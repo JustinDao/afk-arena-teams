@@ -1,0 +1,108 @@
+:root {
+  color-scheme: light dark;
+  --mat-sys-label-large-font: 'IBM Plex Sans';
+  --mat-sys-label-medium-font: 'IBM Plex Sans';
+  --mat-sys-body-medium-font: 'IBM Plex Sans';
+  --mat-sys-body-small-font: 'IBM Plex Sans';
+  --app-primary: var(--mat-sys-primary);
+  --app-on-primary: var(--mat-sys-on-primary);
+  --app-bg: var(--mat-sys-surface);
+  --app-panel: var(--mat-sys-surface-container-low);
+  --app-panel-variant: var(--mat-sys-surface-container);
+  --app-ink: var(--mat-sys-on-surface);
+  --app-muted: var(--mat-sys-on-surface-variant);
+  --app-line: var(--mat-sys-outline-variant);
+  --app-error: var(--mat-sys-error);
+  --app-success: var(--mat-sys-primary);
+  --app-warning: var(--mat-sys-tertiary);
+  --app-chip-saturation: 40%;
+  --app-chip-lightness: 88%;
+  --app-chip-ink: var(--mat-sys-on-surface);
+  --app-space-1: 4px;
+  --app-space-2: 6px;
+  --app-space-3: 10px;
+  --app-space-4: 16px;
+  --app-space-7: 28px;
+  --app-space-8: 36px;
+  --app-radius-sm: 8px;
+  --app-radius: 10px;
+  --app-radius-lg: 14px;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root.theme-dark {
+  color-scheme: dark;
+  --mat-sys-surface: color-mix(in srgb, var(--mat-sys-neutral10) 88%, var(--mat-sys-scrim));
+  --mat-sys-surface-bright: var(--mat-sys-surface-container-lowest);
+  --mat-sys-surface-container-low: color-mix(in srgb, var(--mat-sys-neutral10) 80%, var(--mat-sys-outline));
+  --mat-sys-surface-container: color-mix(in srgb, var(--mat-sys-neutral10) 72%, var(--mat-sys-outline));
+  --mat-sys-on-surface: var(--mat-sys-surface-bright);
+  --mat-sys-on-surface-variant: color-mix(in srgb, var(--mat-sys-surface-bright) 65%, var(--mat-sys-outline-variant));
+  --mat-sys-outline-variant: color-mix(in srgb, var(--mat-sys-outline) 65%, var(--mat-sys-neutral10));
+  --mat-sys-primary: var(--mat-sys-primary-fixed-dim);
+  --mat-sys-on-primary: var(--mat-sys-on-primary-fixed);
+  --mat-sys-error: color-mix(in srgb, var(--mat-sys-error) 45%, var(--mat-sys-surface-bright));
+  --mat-sys-tertiary: var(--mat-sys-tertiary-fixed-dim);
+  --app-chip-saturation: 32%;
+  --app-chip-lightness: 25%;
+  --app-chip-ink: var(--mat-sys-on-surface);
+}
+
+:root.theme-light {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light) {
+    color-scheme: dark;
+    --mat-sys-surface: color-mix(in srgb, var(--mat-sys-neutral10) 88%, var(--mat-sys-scrim));
+    --mat-sys-surface-bright: var(--mat-sys-surface-container-lowest);
+    --mat-sys-surface-container-low: color-mix(in srgb, var(--mat-sys-neutral10) 80%, var(--mat-sys-outline));
+    --mat-sys-surface-container: color-mix(in srgb, var(--mat-sys-neutral10) 72%, var(--mat-sys-outline));
+    --mat-sys-on-surface: var(--mat-sys-surface-bright);
+    --mat-sys-on-surface-variant: color-mix(in srgb, var(--mat-sys-surface-bright) 65%, var(--mat-sys-outline-variant));
+    --mat-sys-outline-variant: color-mix(in srgb, var(--mat-sys-outline) 65%, var(--mat-sys-neutral10));
+    --mat-sys-primary: var(--mat-sys-primary-fixed-dim);
+    --mat-sys-on-primary: var(--mat-sys-on-primary-fixed);
+    --mat-sys-error: color-mix(in srgb, var(--mat-sys-error) 45%, var(--mat-sys-surface-bright));
+    --mat-sys-tertiary: var(--mat-sys-tertiary-fixed-dim);
+    --app-chip-saturation: 32%;
+    --app-chip-lightness: 25%;
+    --app-chip-ink: var(--mat-sys-on-surface);
+  }
+}
+
+html {
+  min-height: 100%;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-ink);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+}

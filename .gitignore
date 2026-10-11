@@ -1,0 +1,6 @@
+/node_modules
+/dist
+/coverage
+/.angular
+/out-tsc
+/src/environments/environment.ts

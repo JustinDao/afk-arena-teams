@@ -1,0 +1,85 @@
+<article class="card" [class.full]="row().active && row().gap === 0" [class.part]="row().active && row().gap > 0">
+  <div class="card-header">
+    <div>
+      <h3>{{ row().submission.target }}</h3>
+      <span class="result">{{ resultLabel(row().submission) }}</span>
+    </div>
+    <button
+      mat-button
+      class="vote"
+      [attr.aria-pressed]="voted()"
+      [attr.aria-label]="'Upvote, ' + voteCount() + ' votes'"
+      (click)="vote.emit(row().submission.id)"
+    ><span aria-hidden="true">▲</span>{{ voteCount() }}</button>
+  </div>
+
+  <div class="boards">
+    @for (formation of row().submission.forms; track formation.key; let formIndex = $index) {
+      <div class="board" [class.run]="isRunable(formIndex)">
+        @if (row().submission.forms.length > 1) {
+          <p class="board-label">
+            {{ formation.label }}
+            @if (row().submission.mode === 'nightmare-corridor' && formation.timeSeconds !== null) {
+              · {{ killTimeLabel(formation.timeSeconds) }}
+            }
+            {{ isRunable(formIndex) ? ' (you can run this)' : '' }}
+          </p>
+        }
+        @for (rowSize of layout; track $index; let rowIndex = $index) {
+          <div class="hero-row" [class.back]="rowIndex > 0">
+            @for (hero of formation.heroes.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track hero.hid; let heroIndex = $index) {
+              <div
+                class="hero"
+                [class.ok]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'ok'"
+                [class.under]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under'"
+                [class.missing]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing'"
+                [style.--h]="hue(hero.name ?? heroName(hero.hid))"
+                [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : null"
+              >
+                <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="medium" />
+                <span class="hero-name">{{ hero.name ?? heroName(hero.hid) }}</span>
+                @if (hero.inv) { <span class="investment">{{ investmentLabel(hero.inv) }}</span> }
+                @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
+                @if (hero.collection; as collection) {
+                  <span class="collection-tag">
+                    @if (collectionIcon(collection.catalogId, collection.nodes); as iconUrl) {
+                      <img class="collection-icon" [src]="iconUrl" [alt]="collection.name + ' icon'">
+                    }
+                    {{ collection.name }}
+                    @for (node of collection.nodes; track node.slotIndex) {
+                      <img
+                        class="collection-node-icon"
+                        [src]="collectionNodeIcon(node.stat, node.tier)"
+                        [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                        [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                      >
+                    }
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        }
+        @if (formation.beast) {
+          <p class="beast"><app-hero-icon [name]="formation.beast" [imageUrl]="formation.petIconUrl ?? null" /> Pet: {{ formation.beast }}@if (formation.petLevel !== null) { · Lv. {{ formation.petLevel }} }</p>
+        }
+      </div>
+    }
+  </div>
+
+  @if (row().active && row().gap > 0) {
+    <p class="gap">
+      @if (row().submission.forms.length > 1 && scope() === 'slot') {
+        Closest slot is {{ row().gap }} roster item{{ row().gap === 1 ? '' : 's' }} short.
+      }
+      {{ missingSummary() }}.
+    </p>
+  }
+  @if (row().submission.notes) { <p class="note">{{ row().submission.notes }}</p> }
+  <p class="meta">
+    {{ row().submission.by === 'sample' ? 'Sample data' : 'By ' + row().submission.by }}, {{ ageLabel(row().submission.days) }}
+    @if (row().submission.heroLevel !== null) {
+      · @if (row().submission.mode === 'twisted-realm') { RC level } @else { Hero level } {{ row().submission.heroLevel }}
+    }
+  </p>
+</article>
