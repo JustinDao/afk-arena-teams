@@ -443,8 +443,8 @@
           <button mat-button class="btn signout-button" (click)="signOut()">Sign out</button>
         } @else {
           <div class="seg" role="group" aria-label="Account action">
-            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-in'" (click)="accountMode.set('sign-in')">Sign in</button>
-            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-up'" (click)="accountMode.set('sign-up')">Create account</button>
+            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-in'" (click)="selectAccountMode('sign-in')">Sign in</button>
+            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-up'" (click)="selectAccountMode('sign-up')">Create account</button>
           </div>
           <div class="account-actions">
           <form class="account-form" [formGroup]="accountForm" (ngSubmit)="submitAccount()">

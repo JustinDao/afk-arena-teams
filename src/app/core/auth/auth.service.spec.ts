@@ -8,6 +8,10 @@ describe('AuthService', () => {
     expect(isDuplicateSignup(null, [])).toBeTrue();
     expect(isDuplicateSignup(null, [{ provider: 'email' }])).toBeFalse();
     expect(isDuplicateSignup({ code: 'weak_password', message: 'Password is too short' }, null)).toBeFalse();
+    expect(isDuplicateSignup(null, { identities: [] })).toBeTrue();
+    expect(isDuplicateSignup(null, { identities: [{ provider: 'email' }], email_confirmed_at: '2026-01-01T00:00:00Z' })).toBeTrue();
+    expect(isDuplicateSignup(null, { identities: [{ provider: 'email' }], created_at: '2026-01-01T00:00:00Z' })).toBeTrue();
+    expect(isDuplicateSignup(null, { identities: [{ provider: 'email' }], created_at: new Date().toISOString() })).toBeFalse();
   });
 
   it('clearly disables account operations until Supabase is configured', async () => {

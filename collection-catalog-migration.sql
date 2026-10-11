@@ -133,6 +133,9 @@ create trigger fill_collection_snapshot_metadata
 before insert on formation_collections
 for each row execute function fill_collection_snapshot_metadata();
 
+drop function if exists public.save_user_collection cascade;
+drop function if exists public.save_user_collection(jsonb) cascade;
+
 create or replace function save_user_collection(p_collection jsonb) returns uuid
 language plpgsql security definer set search_path = public
 as $$
@@ -204,3 +207,18 @@ end;
 $$;
 revoke all on function save_user_collection(jsonb) from public;
 grant execute on function save_user_collection(jsonb) to authenticated;
+
+drop function if exists public.email_exists cascade;
+drop function if exists public.email_exists(text) cascade;
+
+create or replace function public.email_exists(p_email text) returns boolean
+language plpgsql security definer set search_path = public
+as $$
+begin
+  return exists (
+    select 1 from auth.users where lower(email) = lower(trim(p_email))
+  );
+end;
+$$;
+revoke all on function public.email_exists(text) from public;
+grant execute on function public.email_exists(text) to anon, authenticated;

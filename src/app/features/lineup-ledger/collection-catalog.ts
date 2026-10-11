@@ -34,9 +34,10 @@ export const COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [
 
 export const COLLECTION_NODE_TIERS: readonly CollectionNodeTier[] = ['elite', 'legendary', 'mythic'];
 
-export function collectionIconUrl(collectionId: number, mythicStats = 0): string {
+export function collectionIconUrl(collectionId: number, level = 1, mythicStats = 0): string {
+  const lvl = level > 1 ? `_lvl${level}` : '';
   const mythic = mythicStats ? `_ms${mythicStats}` : '';
-  return `${CDN_BASE}/collection_icon/${collectionId}${mythic}_cl.webp`;
+  return `${CDN_BASE}/collection_icon/${collectionId}${lvl}${mythic}_cl.webp`;
 }
 
 export function collectionNodeIconUrl(stat: CollectionNodeStat, tier: CollectionNodeTier): string {

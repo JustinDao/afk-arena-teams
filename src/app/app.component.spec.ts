@@ -1,9 +1,12 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
 import { HeroIconService } from './core/hero-icons/hero-icon.service';
 import { UserDataService } from './core/data/user-data.service';
 import { provideRouter, Router } from '@angular/router';
 import { APP_ROUTES } from './app.routes';
+import { AuthService, DUPLICATE_SIGNUP_MESSAGE } from './core/auth/auth.service';
+import { User } from '@supabase/supabase-js';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS, collectionIconUrl, collectionNodeIconUrl } from './features/lineup-ledger/collection-catalog';
 
 describe('AppComponent collection node editor', () => {
@@ -62,6 +65,52 @@ describe('AppComponent collection node editor', () => {
       fixture.detectChanges();
       expect(component.accountForm.valid).toBeTrue();
       expect(fixture.nativeElement.querySelector('.submit-button').disabled).toBeFalse();
+      fixture.destroy();
+    });
+
+    it('displays a duplicate account error message when signing up with an existing email', async () => {
+      const authMock = {
+        error: signal<string | null>(null),
+        user: signal<User | null>(null),
+        ready: signal(true),
+        configured: true,
+        clearError() {
+          this.error.set(null);
+        },
+        signUp: jasmine.createSpy('signUp').and.callFake(async () => {
+          authMock.error.set(DUPLICATE_SIGNUP_MESSAGE);
+        }),
+      };
+      await TestBed.configureTestingModule({
+        imports: [AppComponent],
+        providers: [
+          provideRouter(APP_ROUTES),
+          { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '' } },
+          { provide: UserDataService, useValue: { configured: false } },
+          { provide: AuthService, useValue: authMock },
+        ],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(AppComponent);
+      const component = fixture.componentInstance;
+      component.openAccount();
+      component.selectAccountMode('sign-up');
+      component.accountForm.setValue({ email: 'player@example.com', password: 'long-enough-password' });
+      fixture.detectChanges();
+
+      await component.submitAccount();
+      fixture.detectChanges();
+
+      expect(authMock.signUp).toHaveBeenCalledWith('player@example.com', 'long-enough-password');
+      expect(component.accountMessage()).toBeNull();
+      expect(component.auth.error()).toBe(DUPLICATE_SIGNUP_MESSAGE);
+      const errorEl = fixture.nativeElement.querySelector('.auth-error');
+      expect(errorEl?.textContent).toContain(DUPLICATE_SIGNUP_MESSAGE);
+      expect(fixture.nativeElement.querySelector('.account-message')).toBeNull();
+
+      component.selectAccountMode('sign-in');
+      fixture.detectChanges();
+      expect(component.auth.error()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.auth-error')).toBeNull();
       fixture.destroy();
     });
   });
@@ -143,7 +192,10 @@ describe('AppComponent collection node editor', () => {
     ]);
     expect(component.collectionNodes()).toEqual([]);
     expect(collectionIconUrl(1, 2)).toBe(
-      'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/1_ms2_cl.webp',
+      'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/1_lvl2_cl.webp',
+    );
+    expect(collectionIconUrl(1, 3, 2)).toBe(
+      'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/1_lvl3_ms2_cl.webp',
     );
     expect(collectionNodeIconUrl('atk', 'mythic')).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_stats_icon/atk_m.webp',

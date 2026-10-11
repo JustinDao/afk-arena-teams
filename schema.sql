@@ -44,6 +44,8 @@ drop function if exists public.replace_user_roster(jsonb) cascade;
 drop function if exists public.replace_user_pet_roster(jsonb) cascade;
 drop function if exists public.set_user_hero_level(smallint) cascade;
 drop function if exists public.toggle_submission_vote(bigint) cascade;
+drop function if exists public.email_exists(text) cascade;
+drop function if exists public.email_exists cascade;
 
 create extension if not exists pg_trgm;
 
@@ -139,6 +141,28 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Backfill profiles for any pre-existing Supabase Auth users whose profile rows
+-- were dropped by the schema reset above. The trigger only fires on new inserts,
+-- so existing users must be seeded manually here.
+insert into public.profiles (id, display_name)
+select
+  id,
+  coalesce(raw_user_meta_data ->> 'full_name', raw_user_meta_data ->> 'name', split_part(email, '@', 1))
+from auth.users
+on conflict (id) do nothing;
+
+create function public.email_exists(p_email text) returns boolean
+language plpgsql security definer set search_path = public
+as $$
+begin
+  return exists (
+    select 1 from auth.users where lower(email) = lower(trim(p_email))
+  );
+end;
+$$;
+revoke all on function public.email_exists(text) from public;
+grant execute on function public.email_exists(text) to anon, authenticated;
 
 -- Saved roster for logged-in users.
 create table user_roster (

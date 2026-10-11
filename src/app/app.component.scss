@@ -189,6 +189,10 @@ textarea {
   font: inherit;
 }
 
+select {
+  padding-right: 28px;
+}
+
 .check select {
   width: auto;
 }
@@ -594,6 +598,12 @@ footer {
   gap: var(--app-space-3);
   padding-block: var(--app-space-2);
   border-bottom: 1px solid var(--app-line);
+}
+
+.collection-item > div:last-child {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--app-space-2);
 }
 
 .collection-icon {

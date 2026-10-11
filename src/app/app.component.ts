@@ -188,9 +188,16 @@ export class AppComponent {
     this.auth.clearError();
   }
 
+  selectAccountMode(mode: 'sign-in' | 'sign-up'): void {
+    this.accountMode.set(mode);
+    this.accountMessage.set(null);
+    this.auth.clearError();
+  }
+
   async submitAccount(): Promise<void> {
     this.accountBusy.set(true);
     this.accountMessage.set(null);
+    this.auth.clearError();
     const { email, password } = this.accountForm.getRawValue();
     try {
       if (this.accountMode() === 'sign-up') {
@@ -340,7 +347,8 @@ export class AppComponent {
   }
 
   collectionIcon(collectionId: number, nodes: readonly CollectionNode[]): string {
-    return collectionIconUrl(collectionId, nodes.filter(({ tier }) => tier === 'mythic').length);
+    const levelNodeCount = nodes.filter(({ stat }) => stat === 'skill_level').length;
+    return collectionIconUrl(collectionId, levelNodeCount + 1);
   }
 
   collectionNodeIcon(stat: CollectionNodeStat, tier: CollectionNode['tier']): string {
