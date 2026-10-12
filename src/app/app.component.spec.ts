@@ -1,6 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
+import { SubmitPageComponent } from './features/lineups/pages/submit-page.component';
+import { LineupsStore } from './features/lineups/lineups.store';
 import { HeroIconService } from './core/hero-icons/hero-icon.service';
 import { UserDataService } from './core/data/user-data.service';
 import { provideRouter } from '@angular/router';
@@ -8,20 +10,19 @@ import { AuthService, DUPLICATE_SIGNUP_MESSAGE } from './core/auth/auth.service'
 import { User } from '@supabase/supabase-js';
 import { APP_ROUTES } from './app.routes';
 
-describe('AppComponent collection node editor', () => {
+describe('SubmitPageComponent', () => {
   it('does not show a mercenary control when creating a Twisted Realm team', async () => {
     await TestBed.configureTestingModule({
-      imports: [AppComponent],
+      imports: [SubmitPageComponent],
       providers: [
         provideRouter(APP_ROUTES),
         { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '' } },
         { provide: UserDataService, useValue: { configured: false } },
       ],
     }).compileComponents();
-    const fixture = TestBed.createComponent(AppComponent);
+    const fixture = TestBed.createComponent(SubmitPageComponent);
     fixture.detectChanges();
-    fixture.componentInstance.openSubmission();
-    fixture.componentInstance.changeDraftMode('twisted-realm');
+    TestBed.inject(LineupsStore).changeDraftMode('twisted-realm');
     fixture.detectChanges();
 
     const labels = Array.from(fixture.nativeElement.querySelectorAll('label')) as HTMLLabelElement[];

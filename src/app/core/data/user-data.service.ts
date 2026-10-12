@@ -15,9 +15,18 @@ interface ModeRow {
 }
 
 interface TargetRow {
+  id: number;
   mode_id: number;
   slug: string;
   name: string;
+  active_from: string | null;
+  active_to: string | null;
+}
+
+interface NightmareCycleBossRow {
+  cycle_anchor_id: number;
+  boss_target_id: number;
+  position: number;
 }
 
 interface DatabaseSubmissionRow {
@@ -46,7 +55,7 @@ interface DatabaseSubmissionRow {
       si: number | null;
       furniture: number | null;
       engraving: number | null;
-      heroes: { name: string; icon_url: string; faction: string | null } | null;
+      heroes: { name: string; icon_url: string; faction: string | null; is_awakened: boolean } | null;
     }[];
     formation_collections: {
       hero_id: number;
@@ -65,6 +74,7 @@ interface HeroRow {
   faction: string | null;
   class: string | null;
   hero_type: string;
+  is_awakened: boolean;
 }
 
 interface PetRow {
@@ -108,6 +118,11 @@ interface CollectionCatalogRow {
   name: string;
 }
 
+function displayHeroName(name: string, isAwakened = false): string {
+  const baseName = name.replace(/^Awakened\s+/i, '').replace(/\s+\(Awakened\)$/i, '');
+  return isAwakened ? `${baseName} (Awakened)` : baseName;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
   readonly configured = supabaseConfigured;
@@ -148,7 +163,7 @@ export class UserDataService {
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
     const { data, error } = await supabase.from('submissions')
-      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,heroes(name,icon_url,faction)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
+      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw new Error(`Could not load lineups: ${error.message}`);
@@ -181,7 +196,7 @@ export class UserDataService {
                 return {
                   pos: hero.position,
                   hid: hero.hero_id,
-                  name: hero.heroes?.name,
+                  name: hero.heroes ? displayHeroName(hero.heroes.name, hero.heroes.is_awakened) : undefined,
                   iconUrl: hero.heroes?.icon_url,
                   faction: hero.heroes?.faction,
                   inv: { si: hero.si, furn: hero.furniture, eng: hero.engraving },
@@ -215,14 +230,16 @@ export class UserDataService {
 
   async loadReferenceData(): Promise<GameReferenceData> {
     if (!supabase) throw new Error('Supabase is not configured.');
-    const [modeResponse, targetResponse, heroResponse, petResponse] = await Promise.all([
+    const [modeResponse, targetResponse, cycleBossResponse, heroResponse, petResponse] = await Promise.all([
       supabase.from('game_modes').select('id,slug,name,target_kind,sort_order,config').eq('enabled', true).order('sort_order'),
-      supabase.from('targets').select('mode_id,slug,name').order('name'),
-      supabase.from('heroes').select('id,name,icon_url,faction,class,hero_type').order('name'),
+      supabase.from('targets').select('id,mode_id,slug,name,active_from,active_to').order('name'),
+      supabase.from('nightmare_corridor_cycle_bosses').select('cycle_anchor_id,boss_target_id,position').order('position'),
+      supabase.from('heroes').select('id,name,icon_url,faction,class,hero_type,is_awakened').order('name'),
       supabase.from('pets').select('id,name,is_awakened,icon_url').order('name'),
     ]);
     if (modeResponse.error) throw new Error(`Could not load game modes: ${modeResponse.error.message}`);
     if (targetResponse.error) throw new Error(`Could not load targets: ${targetResponse.error.message}`);
+    if (cycleBossResponse.error) throw new Error(`Could not load Nightmare Corridor cycles: ${cycleBossResponse.error.message}`);
     if (heroResponse.error) throw new Error(`Could not load heroes: ${heroResponse.error.message}`);
     if (petResponse.error) throw new Error(`Could not load pets: ${petResponse.error.message}`);
 
@@ -232,12 +249,15 @@ export class UserDataService {
       targets.push(target);
       targetsByMode.set(target.mode_id, targets);
     }
+    const targets = (targetResponse.data ?? []) as TargetRow[];
+    const targetById = new Map(targets.map((target) => [target.id, target]));
+    const cycleBosses = (cycleBossResponse.data ?? []) as NightmareCycleBossRow[];
     const modes = ((modeResponse.data ?? []) as unknown as (ModeRow & { id: number })[]).map((row) =>
-      this.mapMode(row, targetsByMode.get(row.id) ?? []),
+      this.mapMode(row, targetsByMode.get(row.id) ?? [], cycleBosses, targetById),
     );
     const heroes = ((heroResponse.data ?? []) as HeroRow[]).map((hero) => ({
       id: hero.id,
-      name: hero.name,
+      name: displayHeroName(hero.name, hero.is_awakened),
       faction: hero.faction,
       class: hero.class,
       type: heroAttributeFromValue(hero.hero_type),
@@ -404,19 +424,51 @@ export class UserDataService {
     return mapped;
   }
 
-  private mapMode(row: ModeRow & { id: number }, targetRows: readonly TargetRow[]): ModeConfig {
+  private mapMode(
+    row: ModeRow & { id: number },
+    targetRows: readonly TargetRow[],
+    cycleBosses: readonly NightmareCycleBossRow[],
+    targetById: ReadonlyMap<number, TargetRow>,
+  ): ModeConfig {
     const config = row.config ?? {};
     const fields = (config['result_fields'] as Record<string, unknown>[] | undefined) ?? [];
-    const formations = config['formations'] as ModeConfig['formations'] | undefined;
+    const formations = row.slug === 'nightmare-corridor'
+      ? undefined
+      : config['formations'] as ModeConfig['formations'] | undefined;
     const variableFormations = config['variable_formations'] as { min: number; max: number } | undefined;
+    const cycleRows = row.slug === 'nightmare-corridor'
+      ? targetRows
+        .filter((target) => cycleBosses.some((boss) => boss.cycle_anchor_id === target.id))
+        .sort((a, b) => (b.active_from ?? '').localeCompare(a.active_from ?? '') || a.name.localeCompare(b.name))
+      : targetRows;
+    const targetFormations = row.slug === 'nightmare-corridor'
+      ? Object.fromEntries(cycleRows.map((anchor) => {
+        const cycle = cycleBosses
+          .filter((boss) => boss.cycle_anchor_id === anchor.id)
+          .sort((a, b) => a.position - b.position);
+        if (cycle.length !== 6 || cycle.some((boss, index) => boss.position !== index + 1)) {
+          throw new Error(`Nightmare Corridor cycle ${anchor.name} must contain exactly six consecutively ordered bosses.`);
+        }
+        if (cycle.at(-1)?.boss_target_id !== anchor.id) {
+          throw new Error(`Nightmare Corridor cycle ${anchor.name} must be its sixth boss.`);
+        }
+        return [anchor.name, cycle.map((boss) => {
+          const target = targetById.get(boss.boss_target_id);
+          if (!target) throw new Error(`Nightmare Corridor cycle ${anchor.name} references a missing boss target.`);
+          if (target.mode_id !== row.id) throw new Error(`Nightmare Corridor cycle ${anchor.name} references a boss from another game mode.`);
+          return { key: target.slug, label: target.name };
+        })];
+      }))
+      : undefined;
     return {
       slug: row.slug,
       short: row.slug.split('-').map((part) => part[0].toUpperCase()).join(''),
       name: row.name,
       targetLabel: String(config['target_label'] ?? (row.target_kind === 'debuff' ? 'Debuff' : 'Boss')),
       targetAll: String(config['target_all'] ?? (row.target_kind === 'debuff' ? 'All debuffs' : 'All bosses')),
-      targets: targetRows.map((target) => target.name),
-      targetSlugs: Object.fromEntries(targetRows.map((target) => [target.name, target.slug])),
+      targets: cycleRows.map((target) => target.name),
+      targetSlugs: Object.fromEntries(cycleRows.map((target) => [target.name, target.slug])),
+      ...(targetFormations ? { targetFormations } : {}),
       rules: String(config['rules'] ?? ''),
       ...(formations ? { formations } : {}),
       ...(variableFormations ? { variable: variableFormations } : {}),

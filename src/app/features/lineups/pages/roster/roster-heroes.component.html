@@ -19,8 +19,6 @@
     <button mat-button class="btn" [disabled]="busy()" (click)="store.selectAllHeroes()">Select all</button>
     <button mat-button class="btn" [disabled]="busy()" (click)="confirmingClear.set(true)">Clear all heroes</button>
   </div>
-  <label class="visually-hidden" for="roster-search">Search heroes</label>
-  <input id="roster-search" class="search" placeholder="Search heroes" aria-label="Search heroes" (input)="setSearch($event)">
   <div class="roster-filters" role="group" aria-label="Filter heroes">
     <div class="icon-filter-row" role="group" aria-label="Faction">
       <span class="icon-filter-label">Faction</span>
@@ -56,21 +54,15 @@
       }
     </div>
   </div>
-  <div class="pick roster-pick hero-roster-pick">
-    @for (hero of filteredHeroes(); track hero.id) {
-      <button
-        mat-button
-        class="hero-pick"
-        [disabled]="busy()"
-        [class.owned]="!!store.roster()[hero.id]"
-        [style.--hero-faction-color]="factionColor(hero)"
-        [attr.aria-pressed]="!!store.roster()[hero.id]"
-        (click)="store.toggleHero(hero.id)"
-      ><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</button>
-    } @empty {
-      <p class="muted">No hero matches that search.</p>
-    }
-  </div>
+  <app-hero-picker
+    class="roster-pick hero-roster-pick"
+    [heroes]="filteredHeroes()"
+    [disabledIds]="disabledHeroIds()"
+    [selectedIds]="ownedHeroIds()"
+    searchId="roster-search"
+    searchLabel="Search heroes"
+    (heroSelected)="store.toggleHero($event)"
+  />
   <h3>Investment (optional)</h3>
   <p class="rules">Enter SI (0–40), furniture (0–12), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
   <div class="seg" role="group" aria-label="Investment input format">

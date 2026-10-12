@@ -211,6 +211,16 @@ footer {
   background: var(--app-bg);
 }
 
+.submit-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-inline: var(--app-space-3);
+}
+
+.submit-page .panel {
+  width: 100%;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -407,6 +417,10 @@ footer {
 
 .extra-row {
   grid-template-columns: 1fr auto 110px;
+}
+
+.extra-row .collection-assignment {
+  grid-column: 1 / -1;
 }
 
 .investment-row input,

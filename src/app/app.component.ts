@@ -8,10 +8,9 @@ import { User } from '@supabase/supabase-js';
 import { filter } from 'rxjs';
 import { MODE_PATHS } from './app.routes';
 import { AuthService } from './core/auth/auth.service'
-import { HeroIconComponent } from './core/hero-icons/hero-icon.component'
 import { HeroIconService } from './core/hero-icons/hero-icon.service'
 import { LineupsStore } from './features/lineups/lineups.store'
-import { DraftFormation, ModeConfig, UPCOMING_MODES } from './features/lineups/models'
+import { UPCOMING_MODES } from './features/lineups/models'
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -19,7 +18,7 @@ type ThemeMode = 'system' | 'light' | 'dark';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CdkTrapFocus, HeroIconComponent, MatButtonModule, ReactiveFormsModule, RouterLink, RouterOutlet],
+  imports: [CdkTrapFocus, MatButtonModule, ReactiveFormsModule, RouterLink, RouterOutlet],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   encapsulation: ViewEncapsulation.None,
@@ -39,13 +38,6 @@ export class AppComponent {
   readonly accountBusy = signal(false);
   readonly accountMessage = signal<string | null>(null);
 
-  readonly submissionForm = new FormGroup({
-    target: new FormControl('', { nonNullable: true }),
-    notes: new FormControl('', { nonNullable: true }),
-    damage: new FormControl('', { nonNullable: true }),
-    placementType: new FormControl<'rank' | 'percent'>('rank', { nonNullable: true }),
-    placementValue: new FormControl('', { nonNullable: true }),
-  });
   readonly accountForm = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
     password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
@@ -55,11 +47,12 @@ export class AppComponent {
     void this.heroIcons.initialize();
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.onRoster.set(this.routePath().startsWith('roster')));
+      .subscribe(() => {
+        const path = this.routePath();
+        this.onRoster.set(path.startsWith('roster'));
+        if (path === 'submit') void this.store.loadCollections();
+      });
     this.onRoster.set(this.routePath().startsWith('roster'));
-    this.submissionForm.controls.target.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((target) => this.store.updateDraftTarget(target));
     this.auth.onUserChange((user) => {
       void this.initializePageData(user);
       this.accountMessage.set(null);
@@ -67,12 +60,6 @@ export class AppComponent {
     });
     void this.auth.initialize().then(() => this.initializePageData(this.auth.user()));
     this.readTheme();
-  }
-
-  openSubmission(): void {
-    this.store.openDraft();
-    this.resetSubmissionForm();
-    void this.store.loadCollections();
   }
 
   openAccount(): void {
@@ -138,29 +125,16 @@ export class AppComponent {
     if (await this.auth.signOut()) this.closeAccount();
   }
 
-  closeDialog(): void {
-    this.store.closeDraft();
-  }
-
   navigateToMode(slug: string): void {
     this.store.setMode(slug);
     void this.router.navigateByUrl(this.modePath(slug));
-  }
-
-  changeDraftMode(slug: string): void {
-    this.store.changeDraftMode(slug);
-    this.resetSubmissionForm();
-  }
-
-  submitLineup(): void {
-    this.store.submitDraft(this.submissionForm.getRawValue());
   }
 
   private async initializePageData(user: User | null): Promise<void> {
     await this.store.initializeBackend(user);
     const path = this.routePath();
     if (path.startsWith('roster')) await this.store.loadRosterDetails();
-    if (path === 'roster/collections' || this.store.draft()) await this.store.loadCollections();
+    if (path === 'roster/collections' || path === 'submit') await this.store.loadCollections();
   }
 
   private routePath(): string {
@@ -173,42 +147,8 @@ export class AppComponent {
     return path;
   }
 
-  nullableNumberValue(event: Event): number | null {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.value.trim() === '') return null;
-    const value = Number(input.value);
-    return Number.isInteger(value) ? value : null;
-  }
-
-  petIdValue(event: Event): number | null {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement) || select.value === '') return null;
-    const petId = Number(select.value);
-    return Number.isInteger(petId) && this.store.pets().some((pet) => pet.id === petId) ? petId : null;
-  }
-
-  inputValue(event: Event): string {
-    const input = event.target;
-    return input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? input.value : '';
-  }
-
   hasGoogleLinked(): boolean {
     return !!this.auth.user()?.identities?.some((identity) => identity.provider === 'google');
-  }
-
-  checkboxValue(event: Event): boolean {
-    const input = event.target;
-    return input instanceof HTMLInputElement && input.checked;
-  }
-
-  modeFor(slug: string): ModeConfig {
-    const mode = this.store.modes().find((entry) => entry.slug === slug);
-    if (!mode) throw new Error(`Unknown game mode: ${slug}`);
-    return mode;
-  }
-
-  filledSlots(formation: DraftFormation): number {
-    return formation.slots.filter((slot) => slot.hid !== null).length;
   }
 
   toggleTheme(): void {
@@ -223,28 +163,12 @@ export class AppComponent {
   }
 
   onBackdropClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
-      this.closeDialog();
-      this.closeAccount();
-    }
+    if (event.target === event.currentTarget) this.closeAccount();
   }
 
   @HostListener('document:keydown.escape')
   closeOnEscape(): void {
-    if (this.store.draft()) this.closeDialog();
     if (this.accountOpen()) this.closeAccount();
-  }
-
-  private resetSubmissionForm(): void {
-    const draft = this.store.draft();
-    if (!draft) return;
-    this.submissionForm.reset({
-      target: draft.target,
-      notes: draft.notes,
-      damage: '',
-      placementType: 'rank',
-      placementValue: '',
-    });
   }
 
   private readTheme(): void {

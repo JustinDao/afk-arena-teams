@@ -44,12 +44,12 @@ begin
         null::smallint,
         'Illustrative seeded example; verify the current cycle and results before using.',
         '[
+          {"key":"soulweaver","label":"Soulweaver","pet":"polar-beast","pet_level":18,"time":196,"heroes":["saurus","mishka","scarlet","oden","mortas"]},
+          {"key":"the-devourer","label":"The Devourer","pet":"fire-breather","pet_level":18,"time":178,"heroes":["rowan","lyca","lorsan","ezizh","raine"]},
           {"key":"astral-devourer","label":"Astral Devourer","pet":"dreary-ball","pet_level":18,"time":142,"heroes":["rowan","lyca","lorsan","ezizh","raine"]},
           {"key":"dual-mantle","label":"Dual-Mantle","pet":"pandy-dumpty","pet_level":18,"time":171,"heroes":["odysseus","orthros","liberta","palmer","talimar"]},
-          {"key":"cursed-capricornus","label":"Cursed Caprihornus","pet":"tufty-ears","pet_level":18,"time":205,"heroes":["belinda","silas","rosaline","daimon","scarlet"]},
-          {"key":"netherspinner","label":"Netherspinner","pet":"grassy-orb","pet_level":18,"time":189,"heroes":["tavriel","gorok","lavatune","lan","mortas"]},
-          {"key":"molten-crystaline-worm","label":"Molten Crystaline Worm","pet":"polar-beast","pet_level":18,"time":196,"heroes":["saurus","mishka","scarlet","oden","mortas"]},
-          {"key":"cindercrow-specter","label":"Cindercrow Specter","pet":"fire-breather","pet_level":18,"time":178,"heroes":["rowan","lyca","lorsan","ezizh","raine"]}
+          {"key":"cursed-caprihornus","label":"Cursed Caprihornus","pet":"tufty-ears","pet_level":18,"time":205,"heroes":["belinda","silas","rosaline","daimon","scarlet"]},
+          {"key":"netherspinner","label":"Netherspinner","pet":"grassy-orb","pet_level":18,"time":189,"heroes":["tavriel","gorok","lavatune","lan","mortas"]}
         ]'::jsonb
       ),
       (

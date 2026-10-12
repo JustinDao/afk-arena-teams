@@ -110,6 +110,7 @@ export interface ModeConfig {
   readonly targetAll: string;
   readonly targets: readonly string[];
   readonly targetSlugs?: Readonly<Record<string, string>>;
+  readonly targetFormations?: Readonly<Record<string, readonly { readonly key: string; readonly label: string }[]>>;
   readonly rules: string;
   readonly formations?: readonly { readonly key: string; readonly label: string }[];
   readonly variable?: { readonly min: number; readonly max: number };
@@ -211,25 +212,26 @@ export const MODES: readonly ModeConfig[] = [
     name: 'Nightmare Corridor',
     targetLabel: 'Cycle anchor (6th boss)',
     targetAll: 'All cycles',
-    targets: [
-      'Abyssal Maestro', 'Abyssal Murmur', 'Abyssal Terror', 'Astral Devourer', 'Blighted Seraph',
-      'Bloodvine Wraith', 'Burning Brute', 'Chimewarden', 'Clawlossus',
-      'Cruel Crow', 'Cursed Caprihornus', 'Darkness Rising', 'Demonic Nemora',
-      'Demonic Puppet', 'Dual-Mantel', 'Dune Destroyer', 'Duskwailer', 'Fractured Fool', 'God of The Hunt',
-      'Grotesque Mage', 'Ice Shemira', 'Infernal Overlord', 'Kane', 'Mask Curator', 'Mirror Demon',
-      'Molten Crystalline Worm Queen', 'Morass Diabolus', 'Netherspinner',
-      'Nightmare Weaver', 'Ossivorous Sphore', 'Pillar of Justice', 'Raging Canon', 'Sky Serpent',
-      'Soul Hound', 'Soulchain Night', 'Soulweaver', 'Swamp Corrupter', 'The Devourer', 'The Fire Daemon',
-      'The Light Martyr', 'The Unhinged', 'Wraith Reaver',
-    ],
+    targets: ['Netherspinner'],
+    targetSlugs: { Netherspinner: 'netherspinner' },
+    targetFormations: {
+      Netherspinner: [
+        { key: 'soulweaver', label: 'Soulweaver' },
+        { key: 'the-devourer', label: 'The Devourer' },
+        { key: 'astral-devourer', label: 'Astral Devourer' },
+        { key: 'dual-mantle', label: 'Dual-Mantel' },
+        { key: 'cursed-caprihornus', label: 'Cursed Caprihornus' },
+        { key: 'netherspinner', label: 'Netherspinner' },
+      ],
+    },
     rules: 'Six teams, one for each boss in the cycle. Select the cycle by its 6th boss. Only Resonating Crystal heroes and up to one mercenary across the lineup.',
     formations: [
+      { key: 'soulweaver', label: 'Soulweaver' },
+      { key: 'the-devourer', label: 'The Devourer' },
       { key: 'astral-devourer', label: 'Astral Devourer' },
       { key: 'dual-mantle', label: 'Dual-Mantle' },
-      { key: 'cursed-capricornus', label: 'Cursed Caprihornus' },
+      { key: 'cursed-caprihornus', label: 'Cursed Caprihornus' },
       { key: 'netherspinner', label: 'Netherspinner' },
-      { key: 'molten-crystaline-worm', label: 'Molten Crystaline Worm' },
-      { key: 'cindercrow-specter', label: 'Cindercrow Specter' },
     ],
     mercMax: 1,
     collectionsEnabled: true,

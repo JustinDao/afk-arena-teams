@@ -11,7 +11,7 @@
       <button mat-button class="btn" (click)="openAccount()">Sign in</button>
     }
     <a mat-button class="btn" routerLink="/roster/heroes">My roster</a>
-    <button mat-flat-button class="btn primary" (click)="openSubmission()">Submit a lineup</button>
+    <a mat-flat-button class="btn primary" routerLink="/submit">Submit a lineup</a>
     <button mat-button class="btn theme-button" (click)="toggleTheme()" [attr.aria-label]="'Theme: ' + theme() + '. Change theme'">
       {{ theme() === 'system' ? 'System theme' : theme() === 'dark' ? 'Dark theme' : 'Light theme' }}
     </button>
@@ -44,31 +44,30 @@
   <p>Hero icons are served from the <a href="https://github.com/afk-mine/cdn" target="_blank" rel="noopener noreferrer">AFK Arena CDN project</a>. AFK Arena names and game assets belong to Lilith Games; this fan-made project is not affiliated with or endorsed by Lilith Games.</p>
 </footer>
 
-@if (accountOpen() || store.draft()) {
+@if (accountOpen()) {
   <div class="overlay" role="presentation" (click)="onBackdropClick($event)">
-    @if (accountOpen()) {
-      <section class="panel" role="dialog" aria-modal="true" aria-labelledby="account-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
-        <div class="panel-header">
-          <h2 id="account-title">Your account</h2>
-          <button mat-button class="btn" (click)="closeAccount()">Close</button>
-        </div>
-        @if (!auth.configured) {
-          <p class="rules" role="status">Accounts are not enabled yet. Add your Supabase project URL and public anon key to <code>src/environments/environment.ts</code>, then run the SQL setup in the README.</p>
-        } @else if (auth.user()) {
-          <p>Signed in as <strong>{{ auth.user()?.email }}</strong></p>
-          @if (!hasGoogleLinked()) {
-            <p class="rules">Link Google to sign in with either this email/password or your Google account.</p>
-            <button mat-stroked-button class="btn" (click)="linkGoogle()" [disabled]="accountBusy()">Link Google account</button>
-          } @else {
-            <p class="success-message">Google is linked to this account.</p>
-          }
-          <button mat-button class="btn signout-button" (click)="signOut()">Sign out</button>
+    <section class="panel" role="dialog" aria-modal="true" aria-labelledby="account-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <div class="panel-header">
+        <h2 id="account-title">Your account</h2>
+        <button mat-button class="btn" (click)="closeAccount()">Close</button>
+      </div>
+      @if (!auth.configured) {
+        <p class="rules" role="status">Accounts are not enabled yet. Add your Supabase project URL and public anon key to <code>src/environments/environment.ts</code>, then run the SQL setup in the README.</p>
+      } @else if (auth.user()) {
+        <p>Signed in as <strong>{{ auth.user()?.email }}</strong></p>
+        @if (!hasGoogleLinked()) {
+          <p class="rules">Link Google to sign in with either this email/password or your Google account.</p>
+          <button mat-stroked-button class="btn" (click)="linkGoogle()" [disabled]="accountBusy()">Link Google account</button>
         } @else {
-          <div class="seg" role="group" aria-label="Account action">
-            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-in'" (click)="selectAccountMode('sign-in')">Sign in</button>
-            <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-up'" (click)="selectAccountMode('sign-up')">Create account</button>
-          </div>
-          <div class="account-actions">
+          <p class="success-message">Google is linked to this account.</p>
+        }
+        <button mat-button class="btn signout-button" (click)="signOut()">Sign out</button>
+      } @else {
+        <div class="seg" role="group" aria-label="Account action">
+          <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-in'" (click)="selectAccountMode('sign-in')">Sign in</button>
+          <button mat-button type="button" [attr.aria-pressed]="accountMode() === 'sign-up'" (click)="selectAccountMode('sign-up')">Create account</button>
+        </div>
+        <div class="account-actions">
           <form class="account-form" [formGroup]="accountForm" (ngSubmit)="submitAccount()">
             <label class="field">Email
               <input type="email" formControlName="email" autocomplete="email" required>
@@ -84,179 +83,13 @@
             </button>
           </form>
           <button mat-stroked-button type="button" class="btn google-button" (click)="signInWithGoogle()" [disabled]="accountBusy()">Continue with Google</button>
-          </div>
-          @if (accountMessage()) { <p class="success-message" role="status">{{ accountMessage() }}</p> }
-          <p class="rules">If you sign up with a password, you can link Google later from this account dialog.</p>
-        }
-        @if (auth.error()) { <p class="auth-error" role="alert">{{ auth.error() }}</p> }
-        @if (store.backendError()) { <p class="auth-error" role="alert">{{ store.backendError() }}</p> }
-      </section>
-    } @else {
-      @if (store.draft(); as draft) {
-      <section class="panel" role="dialog" aria-modal="true" aria-labelledby="submit-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
-        <div class="panel-header">
-          <h2 id="submit-title">Submit a lineup</h2>
-          <button mat-button class="btn" (click)="closeDialog()">Close</button>
         </div>
-        <div class="seg" role="group" aria-label="Game mode">
-          @for (mode of store.modes(); track mode.slug) {
-            <button mat-button type="button" [attr.aria-pressed]="mode.slug === draft.mode" (click)="changeDraftMode(mode.slug)">{{ mode.short }}</button>
-          }
-        </div>
-        <p class="rules">{{ modeFor(draft.mode).rules }}</p>
-
-        <form [formGroup]="submissionForm" (ngSubmit)="submitLineup()">
-          @if (draft.mode === 'twisted-realm') {
-            <p class="rules">TR hero level is your Resonating Crystal level. Current roster level: {{ store.heroLevel() ?? 'not set' }}.</p>
-          }
-          <label class="field">{{ modeFor(draft.mode).targetLabel }}
-            <select formControlName="target">
-              <option value="">Select…</option>
-              @for (target of modeFor(draft.mode).targets; track $index) {
-                <option [value]="target">{{ target }}</option>
-              }
-            </select>
-          </label>
-
-          @if (draft.forms.length > 1 || modeFor(draft.mode).variable) {
-            <div class="formation-tabs">
-              @for (formation of draft.forms; track formation.key; let formIndex = $index) {
-                <button mat-button type="button" [attr.aria-pressed]="formIndex === draft.cur" (click)="store.selectFormation(formIndex)">
-                  {{ formation.label }} <small>{{ filledSlots(formation) }}/5</small>
-                </button>
-              }
-              @if (modeFor(draft.mode).variable; as variable) {
-                <button mat-button type="button" [disabled]="draft.forms.length >= variable.max" (click)="store.addTeam()">Add team</button>
-                <button mat-button type="button" [disabled]="draft.forms.length <= variable.min" (click)="store.removeTeam()">Remove last</button>
-              }
-            </div>
-          }
-
-          <div class="formation-board">
-            @for (rowIndex of [0, 1]; track rowIndex) {
-              <div class="formation-row" [class.back]="rowIndex > 0">
-                @for (slot of draft.forms[draft.cur].slots.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track $index; let inRowIndex = $index) {
-                  @let slotIndex = rowIndex === 0 ? inRowIndex : inRowIndex + 2;
-                  @if (slot.hid === null) {
-                    <button mat-button type="button" class="formation-slot empty-slot" [class.selected]="draft.slot === slotIndex" (click)="store.selectSlot(slotIndex)">
-                      {{ rowIndex ? 'Back' : 'Front' }} slot
-                    </button>
-                  } @else {
-                    <button mat-button type="button" class="formation-slot" [class.selected]="draft.slot === slotIndex" [style.--h]="store.hue(store.heroName(slot.hid))" (click)="store.selectSlot(slotIndex)">
-                      <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" />
-                      <span>{{ store.heroName(slot.hid) }}</span>
-                      <span class="remove-slot" role="button" [attr.aria-label]="'Remove ' + store.heroName(slot.hid)" (click)="$event.stopPropagation(); store.clearSlot(slotIndex)">×</span>
-                    </button>
-                  }
-                }
-              </div>
-            }
-          </div>
-          <label class="visually-hidden" for="draft-search">Search heroes to add</label>
-          <input id="draft-search" class="search" placeholder="Search heroes to add" [value]="draft.q" (input)="store.setDraftSearch(inputValue($event))">
-          <div class="pick">
-            @for (hero of store.filteredDraftHeroes(); track hero.id) {
-              <button mat-button type="button" class="hero-pick" [style.--h]="store.hue(hero.name)" [disabled]="store.heroAlreadySelected(hero.id)" (click)="store.pickHero(hero.id)">
-                <app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}
-              </button>
-            } @empty {
-              <p class="muted">No hero matches that search.</p>
-            }
-          </div>
-
-          <section class="extras">
-            <h3>Details for {{ draft.forms[draft.cur].label }} <span class="muted">(optional)</span></h3>
-            @for (slot of draft.forms[draft.cur].slots; track $index; let slotIndex = $index) {
-              @if (slot.hid !== null) {
-                <div class="extra-row">
-                  <span class="extra-hero"><app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" />{{ store.heroName(slot.hid) }}</span>
-                  @if (draft.mode !== 'twisted-realm' && modeFor(draft.mode).mercMax !== 0) {
-                    <label class="check">
-                      <input type="checkbox" [checked]="slot.merc" (change)="store.updateDraftFormationField('mercenary', checkboxValue($event), slotIndex)">
-                      Mercenary
-                    </label>
-                  }
-                  <input [value]="slot.inv" placeholder="309e60" [attr.aria-label]="'Investment for ' + store.heroName(slot.hid)" (change)="store.updateDraftFormationField('investment', inputValue($event), slotIndex)">
-                  @if (modeFor(draft.mode).collectionsEnabled && auth.user()) {
-                    <label class="field collection-assignment">Collection for {{ store.heroName(slot.hid) }}
-                      <select [value]="slot.collectionId" (change)="store.updateCollectionAssignment(slotIndex, inputValue($event))">
-                        <option value="">No collection</option>
-                        @for (collection of store.collections(); track collection.id) {
-                          <option [value]="collection.id">{{ collection.name }} · {{ collection.nodes.length }} nodes</option>
-                        }
-                      </select>
-                    </label>
-                  }
-                </div>
-              }
-            } @empty {
-              <p class="muted">Add heroes to set mercenary and investment details.</p>
-            }
-            <label class="field">Pet
-              <select [value]="draft.forms[draft.cur].petId ?? ''" (change)="store.updateDraftPet(petIdValue($event))">
-                <option value="">No pet</option>
-                @for (pet of store.pets(); track pet.id) {
-                  <option [value]="pet.id">{{ pet.name }}@if (pet.isAwakened) { (Awakened) }</option>
-                }
-              </select>
-            </label>
-            @if (draft.forms[draft.cur].petId !== null) {
-              <label class="field">Pet level
-                <input
-                  type="number"
-                  min="1"
-                  max="18"
-                  step="1"
-                  [value]="draft.forms[draft.cur].petLevel ?? ''"
-                  placeholder="1–18"
-                  (change)="store.updateDraftPetLevel(nullableNumberValue($event))"
-                >
-              </label>
-            }
-          </section>
-
-          <section class="result-fields">
-            <h3>Result</h3>
-            @if (draft.mode === 'nightmare-corridor') {
-              <label class="field">Kill time for {{ draft.forms[draft.cur].label }} (m:ss)
-                <input
-                  [value]="draft.forms[draft.cur].time"
-                  placeholder="2:22"
-                  (change)="store.updateDraftTime(inputValue($event))"
-                >
-              </label>
-            } @else if (draft.mode === 'treasure-scramble') {
-              <label class="field">Placement type
-                <select formControlName="placementType">
-                  <option value="rank">Rank (1–100)</option>
-                  <option value="percent">Top percentage</option>
-                </select>
-              </label>
-              <label class="field">{{ submissionForm.controls.placementType.value === 'rank' ? 'Rank' : 'Top percentage (%)' }}
-                <input formControlName="placementValue" type="number" [min]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01" max="100" [step]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01">
-              </label>
-            } @else {
-              <label class="field">{{ draft.mode === 'cursed-realm' ? 'Total damage across all six fights' : 'Damage dealt' }}
-                <input formControlName="damage" placeholder="e.g. 1.84B">
-              </label>
-            }
-          </section>
-
-          <label class="field">Notes (optional)
-            <textarea formControlName="notes" rows="3" placeholder="Ultimate order, swaps, minimum investment…"></textarea>
-          </label>
-          @if (store.draftErrors().length) {
-            <div class="errors" role="alert">
-              <ul>
-                @for (error of store.draftErrors(); track error) { <li>{{ error }}</li> }
-              </ul>
-            </div>
-          }
-          <button mat-flat-button class="btn primary submit-button" type="submit">Add lineup</button>
-        </form>
-      </section>
+        @if (accountMessage()) { <p class="success-message" role="status">{{ accountMessage() }}</p> }
+        <p class="rules">If you sign up with a password, you can link Google later from this account dialog.</p>
       }
-    }
+      @if (auth.error()) { <p class="auth-error" role="alert">{{ auth.error() }}</p> }
+      @if (store.backendError()) { <p class="auth-error" role="alert">{{ store.backendError() }}</p> }
+    </section>
   </div>
 }
 

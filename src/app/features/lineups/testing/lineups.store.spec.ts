@@ -121,14 +121,28 @@ describe('LineupsStore', () => {
     const example = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'nightmare-corridor');
     expect(example?.target).toBe('Netherspinner');
     expect(example?.forms.map(({ label }) => label)).toEqual([
+      'Soulweaver',
+      'The Devourer',
       'Astral Devourer',
       'Dual-Mantle',
       'Cursed Caprihornus',
       'Netherspinner',
-      'Molten Crystaline Worm',
     ]);
     expect(example?.forms.every(({ timeSeconds }) => timeSeconds !== null && timeSeconds > 0)).toBeTrue();
     expect(example?.forms.flatMap(({ heroes }) => heroes).filter(({ merc }) => merc).length).toBeLessThanOrEqual(1);
+  });
+
+  it('creates Nightmare Corridor teams from the selected cycle anchor', () => {
+    store.openDraft();
+    expect(store.draft()?.target).toBe('Netherspinner');
+    expect(store.draft()?.forms.map(({ label }) => label)).toEqual([
+      'Soulweaver',
+      'The Devourer',
+      'Astral Devourer',
+      'Dual-Mantel',
+      'Cursed Caprihornus',
+      'Netherspinner',
+    ]);
   });
 
   it('records Resonating Crystal level for Twisted Realm and uses TS placement as its metric', () => {
@@ -140,14 +154,18 @@ describe('LineupsStore', () => {
     expect(treasureExamples.map(resultLine)).toEqual(['Top 1%', 'Rank 37']);
   });
 
-  it('enforces mercenary caps across the full lineup and validates TS placement', async () => {
+  it('limits mercenaries immediately across the full lineup and validates TS placement', async () => {
     store.openDraft();
     store.changeDraftMode('nightmare-corridor');
     store.updateDraftTarget('Netherspinner');
     fillDraft(store);
     store.updateDraftFormationField('mercenary', true, 0);
+    expect(store.draft()?.forms.at(-1)?.slots[0].merc).toBeTrue();
     store.selectFormation(1);
+    expect(store.mercenaryLimitReached(0)).toBeTrue();
     store.updateDraftFormationField('mercenary', true, 0);
+    expect(store.draft()?.forms[1].slots[0].merc).toBeFalse();
+    expect(store.toast()).toContain('Only 1 mercenary');
     await store.submitDraft({
       target: 'Netherspinner',
       notes: '',
@@ -155,7 +173,7 @@ describe('LineupsStore', () => {
       placementType: 'rank',
       placementValue: '',
     });
-    expect(store.draftErrors()).toContain('Only 1 mercenary is allowed across this lineup.');
+    expect(store.draftErrors()).toEqual([]);
 
     store.changeDraftMode('treasure-scramble');
     fillDraft(store);

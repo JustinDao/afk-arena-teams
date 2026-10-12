@@ -31,6 +31,10 @@ export const APP_ROUTES: Routes = [
   { path: 'cursed-realm', loadComponent: lineupsPage, data: { mode: 'cursed-realm' } },
   { path: 'nightmare-corridor', loadComponent: lineupsPage, data: { mode: 'nightmare-corridor' } },
   {
+    path: 'submit',
+    loadComponent: () => import('./features/lineups/pages/submit-page.component').then((m) => m.SubmitPageComponent),
+  },
+  {
     path: 'roster',
     loadComponent: () => import('./features/lineups/pages/roster/roster-page.component').then((m) => m.RosterPageComponent),
     children: [

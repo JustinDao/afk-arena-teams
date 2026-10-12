@@ -13,13 +13,13 @@ npm start
 
 Open the local URL printed by Angular CLI (usually `http://localhost:4200`). Create a production build with `npm run build`; run unit tests with `npm test`.
 
-Each active mode and the roster tabs have a named URL: `/twisted-realm`, `/treasure-scramble`, `/cursed-realm`, `/nightmare-corridor`, `/roster/heroes`, `/roster/pets`, and `/roster/collections`. `/roster` redirects to `/roster/heroes`, and the short aliases `/tr`, `/ts`, `/cr`, and `/nc` redirect to their named routes. Pages are lazy-loaded routed components under `src/app/features/lineups/pages/`; `AppComponent` is only the shell (header, mode nav, account/submission dialogs). The root URL redirects to `/nightmare-corridor`. When deploying, configure the host to serve `index.html` for these paths so direct links and refreshes work.
+Each active mode, roster tab, and lineup submission has a named URL: `/twisted-realm`, `/treasure-scramble`, `/cursed-realm`, `/nightmare-corridor`, `/roster/heroes`, `/roster/pets`, `/roster/collections`, and `/submit`. `/roster` redirects to `/roster/heroes`, and the short aliases `/tr`, `/ts`, `/cr`, and `/nc` redirect to their named routes. Pages are lazy-loaded routed components under `src/app/features/lineups/pages/`; `AppComponent` is the shell for the header, mode navigation, and account dialog. The root URL redirects to `/nightmare-corridor`. When deploying, configure the host to serve `index.html` for these paths so direct links and refreshes work.
 
 Without Supabase configuration the app uses sample lineups. Guest rosters and votes are saved in this browser; guest submissions are temporary. Configure Supabase to enable accounts, private hero/pet/collection inventories, shared lineups, and community votes.
 
 ## Supabase setup
 
-1. For a new Supabase project, run [`schema.sql`](./schema.sql), then [`seed.sql`](./seed.sql) to add public example lineups. **Running `schema.sql` resets all app tables and deletes existing lineups, votes, profiles, and roster/collection data; Supabase Auth users are retained.** For an existing project where data must be preserved, run [`collection-catalog-migration.sql`](./collection-catalog-migration.sql) instead. Existing custom collection names and builds are preserved as legacy inventory; catalog-matched collections use the new editor, with the former skill/per-node level fields removed.
+1. For a new Supabase project, run [`schema.sql`](./schema.sql), then [`seed.sql`](./seed.sql) to add public example lineups. **Running `schema.sql` resets all app tables and deletes existing lineups, votes, profiles, and roster/collection data; Supabase Auth users are retained.** For an existing project where data must be preserved, run the relevant additive migration, including [`nightmare-corridor-cycle-migration.sql`](./nightmare-corridor-cycle-migration.sql) for the database-managed NC cycle mapping. If the project has not applied it yet, also run [`collection-catalog-migration.sql`](./collection-catalog-migration.sql) for the existing collection-catalog change.
 2. Copy [`src/environments/environment.example.ts`](./src/environments/environment.example.ts) to `src/environments/environment.ts`. Fill `supabaseUrl` and `supabaseKey` with the project URL and **publishable/anon key** from Supabase Project Settings → API. This local file is git-ignored. Never put a service-role or secret key in browser code.
 3. In Supabase Authentication → URL Configuration, set the local app URL (`http://localhost:4200`) as the Site URL and add it to Redirect URLs.
 4. Email/password signup is available in the account dialog. If email confirmation is enabled, users confirm by email before signing in; the profile is created automatically after their first successful signup.
@@ -34,12 +34,13 @@ Update the reference data in Supabase Table Editor:
 
 - `heroes`: add or rename heroes, and maintain each hero's faction, class, `hero_type` (strength, agility, or intelligence), and role.
 - `pets`: add or rename pets; `is_awakened` supports catalog entries identified as awakened.
-- `targets`: add or change boss/debuff names and rotation dates.
+- `targets`: add or change boss/debuff names and rotation dates. Nightmare Corridor cycle anchors use `active_from`/`active_to` for their cycle window.
+- `nightmare_corridor_cycle_bosses`: map each Nightmare Corridor cycle anchor to its six ordered boss targets; the sixth boss must be the selected anchor.
 - `game_modes`: enable modes and adjust their `config` JSON, including displayed rules, formation layout, collection availability, and duplicate-hero rules.
 - `collection_catalog`: named collections and their classes.
 - `collection_node_types` and `collection_node_tiers`: available stat nodes and Elite/Legendary/Mythic node tiers. Stat-node codes must use lowercase letters, digits, and underscores; the app displays labels from the codes and loads the list from this table.
 
-The initial Twisted Realm and Cursed Realm target names are starter data and can be maintained as the in-game rotation changes. Nightmare Corridor cycles are identified by their sixth boss and contain six boss-named teams with a separate kill time for each. Treasure Scramble is configured for exactly seven teams by default.
+The initial Twisted Realm and Cursed Realm target names are starter data and can be maintained as the in-game rotation changes. Nightmare Corridor replaces one boss slot at a time rather than refreshing all six together, so each cycle is identified by its sixth-boss anchor and its dates, and `nightmare_corridor_cycle_bosses` supplies the six ordered boss teams with separate kill times. Lineup submission is available on its own `/submit` route. Treasure Scramble is configured for exactly seven teams by default.
 
 The `search_submissions` RPC can rank public lineups by missing heroes, under-invested heroes, missing pets, pet levels, and (for Twisted Realm) Resonating Crystal level. It accepts hero and pet CDN-ID arrays; `p_pet_levels` is a JSON object keyed by pet ID, for example `{"6001":18}`, and `p_hero_investments` can map hero IDs to `si`, `furniture`, and `engraving` values. Set `p_strict` to `false` to include near matches. The app currently performs equivalent roster matching in the client so guests can search without uploading their private roster; signed-in rosters remain private.
 

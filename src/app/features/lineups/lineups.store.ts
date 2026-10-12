@@ -512,7 +512,16 @@ export class LineupsStore {
   }
 
   updateDraftTarget(target: string): void {
-    this.updateDraft((draft) => { draft.target = target; });
+    this.updateDraft((draft) => {
+      draft.target = target;
+      const mode = this.getMode(draft.mode);
+      const formations = mode.targetFormations?.[target];
+      if (formations) {
+        draft.forms = formations.map(({ key, label }) => makeEmptyFormation(key, label));
+        draft.cur = 0;
+        draft.slot = -1;
+      }
+    });
   }
 
   selectFormation(index: number): void {
@@ -581,8 +590,15 @@ export class LineupsStore {
     this.updateDraft((draft) => {
       const formation = draft.forms[draft.cur];
       if (field === 'investment') formation.slots[slotIndex].inv = String(value);
-      else formation.slots[slotIndex].merc = Boolean(value);
+      else if (Boolean(value) && this.isMercenaryLimitReached(draft, slotIndex)) {
+        this.showToast(`Only ${this.getMode(draft.mode).mercMax} mercenary is allowed across this lineup.`);
+      } else formation.slots[slotIndex].merc = Boolean(value);
     });
+  }
+
+  mercenaryLimitReached(slotIndex: number): boolean {
+    const draft = this.draftSignal();
+    return draft ? this.isMercenaryLimitReached(draft, slotIndex) : false;
   }
 
   updateDraftPet(petId: number | null): void {
@@ -781,12 +797,16 @@ export class LineupsStore {
     const mode = this.getMode(slug);
     const result: Record<string, unknown> = {};
     for (const field of mode.fields) if (field.def !== undefined) result[field.k] = field.def;
+    const target = this.modeSignal() === slug
+      ? (this.targetSignal() ?? (slug === 'nightmare-corridor' ? mode.targets[0] ?? '' : ''))
+      : (slug === 'nightmare-corridor' ? mode.targets[0] ?? '' : '');
+    const targetFormations = mode.targetFormations?.[target];
     const forms = mode.variable
       ? Array.from({ length: mode.variable.min }, (_, index) => makeEmptyFormation(`t${index + 1}`, `Team ${index + 1}`))
-      : mode.formations!.map(({ key, label }) => makeEmptyFormation(key, label));
+      : (targetFormations ?? mode.formations ?? []).map(({ key, label }) => makeEmptyFormation(key, label));
     return {
       mode: slug,
-      target: this.modeSignal() === slug ? (this.targetSignal() ?? '') : '',
+      target,
       cur: 0,
       slot: -1,
       q: '',
@@ -810,6 +830,14 @@ export class LineupsStore {
     };
     update(draft);
     this.draftSignal.set(draft);
+  }
+
+  private isMercenaryLimitReached(draft: LineupDraft, slotIndex: number): boolean {
+    const max = this.getMode(draft.mode).mercMax;
+    if (max === undefined) return false;
+    const selected = draft.forms.reduce((total, form) => total + form.slots.filter(({ merc }) => merc).length, 0);
+    const current = draft.forms[draft.cur].slots[slotIndex];
+    return !current.merc && selected >= max;
   }
 
   private evaluateSubmission(

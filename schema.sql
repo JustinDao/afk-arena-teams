@@ -20,6 +20,7 @@ drop table if exists
   formations,
   submissions,
   user_collection_nodes,
+  nightmare_corridor_cycle_bosses,
   user_collections,
   collection_slots,
   collection_node_tiers,
@@ -81,6 +82,15 @@ create table targets (
   active_to       date,
   formation_count smallint,                    -- Optional mode-specific formation count metadata
   unique (mode_id, slug)
+);
+
+create table nightmare_corridor_cycle_bosses (
+  cycle_anchor_id int not null references targets(id) on delete cascade,
+  boss_target_id  int not null references targets(id) on delete cascade,
+  position        smallint not null check (position between 1 and 6),
+  primary key (cycle_anchor_id, position),
+  unique (cycle_anchor_id, boss_target_id),
+  check (cycle_anchor_id <> boss_target_id or position = 6)
 );
 
 create table heroes (
@@ -471,6 +481,7 @@ create index formations_pet on formations (pet_id) where pet_id is not null;
 
 alter table game_modes enable row level security;
 alter table targets enable row level security;
+alter table nightmare_corridor_cycle_bosses enable row level security;
 alter table heroes enable row level security;
 alter table pets enable row level security;
 alter table collection_slots enable row level security;
@@ -490,12 +501,14 @@ alter table formation_collections enable row level security;
 
 create policy read_all on game_modes for select using (true);
 create policy read_all on targets for select using (true);
+create policy read_all on nightmare_corridor_cycle_bosses for select using (true);
 create policy read_all on heroes for select using (true);
 create policy read_all on pets for select using (true);
 create policy read_all on collection_slots for select using (true);
 create policy read_all on collection_node_types for select using (true);
 create policy read_all on collection_node_tiers for select using (true);
 create policy read_all on collection_catalog for select using (true);
+grant select on nightmare_corridor_cycle_bosses to anon, authenticated;
 grant select on collection_catalog to anon, authenticated;
 grant select on collection_node_types to anon, authenticated;
 create policy read_all on submissions for select using (true);
@@ -988,64 +1001,64 @@ insert into heroes (id, slug, name, faction, class, hero_type, role, rarity, is_
   (121, 'haelus', 'Haelus', 'Celestial', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (122, 'treznor', 'Treznor', 'Graveborn', 'Ranger', 'agility', 'Control', 'elite', false),
   (123, 'thesku', 'Thesku', 'Mauler', 'Mage', 'intelligence', 'Control', 'elite', false),
-  (124, 'awakened-talene', 'Awakened Talene', 'Celestial', 'Tank', 'intelligence', 'Buffer', 'legendary', true),
+  (124, 'awakened-talene', 'Talene (Awakened)', 'Celestial', 'Tank', 'intelligence', 'Buffer', 'legendary', true),
   (125, 'framton', 'Framton', 'Hypogean', 'Warrior', 'agility', 'Continuous Damage', 'elite', false),
   (126, 'astar', 'Astar', 'Wilder', 'Support', 'intelligence', 'Regen', 'elite', false),
   (127, 'scarlet', 'Scarlet', 'Lightbearer', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
   (128, 'melusina', 'Melusina', 'Dimensional', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
   (129, 'fane', 'Fane', 'Graveborn', 'Support', 'agility', 'Debuffer', 'elite', false),
-  (130, 'awakened-ezizh', 'Awakened Ezizh', 'Hypogean', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (130, 'awakened-ezizh', 'Ezizh (Awakened)', 'Hypogean', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (131, 'alaro', 'Alaro', 'Mauler', 'Support', 'agility', 'Buffer', 'elite', false),
   (132, 'audrae', 'Audrae', 'Celestial', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
   (133, 'oku', 'Oku', 'Wilder', 'Tank', 'strength', 'Tank', 'elite', false),
-  (134, 'awakened-thane', 'Awakened Thane', 'Lightbearer', 'Ranger', 'agility', 'Burst Damage', 'legendary', true),
+  (134, 'awakened-thane', 'Thane (Awakened)', 'Lightbearer', 'Ranger', 'agility', 'Burst Damage', 'legendary', true),
   (135, 'vyloris', 'Vyloris', 'Hypogean', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
   (136, 'sonja', 'Sonja', 'Lightbearer', 'Tank', 'agility', 'Buffer', 'elite', false),
   (137, 'anasta', 'Anasta', 'Mauler', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
   (138, 'kalene', 'Kalene', 'Graveborn', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
-  (139, 'awakened-brutus', 'Awakened Brutus', 'Mauler', 'Warrior', 'strength', 'Continuous Damage', 'legendary', true),
+  (139, 'awakened-brutus', 'Brutus (Awakened)', 'Mauler', 'Warrior', 'strength', 'Continuous Damage', 'legendary', true),
   (140, 'joan-of-arc', 'Joan of Arc', 'Dimensional', 'Support', 'strength', 'Buffer', 'elite', false),
   (141, 'eorin', 'Eorin', 'Wilder', 'Ranger', 'agility', 'Burst Damage', 'elite', false),
   (142, 'tarnos', 'Tarnos', 'Celestial', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
-  (143, 'awakened-solise', 'Awakened Solise', 'Wilder', 'Support', 'intelligence', 'Regen', 'legendary', true),
+  (143, 'awakened-solise', 'Solise (Awakened)', 'Wilder', 'Support', 'intelligence', 'Regen', 'legendary', true),
   (144, 'geralt', 'Geralt', 'Dimensional', 'Warrior', 'agility', 'Regen', 'elite', false),
   (145, 'yennefer', 'Yennefer', 'Dimensional', 'Mage', 'intelligence', 'Regen', 'elite', false),
   (146, 'canisa-ruke', 'Canisa & Ruke', 'Hypogean', 'Tank', 'strength', 'Tank', 'elite', false),
   (147, 'nevanthi', 'Nevanthi', 'Wilder', 'Support', 'intelligence', 'Regen', 'elite', false),
-  (148, 'awakened-baden', 'Awakened Baden', 'Graveborn', 'Ranger', 'strength', 'Continuous Damage', 'legendary', true),
+  (148, 'awakened-baden', 'Baden (Awakened)', 'Graveborn', 'Ranger', 'strength', 'Continuous Damage', 'legendary', true),
   (149, 'salaki', 'Salaki', 'Mauler', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (150, 'palmer', 'Palmer', 'Lightbearer', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (151, 'veithael', 'Veithael', 'Celestial', 'Tank', 'agility', 'Tank', 'elite', false),
   (152, 'mulan', 'Mulan', 'Dimensional', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
-  (153, 'awakened-belinda', 'Awakened Belinda', 'Lightbearer', 'Mage', 'intelligence', 'Burst Damage', 'legendary', true),
+  (153, 'awakened-belinda', 'Belinda (Awakened)', 'Lightbearer', 'Mage', 'intelligence', 'Burst Damage', 'legendary', true),
   (154, 'tamrus', 'Tamrus', 'Wilder', 'Warrior', 'agility', 'Control', 'elite', false),
   (155, 'olgath', 'Olgath', 'Hypogean', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
   (156, 'edwin', 'Edwin', 'Graveborn', 'Tank', 'strength', 'Tank', 'elite', false),
-  (157, 'awakened-maetria', 'Awakened Maetria', 'Hypogean', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (157, 'awakened-maetria', 'Maetria (Awakened)', 'Hypogean', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (158, 'crassio', 'Crassio', 'Mauler', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
   (159, 'emilia', 'Emilia', 'Dimensional', 'Mage', 'intelligence', 'Control', 'elite', false),
   (160, 'rem', 'Rem', 'Dimensional', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
-  (161, 'awakened-athalia', 'Awakened Athalia', 'Celestial', 'Warrior', 'agility', 'Burst Damage', 'legendary', true),
+  (161, 'awakened-athalia', 'Athalia (Awakened)', 'Celestial', 'Warrior', 'agility', 'Burst Damage', 'legendary', true),
   (162, 'ginneas', 'Ginneas', 'Lightbearer', 'Tank', 'strength', 'Tank', 'elite', false),
   (163, 'daemia', 'Daemia', 'Celestial', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
   (164, 'trishea', 'Trishea', 'Wilder', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
-  (165, 'awakened-safiya', 'Awakened Safiya', 'Mauler', 'Support', 'intelligence', 'Buffer', 'legendary', true),
+  (165, 'awakened-safiya', 'Safiya (Awakened)', 'Mauler', 'Support', 'intelligence', 'Buffer', 'legendary', true),
   (166, 'ivan', 'Ivan', 'Graveborn', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (167, 'naroko', 'Naroko', 'Mauler', 'Tank', 'strength', 'Regen', 'elite', false),
   (168, 'lucilla', 'Lucilla', 'Hypogean', 'Support', 'strength', 'Debuffer', 'elite', false),
   (169, 'liberta', 'Liberta', 'Celestial', 'Support', 'intelligence', 'Continuous Damage', 'elite', false),
-  (170, 'awakened-lyca', 'Awakened Lyca', 'Wilder', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
+  (170, 'awakened-lyca', 'Lyca (Awakened)', 'Wilder', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
   (171, 'jerome', 'Jerome', 'Lightbearer', 'Warrior', 'strength', 'Buff', 'elite', false),
   (172, 'robin-hood', 'Robin Hood', 'Dimensional', 'Ranger', 'agility', 'Debuffer', 'elite', false),
-  (173, 'awakened-shemira', 'Awakened Shemira', 'Graveborn', 'Tank', 'intelligence', 'Tank', 'legendary', true),
+  (173, 'awakened-shemira', 'Shemira (Awakened)', 'Graveborn', 'Tank', 'intelligence', 'Tank', 'legendary', true),
   (174, 'lady-simona', 'Lady Simona', 'Graveborn', 'Mage', 'intelligence', 'Control', 'elite', false),
   (175, 'lavatune', 'Lavatune', 'Hypogean', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (176, 'vika', 'Vika', 'Mauler', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
-  (177, 'awakened-gavus', 'Awakened Gavus', 'Celestial', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
-  (178, 'awakened-eugene', 'Awakened Eugene', 'Hypogean', 'Mage', 'intelligence', 'AoE', 'legendary', true),
+  (177, 'awakened-gavus', 'Gavus (Awakened)', 'Celestial', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (178, 'awakened-eugene', 'Eugene (Awakened)', 'Hypogean', 'Mage', 'intelligence', 'AoE', 'legendary', true),
   (179, 'atheus', 'Atheus', 'Wilder', 'Tank', 'intelligence', 'Tank', 'elite', false),
   (180, 'malkrie', 'Malkrie', 'Celestial', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
-  (181, 'awakened-lucius', 'Awakened Lucius', 'Lightbearer', 'Tank', 'strength', 'Tank', 'legendary', true),
+  (181, 'awakened-lucius', 'Lucius (Awakened)', 'Lightbearer', 'Tank', 'strength', 'Tank', 'legendary', true),
   (182, 'adrian-elyse', 'Adrian & Elyse', 'Lightbearer', 'Warrior', 'agility', 'Control', 'elite', false),
   (183, 'bronn', 'Bronn', 'Graveborn', 'Warrior', 'strength', 'Buffer', 'elite', false),
   (184, 'kalthin', 'Kalthin', 'Hypogean', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
@@ -1056,59 +1069,59 @@ insert into heroes (id, slug, name, faction, class, hero_type, role, rarity, is_
   (193, 'villanelle', 'Villanelle', 'Mauler', 'Support', 'agility', 'Debuffer', 'elite', false),
   (194, 'shuna', 'Shuna', 'Dimensional', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (195, 'rimuru', 'Rimuru', 'Dimensional', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
-  (196, 'awakened-antandra', 'Awakened Antandra', 'Mauler', 'Warrior', 'agility', 'Continuous Damage', 'legendary', true),
+  (196, 'awakened-antandra', 'Antandra (Awakened)', 'Mauler', 'Warrior', 'agility', 'Continuous Damage', 'legendary', true),
   (197, 'melion', 'Melion', 'Draconis', 'Support', 'intelligence', 'Control', 'elite', false),
   (198, 'raoul', 'Raoul', 'Lightbearer', 'Ranger', 'intelligence', 'Debuffer', 'elite', false),
   (199, 'lan', 'Lan', 'Draconis', 'Support', 'intelligence', 'Buffer', 'legendary', false),
   (200, 'misha', 'Misha', 'Wilder', 'Support', 'intelligence', 'Control', 'elite', false),
-  (201, 'awakened-eironn', 'Awakened Eironn', 'Wilder', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
+  (201, 'awakened-eironn', 'Eironn (Awakened)', 'Wilder', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
   (202, 'aurelia', 'Aurelia', 'Celestial', 'Mage', 'intelligence', 'Buffer', 'elite', false),
   (203, 'kregor', 'Kregor', 'Draconis', 'Tank', 'strength', 'Buffer', 'elite', false),
   (204, 'randle', 'Randle', 'Graveborn', 'Support', 'agility', 'Continuous Damage', 'elite', false),
-  (205, 'awakened-thoran', 'Awakened Thoran', 'Graveborn', 'Tank', 'strength', 'Tank', 'legendary', true),
+  (205, 'awakened-thoran', 'Thoran (Awakened)', 'Graveborn', 'Tank', 'strength', 'Tank', 'legendary', true),
   (206, 'knox', 'Knox', 'Hypogean', 'Support', 'intelligence', 'Debuffer', 'elite', false),
   (207, 'skylan', 'Skylan', 'Draconis', 'Ranger', 'agility', 'Continuous Damage', 'legendary', false),
   (208, 'gorren', 'Gorren', 'Mauler', 'Ranger', 'agility', 'Buffer', 'elite', false),
-  (209, 'awakened-zohra', 'Awakened Zohra', 'Celestial', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (209, 'awakened-zohra', 'Zohra (Awakened)', 'Celestial', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (210, 'shalltear-bloodfallen', 'Shalltear Bloodfallen', 'Dimensional', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
   (211, 'sion', 'Sion', 'Draconis', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
   (212, 'haelia', 'Haelia', 'Draconis', 'Warrior', 'strength', 'Burst Damage', 'legendary', false),
   (213, 'mira', 'Mira', 'Graveborn', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
-  (214, 'awakened-envydiel', 'Awakened Envydiel', 'Hypogean', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
+  (214, 'awakened-envydiel', 'Envydiel (Awakened)', 'Hypogean', 'Ranger', 'agility', 'Continuous Damage', 'legendary', true),
   (215, 'lysander', 'Lysander', 'Celestial', 'Ranger', 'agility', 'Buffer', 'elite', false),
   (216, 'velufira', 'Velufira', 'Draconis', 'Support', 'intelligence', 'Debuffer', 'elite', false),
   (217, 'marcille', 'Marcille', 'Dimensional', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
   (218, 'laios', 'Laios', 'Dimensional', 'Warrior', 'strength', 'Control', 'elite', false),
   (219, 'leviathan', 'Leviathan', 'Draconis', 'Tank', 'strength', 'Tank', 'legendary', false),
   (220, 'alvida', 'Alvida', 'Lightbearer', 'Tank', 'strength', 'Debuffer', 'elite', false),
-  (221, 'awakened-estrilda', 'Awakened Estrilda', 'Lightbearer', 'Tank', 'strength', 'Tank', 'legendary', true),
+  (221, 'awakened-estrilda', 'Estrilda (Awakened)', 'Lightbearer', 'Tank', 'strength', 'Tank', 'legendary', true),
   (222, 'umbriel', 'Umbriel', 'Draconis', 'Warrior', 'agility', 'Continuous Damage', 'elite', false),
   (223, 'serenmira', 'Serenmira', 'Hypogean', 'Mage', 'intelligence', 'Buffer', 'elite', false),
   (224, 'sung-jinwoo', 'Sung Jinwoo', 'Dimensional', 'Ranger', 'agility', 'Burst Damage', 'elite', false),
   (225, 'cha-hae-in', 'Cha Hae-in', 'Dimensional', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
   (226, 'kaelon', 'Kaelon', 'Draconis', 'Ranger', 'agility', 'Continuous Damage', 'legendary', false),
   (227, 'talimar', 'Talimar', 'Mauler', 'Support', 'intelligence', 'Buffer', 'elite', false),
-  (228, 'awakened-skriath', 'Awakened Skriath', 'Mauler', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (228, 'awakened-skriath', 'Skriath (Awakened)', 'Mauler', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (229, 'gorok', 'Gorok', 'Wilder', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
   (230, 'selene', 'Selene', 'Celestial', 'Mage', 'intelligence', 'Burst Damage', 'elite', false),
   (231, 'begris', 'Begris', 'Draconis', 'Warrior', 'strength', 'Buffer', 'elite', false),
-  (232, 'awakened-fawkes', 'Awakened Fawkes', 'Graveborn', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (232, 'awakened-fawkes', 'Fawkes (Awakened)', 'Graveborn', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (233, 'lethos', 'Lethos', 'Graveborn', 'Warrior', 'agility', 'Continuous Damage', 'elite', false),
   (234, 'elthara', 'Elthara', 'Draconis', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', false),
   (235, 'tavriel', 'Tavriel', 'Draconis', 'Support', 'intelligence', 'Buffer', 'elite', false),
   (236, 'saitama', 'Saitama', 'Dimensional', 'Warrior', 'strength', 'Continuous Damage', 'elite', false),
   (237, 'terrible-tornado', 'Terrible Tornado', 'Dimensional', 'Mage', 'intelligence', 'Buffer', 'elite', false),
-  (238, 'awakened-pippa', 'Awakened Pippa', 'Wilder', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
+  (238, 'awakened-pippa', 'Pippa (Awakened)', 'Wilder', 'Mage', 'intelligence', 'Continuous Damage', 'legendary', true),
   (239, 'icariel', 'Icariel', 'Wilder', 'Ranger', 'agility', 'Buffer', 'elite', false),
   (240, 'odysseus', 'Odysseus', 'Draconis', 'Tank', 'strength', 'Tank', 'legendary', false),
   (241, 'harvey', 'Harvey', 'Hypogean', 'Tank', 'strength', 'Tank', 'elite', false),
   (242, 'dracula', 'Dracula', 'Dimensional', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
   (243, 'serennia', 'Serennia', 'Draconis', 'Ranger', 'agility', 'Continuous Damage', 'elite', false),
-  (244, 'awakened-hybris', 'Awakened Hybris', 'Hypogean', 'Warrior', 'strength', 'Burst Damage', 'legendary', true),
+  (244, 'awakened-hybris', 'Hybris (Awakened)', 'Hypogean', 'Warrior', 'strength', 'Burst Damage', 'legendary', true),
   (245, 'misfortis', 'Misfortis', 'Celestial', 'Tank', 'intelligence', 'Tank', 'elite', false),
   (246, 'severin', 'Severin', 'Draconis', 'Ranger', 'agility', 'Continuous Damage', 'legendary', false),
   (247, 'judy-punch', 'Judy & Punch', 'Dimensional', 'Mage', 'intelligence', 'Continuous Damage', 'elite', false),
-  (248, 'awakened-eluard', 'Awakened Eluard', 'Lightbearer', 'Mage', 'intelligence', 'Burst Damage', 'legendary', true),
+  (248, 'awakened-eluard', 'Eluard (Awakened)', 'Lightbearer', 'Mage', 'intelligence', 'Burst Damage', 'legendary', true),
   (249, 'trix', 'Trix', 'Hypogean', 'Ranger', 'agility', 'Assassin', 'elite', false),
   (250, 'kyno', 'Kyno', 'Draconis', 'Tank', 'strength', 'Buffer', 'elite', false),
   (251, 'athena', 'Athena', 'Dimensional', 'Tank', 'strength', 'Tank', 'elite', false),
@@ -1178,6 +1191,10 @@ on conflict (slug) do update set
   sort_order = excluded.sort_order,
   config = excluded.config;
 
+update game_modes
+set config = config - 'formations'
+where slug = 'nightmare-corridor';
+
 insert into targets (mode_id, slug, name)
 select m.id, t.slug, t.name from game_modes m
 join (values
@@ -1195,6 +1212,7 @@ join (values
   ('nightmare-corridor','bloodvine-wraith','Bloodvine Wraith'),
   ('nightmare-corridor','burning-brute','Burning Brute'),
   ('nightmare-corridor','chimewarden','Chimewarden'),
+  ('nightmare-corridor', 'cindercrow-specter', 'Cindercrow Specter'),
   ('nightmare-corridor','clawlossus','Clawlossus'),
   ('nightmare-corridor','cruel-crow','Cruel Crow'),
   ('nightmare-corridor','cursed-caprihornus','Cursed Caprihornus'),
@@ -1233,3 +1251,19 @@ join (values
   ('treasure-scramble','fog','Fog'), ('treasure-scramble','fountain','Fountain')
 ) as t(mode_slug, slug, name) on t.mode_slug = m.slug
 on conflict (mode_id, slug) do update set name = excluded.name;
+
+insert into nightmare_corridor_cycle_bosses (cycle_anchor_id, boss_target_id, position)
+select anchor.id, boss.id, cycle.position
+from game_modes gm
+join targets anchor on anchor.mode_id = gm.id and anchor.slug = 'netherspinner'
+cross join (values
+  (1, 'soulweaver'),
+  (2, 'the-devourer'),
+  (3, 'astral-devourer'),
+  (4, 'dual-mantel'),
+  (5, 'cursed-caprihornus'),
+  (6, 'netherspinner')
+) as cycle(position, boss_slug)
+join targets boss on boss.mode_id = gm.id and boss.slug = cycle.boss_slug
+where gm.slug = 'nightmare-corridor'
+on conflict (cycle_anchor_id, position) do update set boss_target_id = excluded.boss_target_id;

@@ -25,6 +25,12 @@ function normalizeName(name: string): string {
   return name.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function cdnLookupName(name: string): string {
+  const awakenedSuffix = name.match(/^(.*?)\s+\(Awakened\)$/i);
+  const candidate = awakenedSuffix ? `Awakened ${awakenedSuffix[1]}` : name;
+  return NAME_ALIASES[normalizeName(candidate)] ?? candidate;
+}
+
 interface UnitMetadata {
   readonly id: number;
   readonly faction: string | null;
@@ -43,7 +49,7 @@ export class HeroIconService {
   }
 
   unitIdFor(heroName: string): number | null {
-    const lookupName = NAME_ALIASES[normalizeName(heroName)] ?? heroName;
+    const lookupName = cdnLookupName(heroName);
     return this.units().get(normalizeName(lookupName))?.id ?? null;
   }
 
@@ -91,7 +97,7 @@ export class HeroIconService {
   }
 
   private unitFor(heroName: string): UnitMetadata | null {
-    const lookupName = NAME_ALIASES[normalizeName(heroName)] ?? heroName;
+    const lookupName = cdnLookupName(heroName);
     return this.units().get(normalizeName(lookupName)) ?? null;
   }
 }

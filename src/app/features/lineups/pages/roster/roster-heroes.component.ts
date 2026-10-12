@@ -4,6 +4,7 @@ import { TitleCasePipe } from '@angular/common';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
+import { HeroPickerComponent } from '../../components/hero-picker/hero-picker.component';
 import { HeroAttribute } from '../../hero-classification';
 import { rosterInvestment } from '../../investment';
 import { LineupsStore } from '../../lineups.store';
@@ -15,7 +16,7 @@ type InvestmentPart = 'si' | 'furn' | 'eng';
 @Component({
   selector: 'app-roster-heroes',
   standalone: true,
-  imports: [ConfirmDialogComponent, HeroIconComponent, MatButtonModule, TitleCasePipe],
+  imports: [ConfirmDialogComponent, HeroIconComponent, HeroPickerComponent, MatButtonModule, TitleCasePipe],
   templateUrl: './roster-heroes.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,7 +24,6 @@ export class RosterHeroesComponent {
   readonly store = inject(LineupsStore);
   private readonly auth = inject(AuthService);
   private readonly heroIcons = inject(HeroIconService);
-  readonly search = signal('');
   readonly factionFilter = signal('');
   readonly classFilter = signal('');
   readonly typeFilter = signal<HeroAttribute | ''>('');
@@ -33,10 +33,10 @@ export class RosterHeroesComponent {
   readonly factions = computed(() => this.factionOptions());
   readonly classes = ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'] as const;
   readonly types = ['strength', 'agility', 'intelligence'] as const;
+  readonly ownedHeroIds = computed(() => Object.keys(this.store.roster()).map(Number));
+  readonly disabledHeroIds = computed(() => this.busy() ? this.store.heroes().map(({ id }) => id) : []);
   readonly filteredHeroes = computed(() => {
-    const query = this.search().toLocaleLowerCase();
     return this.store.heroes().filter((hero) =>
-      hero.name.toLocaleLowerCase().includes(query) &&
       (!this.factionFilter() || this.heroFaction(hero.name, hero.faction) === this.factionFilter()) &&
       (!this.classFilter() || this.heroClass(hero.name, hero.class) === this.classFilter()) &&
       (!this.typeFilter() || hero.type === this.typeFilter()),
@@ -45,11 +45,6 @@ export class RosterHeroesComponent {
   readonly busy = computed(() =>
     this.auth.configured && (!this.store.backendReady() || this.store.rosterDetailsLoading()),
   );
-
-  setSearch(event: Event): void {
-    const input = event.target;
-    if (input instanceof HTMLInputElement) this.search.set(input.value);
-  }
 
   setFaction(faction: string): void {
     this.factionFilter.set(faction);

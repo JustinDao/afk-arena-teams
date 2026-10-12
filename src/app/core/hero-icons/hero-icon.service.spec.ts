@@ -24,6 +24,7 @@ describe('HeroIconService', () => {
 
     expect(service.unitIdFor('Rowan')).toBe(52);
     expect(service.unitIdFor('Awakened Lyca')).toBe(170);
+    expect(service.unitIdFor('Lyca (Awakened)')).toBe(170);
     expect(service.unitIdFor('Lyca')).toBe(16);
     expect(service.unitIdFor('Hybris')).toBe(244);
     expect(service.unitIdFor('Awakened Envydiel')).toBe(214);
