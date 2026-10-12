@@ -19,6 +19,20 @@ update game_modes
 set config = config - 'formations'
 where slug = 'nightmare-corridor';
 
+insert into targets (mode_id, slug, name)
+select gm.id, boss.slug, boss.name
+from game_modes gm
+join (values
+  ('soulweaver', 'Soulweaver'),
+  ('the-devourer', 'The Devourer'),
+  ('astral-devourer', 'Astral Devourer'),
+  ('dual-mantel', 'Dual-Mantel'),
+  ('cursed-caprihornus', 'Cursed Caprihornus'),
+  ('netherspinner', 'Netherspinner')
+) as boss(slug, name) on true
+where gm.slug = 'nightmare-corridor'
+on conflict (mode_id, slug) do update set name = excluded.name;
+
 insert into nightmare_corridor_cycle_bosses (cycle_anchor_id, boss_target_id, position)
 select anchor.id, boss.id, cycle.position
 from game_modes gm
@@ -34,3 +48,19 @@ cross join (values
 join targets boss on boss.mode_id = gm.id and boss.slug = cycle.boss_slug
 where gm.slug = 'nightmare-corridor'
 on conflict (cycle_anchor_id, position) do update set boss_target_id = excluded.boss_target_id;
+
+do $$
+declare
+  cycle_count integer;
+begin
+  select count(*) into cycle_count
+  from nightmare_corridor_cycle_bosses cycle
+  join targets anchor on anchor.id = cycle.cycle_anchor_id
+  join game_modes gm on gm.id = anchor.mode_id
+  where gm.slug = 'nightmare-corridor' and anchor.slug = 'netherspinner';
+
+  if cycle_count <> 6 then
+    raise exception 'Nightmare Corridor Netherspinner cycle setup expected 6 bosses but found %; verify the game mode and target data.', cycle_count;
+  end if;
+end
+$$;

@@ -4,7 +4,11 @@ import { parseInvestment } from './investment';
 const heroNames = (
   'Rowan,Raine,Lyca,Lorsan,Ezizh,Liberta,Palmer,Odysseus,Orthros,Talimar,Tavriel,Gorok,Lavatune,Elthara,Dracula,Hybris,Lysander,Leviathan,Serenmira,Melion,Sion,Laios,Marcille,Velufira,Aurelia,Knox,Lan,Jerome,Misfortis,Awakened Envydiel,Kaelon,Gorren,Haelia,Alvida,Misha,Severin,Awakened Gavus,Albedo,Yennefer,Shuna,Atheus,Veithael,Rimuru,Saitama,Cha Hae-in,Sung Jinwoo,Randle,Brutus,Elijah & Lailah,Skylan,Terrible Tornado,Daemia,Begris,Lucilla,Selene,Adrian & Elyse,Judy Punch,Harvey,Thoran,Skriath,Pippa,Fawkes,Estrilda,Eluard,Safiya,Eironn,Kyno,Trix,Saurus,Mishka,Lucretia,Daimon,Silas,Belinda,Shemira,Thane,Baden,Scarlet,Mehira,Lucius,Rosaline,Arthur,Gwyneth,Ferael,Tasi,Nara,Alna,Hodgkin,Oden,Mortas,Framton,Merlin,Haelus,Desira,Treznor,Mezoth,Astarv,Joan,Rosa,Anasta,Talene'
 ).split(',');
-const normalizedHeroNames = heroNames.map((name) => name.replace(/^Awakened\s+(.+)$/, '$1 (Awakened)'));
+function displayHeroName(name: string): string {
+  return name.replace(/^Awakened\s+(.+)$/, '$1 (Awakened)');
+}
+
+const normalizedHeroNames = heroNames.map(displayHeroName);
 const awakenedNames = ['Lyca', 'Pippa', 'Fawkes', 'Estrilda', 'Thoran', 'Skriath', 'Eluard', 'Safiya', 'Eironn', 'Baden', 'Talene', 'Belinda', 'Thane']
   .map((name) => `${name} (Awakened)`);
 
@@ -51,7 +55,7 @@ export const PETS: readonly Pet[] = [
 function formation(key: string, label: string, spec: string, petName = '', timeSeconds: number | null = null): Formation {
   const heroes = spec.split(';').map((entry, pos) => {
     const [name, investment, mercenary] = entry.split('|');
-    const hero = HERO_BY_NAME.get(name.trim());
+    const hero = HERO_BY_NAME.get(displayHeroName(name.trim()));
     if (!hero) throw new Error(`Sample data references unknown hero "${name.trim()}".`);
     return { pos, hid: hero.id, inv: parseInvestment(investment), merc: mercenary === 'm', collection: null };
   });
@@ -115,7 +119,7 @@ add('treasure-scramble', 'Fire', 77, 4, { placementType: 'percent', placement: 1
   'Silas;Mortas;Haelus;Desira;Framton',
 ), 'Team 1 holds the front line, put it on the longest route.');
 add('treasure-scramble', 'Frost', 39, 7, { placementType: 'rank', placement: 37 }, treasureFormations(
-  'Kaelon;Awakened Envydiel;Gorren;Haelia;Skylan',
+  'Kaelon;Envydiel (Awakened);Gorren;Haelia;Skylan',
   'Elijah & Lailah;Brutus;Randle;Aurelia;Saitama',
 ));
 

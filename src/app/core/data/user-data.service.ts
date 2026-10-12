@@ -446,8 +446,9 @@ export class UserDataService {
         const cycle = cycleBosses
           .filter((boss) => boss.cycle_anchor_id === anchor.id)
           .sort((a, b) => a.position - b.position);
+        const cyclePositions = cycle.map(({ position }) => position);
         if (cycle.length !== 6 || cycle.some((boss, index) => boss.position !== index + 1)) {
-          throw new Error(`Nightmare Corridor cycle ${anchor.name} must contain exactly six consecutively ordered bosses.`);
+          throw new Error(`Nightmare Corridor cycle ${anchor.name} must contain exactly six consecutively ordered bosses; found ${cycle.length} rows at positions ${cyclePositions.join(', ') || 'none'}. Run nightmare-corridor-cycle-migration.sql to repair the starter cycle.`);
         }
         if (cycle.at(-1)?.boss_target_id !== anchor.id) {
           throw new Error(`Nightmare Corridor cycle ${anchor.name} must be its sixth boss.`);
