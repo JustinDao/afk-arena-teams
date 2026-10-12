@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus } from '../../models';
-import { formatInvestment, formatKillTime, heroHue, heroName, resultLine } from '../../lineup-display';
+import { formatInvestment, formatKillTime, heroName, resultLine } from '../../lineup-display';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
+import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
+import { rosterFilterColor } from '../../roster-filter-colors';
 
 @Component({
   selector: 'app-lineup-card',
@@ -14,6 +16,7 @@ import { collectionIconUrl, collectionNodeIconUrl } from '../../collection-catal
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LineupCardComponent {
+  private readonly heroIcons = inject(HeroIconService);
   readonly row = input.required<EvaluatedSubmission>();
   readonly scope = input.required<'all' | 'slot'>();
   readonly voted = input.required<boolean>();
@@ -69,8 +72,12 @@ export class LineupCardComponent {
     return collectionNodeIconUrl(stat, tier);
   }
 
+  heroFactionColor(hero: { readonly name?: string; readonly faction?: string | null }, heroId: number): string {
+    const faction = hero.faction ?? this.heroIcons.factionFor(hero.name ?? heroName(heroId));
+    return rosterFilterColor('faction', faction ?? '');
+  }
+
   readonly heroName = heroName;
-  readonly hue = heroHue;
   readonly investmentLabel = formatInvestment;
   readonly resultLabel = resultLine;
   readonly killTimeLabel = formatKillTime;

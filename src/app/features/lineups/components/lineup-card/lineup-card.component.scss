@@ -107,7 +107,7 @@ h3 {
   padding: var(--app-space-2) var(--app-space-1);
   border: 1.5px solid color-mix(in srgb, var(--app-ink) 30%, transparent);
   border-radius: var(--app-radius-sm);
-  background: hsl(var(--h) var(--app-chip-saturation) var(--app-chip-lightness));
+  background: color-mix(in srgb, var(--hero-faction-color) 38%, var(--app-panel));
   color: var(--app-chip-ink);
   font-size: 0.8rem;
   line-height: 1.2;

@@ -1,6 +1,9 @@
 export interface Hero {
   readonly id: number;
   readonly name: string;
+  readonly faction?: string | null;
+  readonly class?: string | null;
+  readonly type?: import('./hero-classification').HeroAttribute | null;
   readonly iconUrl?: string;
 }
 
@@ -26,6 +29,7 @@ export interface HeroPick {
   readonly hid: number;
   readonly name?: string;
   readonly iconUrl?: string;
+  readonly faction?: string | null;
   readonly inv: Investment | null;
   readonly merc: boolean;
   readonly collection: CollectionSnapshot | null;
@@ -207,12 +211,22 @@ export const MODES: readonly ModeConfig[] = [
     name: 'Nightmare Corridor',
     targetLabel: 'Cycle anchor (6th boss)',
     targetAll: 'All cycles',
-    targets: ['Astral Devourer', 'Dual-Mantle', 'Cursed Capricornus', 'Netherspinner', 'Molten Crystaline Worm', 'Cindercrow Specter'],
+    targets: [
+      'Abyssal Maestro', 'Abyssal Murmur', 'Abyssal Terror', 'Astral Devourer', 'Blighted Seraph',
+      'Bloodvine Wraith', 'Burning Brute', 'Chimewarden', 'Clawlossus',
+      'Cruel Crow', 'Cursed Caprihornus', 'Darkness Rising', 'Demonic Nemora',
+      'Demonic Puppet', 'Dual-Mantel', 'Dune Destroyer', 'Duskwailer', 'Fractured Fool', 'God of The Hunt',
+      'Grotesque Mage', 'Ice Shemira', 'Infernal Overlord', 'Kane', 'Mask Curator', 'Mirror Demon',
+      'Molten Crystalline Worm Queen', 'Morass Diabolus', 'Netherspinner',
+      'Nightmare Weaver', 'Ossivorous Sphore', 'Pillar of Justice', 'Raging Canon', 'Sky Serpent',
+      'Soul Hound', 'Soulchain Night', 'Soulweaver', 'Swamp Corrupter', 'The Devourer', 'The Fire Daemon',
+      'The Light Martyr', 'The Unhinged', 'Wraith Reaver',
+    ],
     rules: 'Six teams, one for each boss in the cycle. Select the cycle by its 6th boss. Only Resonating Crystal heroes and up to one mercenary across the lineup.',
     formations: [
       { key: 'astral-devourer', label: 'Astral Devourer' },
       { key: 'dual-mantle', label: 'Dual-Mantle' },
-      { key: 'cursed-capricornus', label: 'Cursed Capricornus' },
+      { key: 'cursed-capricornus', label: 'Cursed Caprihornus' },
       { key: 'netherspinner', label: 'Netherspinner' },
       { key: 'molten-crystaline-worm', label: 'Molten Crystaline Worm' },
       { key: 'cindercrow-specter', label: 'Cindercrow Specter' },

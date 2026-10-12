@@ -41,10 +41,10 @@ export const PETS: readonly Pet[] = [
   { id: 6024, name: 'Joyous Roamer', isAwakened: false },
   { id: 6025, name: 'Trickery Chest', isAwakened: false },
   { id: 6026, name: 'Thistlekin', isAwakened: false },
-  { id: 6027, name: 'Nightfall Pegasus', isAwakened: false },
-  { id: 6028, name: 'Count Snickerfang', isAwakened: false },
-  { id: 6029, name: 'Twinlum Spirit', isAwakened: false },
-  { id: 6030, name: 'Blazefang', isAwakened: false },
+  { id: 6027, name: 'Nightfall Pegasus', isAwakened: true },
+  { id: 6028, name: 'Count Snickerfang', isAwakened: true },
+  { id: 6029, name: 'Twinlum Spirit', isAwakened: true },
+  { id: 6030, name: 'Blazefang', isAwakened: true },
 ];
 
 function formation(key: string, label: string, spec: string, petName = '', timeSeconds: number | null = null): Formation {
@@ -78,10 +78,10 @@ add('twisted-realm', 'Kane', 31, 14, { damage: 1.1e9 }, [
   formation('team', 'Team', 'Saurus|309e60;Mishka|309e30;Scarlet|209e30;Oden|309e30;Mortas|209', 'Flutterplume Owl'),
 ], '', 450);
 
-add('nightmare-corridor', 'Cindercrow Specter', 58, 2, {}, [
+add('nightmare-corridor', 'Netherspinner', 58, 2, {}, [
   formation('astral-devourer', 'Astral Devourer', 'Hybris|309e30;Dracula|309e60;Awakened Estrilda|309e60;Lyca|309e30;Rowan|309e60', 'Dreary Ball', 142),
   formation('dual-mantle', 'Dual-Mantle', 'Odysseus|309e60;Orthros|309e30;Liberta|309e30;Palmer|209e30;Talimar|309e60|m', 'Pandy Dumpty', 171),
-  formation('cursed-capricornus', 'Cursed Capricornus', 'Elthara|309e60;Alvida|309e30;Rowan|309e60;Misha|209e30;Severin|309e30', 'Tufty Ears', 205),
+  formation('cursed-capricornus', 'Cursed Caprihornus', 'Elthara|309e60;Alvida|309e30;Rowan|309e60;Misha|209e30;Severin|309e30', 'Tufty Ears', 205),
   formation('netherspinner', 'Netherspinner', 'Tavriel|309e60;Gorok|309e60;Lavatune|309e30;Talimar|309e60;Lan|209e30', 'Grassy Orb', 189),
   formation('molten-crystaline-worm', 'Molten Crystaline Worm', 'Saurus|309e60;Mishka|309e30;Scarlet|209e30;Oden|309e30;Mortas|209', 'Polar Beast', 196),
   formation('cindercrow-specter', 'Cindercrow Specter', 'Rowan|309e60;Lyca|309e30;Lorsan|309e30;Ezizh|309e60;Raine|309e30', 'Fire Breather', 178),

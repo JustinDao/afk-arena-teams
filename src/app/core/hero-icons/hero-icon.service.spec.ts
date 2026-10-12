@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HeroIconService } from './hero-icon.service';
-import { HEROES, SAMPLE_SUBMISSIONS } from '../../features/lineup-ledger/lineup-data';
+import { HEROES, SAMPLE_SUBMISSIONS } from '../../features/lineups/lineup-data';
 
 describe('HeroIconService', () => {
   it('matches normal, awakened, and aliased heroes to the CDN unit ids', async () => {

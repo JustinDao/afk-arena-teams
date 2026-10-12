@@ -1,0 +1,135 @@
+<section aria-label="Collections">
+  <p class="rules">Choose a collection, then optionally record its three Attack, three Defense, and two Flex nodes.</p>
+  @if (!auth.user()) {
+    <p class="muted">Sign in to manage collections saved to your account.</p>
+  } @else {
+    <form [formGroup]="collectionForm" (ngSubmit)="saveCollection()">
+      <div class="icon-filter-row collection-class-filters" role="group" aria-label="Filter collections by class">
+        <span class="icon-filter-label">Class</span>
+        <button mat-button type="button" class="icon-filter-button" [class.active]="!collectionClassFilter()" [attr.aria-pressed]="!collectionClassFilter()" aria-label="All classes" title="All classes" (click)="setCollectionClass('')">
+          <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
+        </button>
+        @for (collectionClass of collectionClasses(); track collectionClass) {
+          <button mat-button type="button" class="icon-filter-button" [class.active]="collectionClassFilter() === collectionClass" [attr.aria-pressed]="collectionClassFilter() === collectionClass" [attr.aria-label]="collectionClass" [attr.title]="collectionClass" (click)="setCollectionClass(collectionClass)">
+            <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="collectionClassColor(collectionClass)">{{ collectionClassToken(collectionClass) }}</span><span class="filter-caption">{{ collectionClass }}</span></span>
+          </button>
+        }
+      </div>
+      <div class="collection-picker" aria-label="Choose a collection">
+        @for (collection of filteredCollectionCatalog(); track collection.id) {
+          <button
+            mat-button
+            type="button"
+            class="collection-choice"
+            [class.selected]="collectionForm.controls.catalogId.value === collection.id"
+            [attr.aria-pressed]="collectionForm.controls.catalogId.value === collection.id"
+            [attr.aria-label]="collection.name + ', ' + collection.class"
+            (click)="selectCollection(collection.id)"
+          >
+            <img class="collection-icon" [src]="collectionIcon(collection.id, [])" alt="">
+            <span class="collection-choice-copy">
+              <span class="collection-choice-name">{{ collection.name }}</span>
+              <small>{{ collection.class }}</small>
+            </span>
+            @if (collectionForm.controls.catalogId.value === collection.id) {
+              <span class="collection-choice-selected">Creating</span>
+            }
+          </button>
+        }
+      </div>
+      <div class="collection-node-groups">
+        @for (group of collectionNodeSlots; track group.category) {
+          <fieldset>
+            <legend>{{ group.category }} nodes</legend>
+            @for (slotIndex of group.indices; track slotIndex) {
+              <div class="collection-node-form" [class.has-tier]="!!collectionNodeAt(slotIndex)">
+                @if (collectionNodeAt(slotIndex); as node) {
+                  <img class="collection-node-icon" [src]="collectionNodeIcon(node.stat, node.tier)" [alt]="node.stat + ' stat icon'">
+                } @else {
+                  <span class="collection-node-icon-placeholder" aria-hidden="true">{{ slotIndex + 1 }}</span>
+                }
+                <label class="field">
+                  <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} stat</span>
+                  <select
+                    [value]="collectionNodeAt(slotIndex)?.stat ?? ''"
+                    (change)="updateCollectionNodeStat(slotIndex, inputValue($event))"
+                  >
+                    <option value="">No node</option>
+                    @for (stat of collectionNodeStatsForSlot(slotIndex); track stat) {
+                      <option [value]="stat">{{ collectionNodeStatLabel(stat) }}</option>
+                    }
+                  </select>
+                </label>
+                @if (collectionNodeAt(slotIndex); as node) {
+                  @if (node.stat === 'skill_level') {
+                    <span class="collection-node-tier-fixed">Mythic</span>
+                  } @else {
+                    <label class="field">
+                      <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} tier</span>
+                      <select
+                        [value]="node.tier"
+                        (change)="updateCollectionNodeTier(slotIndex, inputValue($event))"
+                      >
+                        <option value="elite">Elite</option>
+                        <option value="legendary">Legendary</option>
+                        <option value="mythic">Mythic</option>
+                      </select>
+                    </label>
+                  }
+                }
+              </div>
+            }
+          </fieldset>
+        }
+      </div>
+      @if (collectionError()) { <p class="auth-error" role="alert">{{ collectionError() }}</p> }
+      @if (editingCollectionId()) {
+        <button mat-button type="button" class="btn" (click)="cancelCollectionEdit()">Cancel edit</button>
+      }
+      <button mat-flat-button class="btn primary submit-button" [disabled]="collectionForm.invalid || collectionCatalog().length === 0">
+        {{ editingCollectionId() ? 'Update collection' : 'Save collection' }}
+      </button>
+    </form>
+    <h3>Saved inventory</h3>
+    @if (store.collectionsLoading()) {
+      <p class="muted" role="status">Loading saved collections…</p>
+    }
+    @for (collection of savedCollections(); track collection.id) {
+      <article class="collection-item">
+        @if (collection.catalogId !== undefined) {
+          <img
+            class="collection-icon"
+            [src]="collectionIcon(collection.catalogId, collection.nodes)"
+            [alt]="collection.name + ' icon'"
+          >
+        }
+        <div class="collection-item-main">
+          <strong>{{ collection.name }}</strong>
+          @if (collection.class) { <span class="collection-class">{{ collection.class }}</span> }
+          <p class="rules">{{ collection.nodes.length ? collectionSummary(collection.nodes) : 'No stat nodes added yet.' }}</p>
+          <div class="collection-node-icons" aria-label="Collection stat nodes">
+            @for (node of collection.nodes; track node.slotIndex) {
+              <img
+                class="collection-node-icon"
+                [src]="collectionNodeIcon(node.stat, node.tier)"
+                [alt]="collectionSlotLabel(node.slotIndex) + ' ' + collectionNodeLabel(node)"
+                [title]="collectionSlotLabel(node.slotIndex) + ' ' + collectionNodeLabel(node)"
+              >
+            }
+          </div>
+          @if (collection.catalogId === undefined) {
+            <p class="rules">Legacy custom collection. Its saved build is preserved, but it is not editable in the catalog editor.</p>
+          }
+        </div>
+        <div class="collection-actions">
+          @if (collection.catalogId !== undefined) {
+            <button mat-button type="button" class="btn" (click)="editCollection(collection)">Edit</button>
+          }
+          <button mat-button type="button" class="btn" (click)="deleteCollection(collection)">Delete</button>
+        </div>
+      </article>
+    } @empty {
+      <p class="muted">No collections saved yet.</p>
+    }
+  }
+</section>

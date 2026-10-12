@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "lineup-ledger": {
+    "lineups": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -29,7 +29,7 @@
             "polyfills": [
               "zone.js"
             ],
-            "outputPath": "dist/lineup-ledger"
+            "outputPath": "dist/lineups"
           },
           "configurations": {
             "production": {
@@ -60,10 +60,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "lineup-ledger:build:production"
+              "buildTarget": "lineups:build:production"
             },
             "development": {
-              "buildTarget": "lineup-ledger:build:development"
+              "buildTarget": "lineups:build:development"
             }
           },
           "defaultConfiguration": "development"

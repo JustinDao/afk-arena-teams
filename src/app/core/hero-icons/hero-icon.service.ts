@@ -7,6 +7,8 @@ interface CdnUnit {
   readonly id?: unknown;
   readonly names?: { readonly en?: unknown };
   readonly isAwakened?: unknown;
+  readonly faction?: unknown;
+  readonly class?: unknown;
 }
 
 const NAME_ALIASES: Readonly<Record<string, string>> = {
@@ -23,9 +25,15 @@ function normalizeName(name: string): string {
   return name.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+interface UnitMetadata {
+  readonly id: number;
+  readonly faction: string | null;
+  readonly heroClass: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HeroIconService {
-  private readonly unitIds = signal<ReadonlyMap<string, number>>(new Map());
+  private readonly units = signal<ReadonlyMap<string, UnitMetadata>>(new Map());
   private loadPromise: Promise<void> | null = null;
 
   async initialize(): Promise<void> {
@@ -36,7 +44,15 @@ export class HeroIconService {
 
   unitIdFor(heroName: string): number | null {
     const lookupName = NAME_ALIASES[normalizeName(heroName)] ?? heroName;
-    return this.unitIds().get(normalizeName(lookupName)) ?? null;
+    return this.units().get(normalizeName(lookupName))?.id ?? null;
+  }
+
+  factionFor(heroName: string): string | null {
+    return this.unitFor(heroName)?.faction ?? null;
+  }
+
+  classFor(heroName: string): string | null {
+    return this.unitFor(heroName)?.heroClass ?? null;
   }
 
   iconUrl(unitId: number): string {
@@ -52,7 +68,7 @@ export class HeroIconService {
         throw new Error('The CDN unit index has an unexpected format.');
       }
 
-      const index = new Map<string, number>();
+      const index = new Map<string, UnitMetadata>();
       for (const value of Object.values(payload)) {
         if (!value || typeof value !== 'object') continue;
         const unit = value as CdnUnit;
@@ -60,13 +76,22 @@ export class HeroIconService {
         const id = Number(unit.id);
         if (typeof name !== 'string' || !Number.isInteger(id) || id <= 0) continue;
         const key = normalizeName(unit.isAwakened === true ? `Awakened ${name}` : name);
-        index.set(key, id);
+        index.set(key, {
+          id,
+          faction: typeof unit.faction === 'string' ? unit.faction : null,
+          heroClass: typeof unit.class === 'string' ? unit.class : null,
+        });
       }
       if (index.size === 0) throw new Error('The CDN unit index contains no usable hero entries.');
-      this.unitIds.set(index);
+      this.units.set(index);
     } catch (error) {
       this.loadPromise = null;
       console.warn('AFK Arena hero icons are unavailable; displaying initials instead.', error);
     }
+  }
+
+  private unitFor(heroName: string): UnitMetadata | null {
+    const lookupName = NAME_ALIASES[normalizeName(heroName)] ?? heroName;
+    return this.units().get(normalizeName(lookupName)) ?? null;
   }
 }

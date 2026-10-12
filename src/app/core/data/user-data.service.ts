@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
-import { CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, Formation, GameReferenceData, ModeConfig, Pet, PetRosterEntry, RosterEntry, Submission } from '../../features/lineup-ledger/models';
-import { formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineup-ledger/investment';
-import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineup-ledger/collection-catalog';
+import { CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, Formation, GameReferenceData, ModeConfig, Pet, PetRosterEntry, RosterEntry, Submission } from '../../features/lineups/models';
+import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
+import { isAwakenedPet } from '../../features/lineups/pet-classification';
+import { formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
+import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
 import { supabase, supabaseConfigured } from '../supabase/supabase-client';
 
 interface ModeRow {
@@ -44,7 +46,7 @@ interface DatabaseSubmissionRow {
       si: number | null;
       furniture: number | null;
       engraving: number | null;
-      heroes: { name: string; icon_url: string } | null;
+      heroes: { name: string; icon_url: string; faction: string | null } | null;
     }[];
     formation_collections: {
       hero_id: number;
@@ -60,6 +62,9 @@ interface HeroRow {
   id: number;
   name: string;
   icon_url: string;
+  faction: string | null;
+  class: string | null;
+  hero_type: string;
 }
 
 interface PetRow {
@@ -143,7 +148,7 @@ export class UserDataService {
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
     const { data, error } = await supabase.from('submissions')
-      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,heroes(name,icon_url)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
+      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,heroes(name,icon_url,faction)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw new Error(`Could not load lineups: ${error.message}`);
@@ -178,6 +183,7 @@ export class UserDataService {
                   hid: hero.hero_id,
                   name: hero.heroes?.name,
                   iconUrl: hero.heroes?.icon_url,
+                  faction: hero.heroes?.faction,
                   inv: { si: hero.si, furn: hero.furniture, eng: hero.engraving },
                   merc: hero.is_merc,
                   collection: collection ? {
@@ -212,7 +218,7 @@ export class UserDataService {
     const [modeResponse, targetResponse, heroResponse, petResponse] = await Promise.all([
       supabase.from('game_modes').select('id,slug,name,target_kind,sort_order,config').eq('enabled', true).order('sort_order'),
       supabase.from('targets').select('mode_id,slug,name').order('name'),
-      supabase.from('heroes').select('id,name,icon_url').order('name'),
+      supabase.from('heroes').select('id,name,icon_url,faction,class,hero_type').order('name'),
       supabase.from('pets').select('id,name,is_awakened,icon_url').order('name'),
     ]);
     if (modeResponse.error) throw new Error(`Could not load game modes: ${modeResponse.error.message}`);
@@ -232,12 +238,15 @@ export class UserDataService {
     const heroes = ((heroResponse.data ?? []) as HeroRow[]).map((hero) => ({
       id: hero.id,
       name: hero.name,
+      faction: hero.faction,
+      class: hero.class,
+      type: heroAttributeFromValue(hero.hero_type),
       iconUrl: hero.icon_url,
     }));
     const pets = ((petResponse.data ?? []) as PetRow[]).map((pet): Pet => ({
       id: pet.id,
       name: pet.name,
-      isAwakened: pet.is_awakened,
+      isAwakened: isAwakenedPet(pet.name, pet.is_awakened),
       iconUrl: pet.icon_url,
     }));
     return { modes, heroes, pets };

@@ -72,13 +72,13 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
 }
 
 @Injectable({ providedIn: 'root' })
-export class LineupLedgerStore {
+export class LineupsStore {
   private readonly modeSignal = signal('nightmare-corridor');
   private readonly targetSignal = signal<string | null>(null);
-  private readonly useRosterSignal = signal(true);
+  private readonly useRosterSignal = signal(false);
   private readonly matchSignal = signal<'strict' | 'partial'>('strict');
   private readonly scopeSignal = signal<'all' | 'slot'>('all');
-  private readonly checkInvestmentSignal = signal(true);
+  private readonly checkInvestmentSignal = signal(false);
   private readonly sortSignal = signal<'votes' | 'fewest' | 'new'>('votes');
   private readonly rosterSignal = signal<Record<string, RosterEntry>>({});
   private readonly petRosterSignal = signal<Record<string, PetRosterEntry>>({});

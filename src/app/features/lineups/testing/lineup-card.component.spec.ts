@@ -14,7 +14,9 @@ describe('LineupCardComponent', () => {
       ...sample,
       forms: sample.forms.map((formation) => ({
         ...formation,
-        heroes: formation.heroes.map((hero, index) => index === 0 ? { ...hero, merc: true } : hero),
+        heroes: formation.heroes.map((hero, index) => index === 0
+          ? { ...hero, merc: true, faction: 'Lightbearer' }
+          : hero),
       })),
     };
     const row: EvaluatedSubmission = {
@@ -43,6 +45,7 @@ describe('LineupCardComponent', () => {
 
     expect(await card.title()).toBe(submission.target);
     expect(fixture.nativeElement.querySelector('.tag')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.hero')?.style.getPropertyValue('--hero-faction-color')).toBe('#83cfff');
     await card.clickVote();
     expect(votedId).toBe(submission.id);
   });

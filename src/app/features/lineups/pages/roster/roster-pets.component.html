@@ -1,0 +1,61 @@
+@if (store.rosterDetailsLoading()) {
+  <p class="rules" role="status">Loading pet roster and hero level…</p>
+}
+<section aria-label="Pets">
+  <p class="rules">Select each pet you own, then record its current level (1–18).</p>
+  <div class="row-wrap">
+    <button mat-button class="btn" [disabled]="busy()" (click)="store.selectAllPets()">Select all pets</button>
+    <button mat-button class="btn" [disabled]="busy()" (click)="confirmClear()">Clear all pets</button>
+  </div>
+  <label class="visually-hidden" for="roster-search">Search pets</label>
+  <input id="roster-search" class="search" placeholder="Search pets" aria-label="Search pets" (input)="setSearch($event)">
+  <div class="pick roster-pick pet-roster-pick">
+    @for (pet of filteredPets(); track pet.id) {
+      <button
+        mat-button
+        class="hero-pick"
+        [class.pet-pick--basic]="petKind(pet) === 'basic'"
+        [class.pet-pick--regular]="petKind(pet) === 'regular'"
+        [class.pet-pick--awakened]="petKind(pet) === 'awakened'"
+        [attr.title]="petKind(pet) + ' pet'"
+        [class.owned]="!!store.petRoster()[pet.id]"
+        [disabled]="busy()"
+        [attr.aria-pressed]="!!store.petRoster()[pet.id]"
+        (click)="store.togglePet(pet.id)"
+      ><app-hero-icon [name]="pet.name" [imageUrl]="pet.iconUrl ?? null" />{{ pet.name }}</button>
+    } @empty {
+      <p class="muted">No pet matches that search.</p>
+    }
+  </div>
+  <h3>Pet levels</h3>
+  <div class="quick-set pet-quick-set" role="group" aria-label="Quick set all pet levels">
+    <span>Set all levels:</span>
+    @for (level of [12, 15, 18]; track level) {
+      <button mat-button type="button" class="btn" [disabled]="busy() || !store.petRosterCount()" (click)="quickSetLevel(level)">{{ level }}</button>
+    }
+  </div>
+  @for (pet of store.pets(); track pet.id) {
+    @if (store.petRoster()[pet.id]; as ownedPet) {
+      <label class="investment-row">
+        <span class="extra-hero"><app-hero-icon [name]="pet.name" [imageUrl]="pet.iconUrl ?? null" />{{ pet.name }}</span>
+        <input
+          type="number"
+          min="1"
+          max="18"
+          step="1"
+          [value]="ownedPet.level"
+          [attr.aria-label]="'Level for ' + pet.name"
+          (change)="updateLevel(pet.id, $event)"
+        >
+      </label>
+    }
+  }
+</section>
+@if (confirmation(); as pending) {
+  <app-confirm-dialog
+    [title]="pending.title"
+    [message]="pending.message"
+    (confirmed)="confirm()"
+    (cancelled)="confirmation.set(null)"
+  />
+}

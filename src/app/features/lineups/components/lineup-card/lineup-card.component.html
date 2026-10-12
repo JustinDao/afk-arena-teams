@@ -33,7 +33,7 @@
                 [class.ok]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'ok'"
                 [class.under]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under'"
                 [class.missing]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing'"
-                [style.--h]="hue(hero.name ?? heroName(hero.hid))"
+                [style.--hero-faction-color]="heroFactionColor(hero, hero.hid)"
                 [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : null"
               >
                 <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="medium" />

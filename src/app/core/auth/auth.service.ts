@@ -6,7 +6,7 @@ export const DUPLICATE_SIGNUP_MESSAGE = 'An account with this email already exis
 
 export function isDuplicateSignup(
   error: Pick<AuthError, 'code' | 'message'> | null,
-  userOrIdentities: Partial<User> | readonly unknown[] | null | undefined,
+  userOrIdentities: Partial<Omit<User, 'identities'>> & { identities?: readonly unknown[] | null } | readonly unknown[] | null | undefined,
 ): boolean {
   if (error) {
     return (

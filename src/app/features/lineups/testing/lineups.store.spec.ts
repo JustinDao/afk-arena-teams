@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LineupLedgerStore } from '../lineup-ledger.store';
+import { LineupsStore } from '../lineups.store';
 import { SAMPLE_SUBMISSIONS } from '../lineup-data';
 import { resultLine } from '../lineup-display';
 import { UserDataService } from '../../../core/data/user-data.service';
@@ -8,21 +8,21 @@ import { HEROES, PETS } from '../lineup-data';
 import { MODES } from '../models';
 import { User } from '@supabase/supabase-js';
 
-describe('LineupLedgerStore', () => {
-  let store: LineupLedgerStore;
+describe('LineupsStore', () => {
+  let store: LineupsStore;
 
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [{ provide: UserDataService, useValue: { configured: false } }],
     });
-    store = TestBed.inject(LineupLedgerStore);
+    store = TestBed.inject(LineupsStore);
   });
 
   it('lists submissions by active mode and selected target', () => {
     expect(store.visibleSubmissions().length).toBe(1);
-    store.setTarget('Cindercrow Specter');
-    expect(store.visibleSubmissions().map(({ submission }) => submission.target)).toEqual(['Cindercrow Specter']);
+    store.setTarget('Netherspinner');
+    expect(store.visibleSubmissions().map(({ submission }) => submission.target)).toEqual(['Netherspinner']);
   });
 
   it('shows partial matches when roster matching is enabled', () => {
@@ -69,7 +69,7 @@ describe('LineupLedgerStore', () => {
   });
 
   it('prefills selected lineup pets with the owned pet level and requires pet ownership to match', () => {
-    store.setTarget('Cindercrow Specter');
+    store.setTarget('Netherspinner');
     store.selectAllHeroes();
     store.setMatch('partial');
     const lineup = store.visibleSubmissions()[0];
@@ -119,14 +119,13 @@ describe('LineupLedgerStore', () => {
 
   it('groups six named Nightmare Corridor bosses under the sixth-boss cycle anchor', () => {
     const example = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'nightmare-corridor');
-    expect(example?.target).toBe('Cindercrow Specter');
+    expect(example?.target).toBe('Netherspinner');
     expect(example?.forms.map(({ label }) => label)).toEqual([
       'Astral Devourer',
       'Dual-Mantle',
-      'Cursed Capricornus',
+      'Cursed Caprihornus',
       'Netherspinner',
       'Molten Crystaline Worm',
-      'Cindercrow Specter',
     ]);
     expect(example?.forms.every(({ timeSeconds }) => timeSeconds !== null && timeSeconds > 0)).toBeTrue();
     expect(example?.forms.flatMap(({ heroes }) => heroes).filter(({ merc }) => merc).length).toBeLessThanOrEqual(1);
@@ -144,13 +143,13 @@ describe('LineupLedgerStore', () => {
   it('enforces mercenary caps across the full lineup and validates TS placement', async () => {
     store.openDraft();
     store.changeDraftMode('nightmare-corridor');
-    store.updateDraftTarget('Cindercrow Specter');
+    store.updateDraftTarget('Netherspinner');
     fillDraft(store);
     store.updateDraftFormationField('mercenary', true, 0);
     store.selectFormation(1);
     store.updateDraftFormationField('mercenary', true, 0);
     await store.submitDraft({
-      target: 'Cindercrow Specter',
+      target: 'Netherspinner',
       notes: '',
       damage: '',
       placementType: 'rank',
@@ -173,8 +172,8 @@ describe('LineupLedgerStore', () => {
   });
 });
 
-describe('LineupLedgerStore account data loading', () => {
-  let store: LineupLedgerStore;
+describe('LineupsStore account data loading', () => {
+  let store: LineupsStore;
   let data: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
@@ -196,7 +195,7 @@ describe('LineupLedgerStore account data loading', () => {
         { provide: AuthService, useValue: {} },
       ],
     });
-    store = TestBed.inject(LineupLedgerStore);
+    store = TestBed.inject(LineupsStore);
   });
 
   it('loads only owned heroes and votes on the main page, then fetches extra data on demand once', async () => {
@@ -220,7 +219,7 @@ describe('LineupLedgerStore account data loading', () => {
   });
 });
 
-function fillDraft(store: LineupLedgerStore): void {
+function fillDraft(store: LineupsStore): void {
   let heroIndex = 0;
   const teamCount = store.draft()?.forms.length ?? 0;
   for (let formIndex = 0; formIndex < teamCount; formIndex++) {

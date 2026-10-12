@@ -1,4 +1,4 @@
-:host {
+app-root {
   display: block;
   min-height: 100vh;
   padding-top: env(safe-area-inset-top, 0px);
@@ -119,35 +119,13 @@ main {
   padding: var(--app-space-4);
 }
 
-.head h2 {
-  margin: var(--app-space-1) 0;
-  font-size: 1.5rem;
-}
-
-.head p {
-  max-width: 70ch;
-  margin: 0 0 var(--app-space-1);
-  color: var(--app-muted);
-}
-
-.toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-3);
-  margin: var(--app-space-4) 0;
-}
-
-.chip {
-  padding: var(--app-space-1) var(--app-space-3);
-  border: 1px solid var(--app-line);
-  border-radius: 999px;
-  background: var(--app-panel);
-  font-size: 0.85rem;
-}
-
 .chip[aria-pressed='true'],
 .seg button[aria-pressed='true'] {
   background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.chip.mat-mdc-button[aria-pressed='true'] {
   color: var(--app-on-primary);
 }
 
@@ -225,45 +203,6 @@ footer {
   background: color-mix(in srgb, var(--app-ink) 72%, transparent);
 }
 
-.roster-page-overlay {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  overflow: auto;
-  padding: max(var(--app-space-3), env(safe-area-inset-top, 0px)) var(--app-space-3) max(var(--app-space-3), env(safe-area-inset-bottom, 0px));
-  background: var(--app-bg);
-}
-
-.roster-page {
-  max-width: 1040px;
-  margin-inline: auto;
-  padding: 0;
-}
-
-.roster-page .panel {
-  width: 100%;
-  border: 0;
-  border-radius: 0;
-}
-
-.roster-tabs {
-  display: flex;
-  gap: var(--app-space-1);
-  margin-block: var(--app-space-3);
-  border-bottom: 1px solid var(--app-line);
-}
-
-.roster-tabs button {
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  color: var(--app-muted);
-}
-
-.roster-tabs button[aria-selected='true'] {
-  border-bottom-color: var(--app-primary);
-  color: var(--app-ink);
-}
-
 .panel {
   width: min(720px, 100%);
   padding: var(--app-space-4);
@@ -312,8 +251,11 @@ footer {
 }
 
 .account-actions { display: grid; gap: var(--app-space-3); }
+
 .account-actions form { display: contents; }
+
 .account-actions .field { margin: 0; }
+
 .account-actions button:disabled { cursor: not-allowed; opacity: 0.55; }
 
 .field-hint {
@@ -426,8 +368,11 @@ footer {
   gap: var(--app-space-2);
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-sm);
-  background: hsl(var(--h, 200) var(--app-chip-saturation) var(--app-chip-lightness));
   color: var(--app-chip-ink);
+}
+
+.hero-roster-pick .hero-pick {
+  background: color-mix(in srgb, var(--hero-faction-color, #a8b4ca) 38%, var(--app-panel));
 }
 
 .hero-pick.owned {
@@ -447,47 +392,6 @@ footer {
   gap: var(--app-space-2);
   padding-block: var(--app-space-1);
   font-size: 0.85rem;
-}
-
-.investment-columns,
-.investment-long-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) repeat(3, minmax(48px, 72px));
-  align-items: center;
-  gap: var(--app-space-2);
-}
-
-.investment-columns {
-  margin-top: var(--app-space-2);
-  color: var(--app-muted);
-  font-size: 0.75rem;
-  text-align: center;
-}
-
-.investment-long-row {
-  padding-block: var(--app-space-1);
-}
-
-.investment-long-row input { min-width: 0; width: 100%; }
-
-.hero-investment-entry {
-  padding-block: var(--app-space-2);
-  border-bottom: 1px solid var(--app-line);
-}
-
-.quick-set {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--app-space-1);
-  margin-top: var(--app-space-1);
-  color: var(--app-muted);
-  font-size: 0.8rem;
-}
-
-.quick-set .btn {
-  min-height: 32px;
-  padding-inline: var(--app-space-2);
 }
 
 .confirmation-panel {
@@ -524,122 +428,6 @@ footer {
 .submit-button {
   margin-top: var(--app-space-2);
   padding: var(--app-space-2);
-}
-
-.collection-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: var(--app-space-2);
-  margin-block: var(--app-space-3);
-}
-
-.collection-choice {
-  display: flex;
-  min-width: 0;
-  min-height: 116px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--app-space-1);
-  padding: var(--app-space-2);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-sm);
-  color: var(--app-ink);
-  text-align: center;
-  white-space: normal;
-}
-
-.collection-choice.selected {
-  border-color: var(--app-primary);
-  background: var(--app-panel-variant);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-primary) 35%, transparent);
-}
-
-.collection-choice .collection-icon {
-  width: 64px;
-  height: 64px;
-}
-
-.collection-choice small {
-  color: var(--app-muted);
-}
-
-.collection-node-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--app-space-3);
-  margin-block: var(--app-space-3);
-}
-
-.collection-node-groups fieldset {
-  min-width: 0;
-  padding: var(--app-space-2);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-sm);
-}
-
-.collection-node-groups legend {
-  padding-inline: var(--app-space-1);
-  font-weight: 600;
-}
-
-.collection-node-form {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) minmax(100px, 0.65fr);
-  align-items: center;
-  gap: var(--app-space-2);
-  margin-block: var(--app-space-2);
-}
-
-.collection-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-3);
-  padding-block: var(--app-space-2);
-  border-bottom: 1px solid var(--app-line);
-}
-
-.collection-item > div:last-child {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--app-space-2);
-}
-
-.collection-icon {
-  width: 56px;
-  height: 56px;
-  flex: 0 0 auto;
-  object-fit: contain;
-}
-
-.collection-node-icon {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.collection-node-icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--app-space-1);
-}
-
-.collection-node-icon-placeholder {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: var(--app-radius-sm);
-  background: var(--app-panel-variant);
-  color: var(--app-muted);
-}
-
-.collection-node-tier-fixed {
-  color: var(--app-muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-align: center;
 }
 
 .visually-hidden {
@@ -687,4 +475,17 @@ footer {
   *::after {
     scroll-behavior: auto !important;
   }
+}
+
+.collection-icon {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.collection-node-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }

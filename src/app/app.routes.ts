@@ -18,16 +18,36 @@ export const MODE_SLUGS_BY_PATH: Readonly<Record<string, string>> = {
   'nightmare-corridor': 'nightmare-corridor',
 };
 
+const lineupsPage = () => import('./features/lineups/pages/lineups-page.component').then((m) => m.LineupsPageComponent);
+
 export const APP_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'nightmare-corridor' },
   { path: 'tr', pathMatch: 'full', redirectTo: 'twisted-realm' },
   { path: 'ts', pathMatch: 'full', redirectTo: 'treasure-scramble' },
   { path: 'cr', pathMatch: 'full', redirectTo: 'cursed-realm' },
   { path: 'nc', pathMatch: 'full', redirectTo: 'nightmare-corridor' },
-  { path: 'twisted-realm', children: [] },
-  { path: 'treasure-scramble', children: [] },
-  { path: 'cursed-realm', children: [] },
-  { path: 'nightmare-corridor', children: [] },
-  { path: 'roster', children: [] },
+  { path: 'twisted-realm', loadComponent: lineupsPage, data: { mode: 'twisted-realm' } },
+  { path: 'treasure-scramble', loadComponent: lineupsPage, data: { mode: 'treasure-scramble' } },
+  { path: 'cursed-realm', loadComponent: lineupsPage, data: { mode: 'cursed-realm' } },
+  { path: 'nightmare-corridor', loadComponent: lineupsPage, data: { mode: 'nightmare-corridor' } },
+  {
+    path: 'roster',
+    loadComponent: () => import('./features/lineups/pages/roster/roster-page.component').then((m) => m.RosterPageComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'heroes' },
+      {
+        path: 'heroes',
+        loadComponent: () => import('./features/lineups/pages/roster/roster-heroes.component').then((m) => m.RosterHeroesComponent),
+      },
+      {
+        path: 'pets',
+        loadComponent: () => import('./features/lineups/pages/roster/roster-pets.component').then((m) => m.RosterPetsComponent),
+      },
+      {
+        path: 'collections',
+        loadComponent: () => import('./features/lineups/pages/roster/roster-collections.component').then((m) => m.RosterCollectionsComponent),
+      },
+    ],
+  },
   { path: '**', redirectTo: 'nightmare-corridor' },
 ];

@@ -1,0 +1,16 @@
+<main class="roster-page">
+  <section class="panel" aria-labelledby="roster-title">
+    <div class="panel-header">
+      <h2 id="roster-title">My roster</h2>
+      <button mat-button class="btn" (click)="backToLineups()">Back to lineups</button>
+    </div>
+    <p class="rules">Your heroes, pets, and collections are saved in their own tabs. @if (auth.user()) { Your roster is saved to your account. } @else { Sign in to sync it across devices. }</p>
+    <nav class="roster-tabs" aria-label="Roster categories">
+      <a mat-button routerLink="heroes" routerLinkActive #heroes="routerLinkActive" [attr.aria-current]="heroes.isActive ? 'page' : null">Heroes</a>
+      <a mat-button routerLink="pets" routerLinkActive #pets="routerLinkActive" [attr.aria-current]="pets.isActive ? 'page' : null">Pets</a>
+      <a mat-button routerLink="collections" routerLinkActive #collections="routerLinkActive" [attr.aria-current]="collections.isActive ? 'page' : null">Collections</a>
+    </nav>
+    <router-outlet />
+    @if (store.backendError()) { <p class="auth-error" role="alert">{{ store.backendError() }}</p> }
+  </section>
+</main>

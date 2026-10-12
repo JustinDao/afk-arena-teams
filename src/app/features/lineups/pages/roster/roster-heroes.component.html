@@ -1,0 +1,129 @@
+@if (store.rosterDetailsLoading()) {
+  <p class="rules" role="status">Loading pet roster and hero level…</p>
+}
+<section aria-label="Heroes">
+  <label class="investment-row">
+    <span>Resonance Crystal level</span>
+    <input
+      type="number"
+      min="180"
+      step="1"
+      [disabled]="busy()"
+      [value]="store.heroLevel() ?? ''"
+      placeholder="670"
+      aria-label="Resonance Crystal level"
+      (change)="store.setHeroLevel(nullableNumberValue($event))"
+    >
+  </label>
+  <div class="row-wrap">
+    <button mat-button class="btn" [disabled]="busy()" (click)="store.selectAllHeroes()">Select all</button>
+    <button mat-button class="btn" [disabled]="busy()" (click)="confirmingClear.set(true)">Clear all heroes</button>
+  </div>
+  <label class="visually-hidden" for="roster-search">Search heroes</label>
+  <input id="roster-search" class="search" placeholder="Search heroes" aria-label="Search heroes" (input)="setSearch($event)">
+  <div class="roster-filters" role="group" aria-label="Filter heroes">
+    <div class="icon-filter-row" role="group" aria-label="Faction">
+      <span class="icon-filter-label">Faction</span>
+      <button mat-button type="button" class="icon-filter-button" [class.active]="!factionFilter()" [attr.aria-pressed]="!factionFilter()" aria-label="All factions" title="All factions" (click)="setFaction('')">
+        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
+      </button>
+      @for (faction of factions(); track faction) {
+        <button mat-button type="button" class="icon-filter-button" [class.active]="factionFilter() === faction" [attr.aria-pressed]="factionFilter() === faction" [attr.aria-label]="faction" [attr.title]="faction" (click)="setFaction(faction)">
+          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('faction', faction)">{{ filterToken('faction', faction) }}</span><span class="filter-caption">{{ faction }}</span></span>
+        </button>
+      }
+    </div>
+    <div class="icon-filter-row" role="group" aria-label="Class">
+      <span class="icon-filter-label">Class</span>
+      <button mat-button type="button" class="icon-filter-button" [class.active]="!classFilter()" [attr.aria-pressed]="!classFilter()" aria-label="All classes" title="All classes" (click)="setClass('')">
+        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
+      </button>
+      @for (heroClass of classes; track heroClass) {
+        <button mat-button type="button" class="icon-filter-button" [class.active]="classFilter() === heroClass" [attr.aria-pressed]="classFilter() === heroClass" [attr.aria-label]="heroClass" [attr.title]="heroClass" (click)="setClass(heroClass)">
+          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('class', heroClass)">{{ filterToken('class', heroClass) }}</span><span class="filter-caption">{{ heroClass }}</span></span>
+        </button>
+      }
+    </div>
+    <div class="icon-filter-row" role="group" aria-label="Type">
+      <span class="icon-filter-label">Type</span>
+      <button mat-button type="button" class="icon-filter-button" [class.active]="!typeFilter()" [attr.aria-pressed]="!typeFilter()" aria-label="All types" title="All types" (click)="setType('')">
+        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
+      </button>
+      @for (type of types; track type) {
+        <button mat-button type="button" class="icon-filter-button" [class.active]="typeFilter() === type" [attr.aria-pressed]="typeFilter() === type" [attr.aria-label]="type | titlecase" [attr.title]="type | titlecase" (click)="setType(type)">
+          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('type', type)">{{ filterToken('type', type) }}</span><span class="filter-caption">{{ type | titlecase }}</span></span>
+        </button>
+      }
+    </div>
+  </div>
+  <div class="pick roster-pick hero-roster-pick">
+    @for (hero of filteredHeroes(); track hero.id) {
+      <button
+        mat-button
+        class="hero-pick"
+        [disabled]="busy()"
+        [class.owned]="!!store.roster()[hero.id]"
+        [style.--hero-faction-color]="factionColor(hero)"
+        [attr.aria-pressed]="!!store.roster()[hero.id]"
+        (click)="store.toggleHero(hero.id)"
+      ><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</button>
+    } @empty {
+      <p class="muted">No hero matches that search.</p>
+    }
+  </div>
+  <h3>Investment (optional)</h3>
+  <p class="rules">Enter SI (0–40), furniture (0–12), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
+  <div class="seg" role="group" aria-label="Investment input format">
+    <button mat-button type="button" [attr.aria-pressed]="investmentMode() === 'short'" (click)="investmentMode.set('short')">Short form</button>
+    <button mat-button type="button" [attr.aria-pressed]="investmentMode() === 'long'" (click)="investmentMode.set('long')">Long form</button>
+  </div>
+  @if (investmentMode() === 'long') {
+    <div class="investment-columns" aria-hidden="true">
+      <span></span><span>SI</span><span>Furn.</span><span>Eng.</span>
+    </div>
+  }
+  @for (hero of store.heroes(); track hero.id) {
+    @if (store.roster()[hero.id]) {
+      <div class="hero-investment-entry">
+        @if (investmentMode() === 'short') {
+          <label class="investment-row">
+            <span class="extra-hero"><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</span>
+            <input
+              [value]="store.roster()[hero.id].inv"
+              placeholder="309e60"
+              [disabled]="busy()"
+              [attr.aria-label]="'Investment for ' + hero.name"
+              [attr.aria-invalid]="investmentErrors()[hero.id] ? 'true' : null"
+              (change)="updateInvestment(hero.id, $event)"
+            >
+          </label>
+        } @else {
+          <div class="investment-long-row">
+            <span class="extra-hero"><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</span>
+            <input type="number" min="0" max="40" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'si')" [attr.aria-label]="'SI for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'si', $event)">
+            <input type="number" min="0" max="12" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'furn')" [attr.aria-label]="'Furniture for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'furn', $event)">
+            <input type="number" min="0" max="100" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'eng')" [attr.aria-label]="'Engraving for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'eng', $event)">
+          </div>
+        }
+        <div class="quick-set" role="group" [attr.aria-label]="'Quick set investment for ' + hero.name">
+          <span>Quick set:</span>
+          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '409e60')">409e60</button>
+          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '309e60')">30960</button>
+          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '309e30')">30930</button>
+        </div>
+        @if (investmentErrors()[hero.id]; as investmentError) {
+          <span class="field-hint" role="alert">{{ investmentError }}</span>
+        }
+      </div>
+    }
+  }
+  @if (!store.rosterCount()) { <p class="muted">Pick heroes above, then optionally add their investment.</p> }
+</section>
+@if (confirmingClear()) {
+  <app-confirm-dialog
+    title="Clear hero roster?"
+    message="This removes all selected heroes and their investment values from your roster."
+    (confirmed)="confirmClear()"
+    (cancelled)="confirmingClear.set(false)"
+  />
+}
