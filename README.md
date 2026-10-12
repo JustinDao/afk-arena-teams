@@ -19,12 +19,28 @@ Without Supabase configuration the app uses sample lineups. Guest rosters and vo
 
 ## Supabase setup
 
-1. For a new Supabase project, run [`schema.sql`](./schema.sql), then [`seed.sql`](./seed.sql) to add public example lineups. **Running `schema.sql` resets all app tables and deletes existing lineups, votes, profiles, and roster/collection data; Supabase Auth users are retained.** For an existing project where data must be preserved, run the relevant additive migration, including [`nightmare-corridor-cycle-migration.sql`](./nightmare-corridor-cycle-migration.sql) for the database-managed NC cycle mapping. If the project has not applied it yet, also run [`collection-catalog-migration.sql`](./collection-catalog-migration.sql) for the existing collection-catalog change.
-2. Copy [`src/environments/environment.example.ts`](./src/environments/environment.example.ts) to `src/environments/environment.ts`. Fill `supabaseUrl` and `supabaseKey` with the project URL and **publishable/anon key** from Supabase Project Settings → API. This local file is git-ignored. Never put a service-role or secret key in browser code.
-3. In Supabase Authentication → URL Configuration, set the local app URL (`http://localhost:4200`) as the Site URL and add it to Redirect URLs.
-4. Email/password signup is available in the account dialog. If email confirmation is enabled, users confirm by email before signing in; the profile is created automatically after their first successful signup.
-5. To enable Google sign-in/linking, create a Google OAuth web client. In Google Cloud, add Supabase's callback URL (shown in Supabase Authentication → Providers → Google) as an authorized redirect URI. Enable Google in that Supabase provider panel and enter its client ID/secret there. The browser app never needs the Google client secret. Google sign-in can create an account, and a signed-in email/password user can link Google from the account dialog.
-6. Run `npm start`.
+Supabase migrations are kept in [`supabase/migrations/`](./supabase/migrations/), with a timestamped filename for each change. They are the canonical SQL history going forward. The root-level `schema.sql` and migration scripts are retained for reference and older manual setup instructions; `schema.sql` is destructive and should not be used with the migration workflow.
+
+1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then log in and link your project:
+   ```sh
+   supabase login
+   supabase link --project-ref <project-ref>
+   ```
+2. Apply the database migrations:
+   - **New project:** run `supabase db push` to apply the schema and subsequent migrations. The migrations include the app's reference catalogs, but not the example lineups from `seed.sql`. Run [`seed.sql`](./seed.sql) separately only if you want those example lineups.
+   - **Existing project already created from `schema.sql`:** first verify its schema matches the baseline migration, then record the baseline without reapplying it:
+     ```sh
+     supabase migration repair --status applied 20261012043000
+     ```
+   If `collection-catalog-migration.sql` was already run manually, also mark its migration version as applied (`20261012043100`) so the data conversion is not repeated. Leave `20261012043200` pending when you need its Nightmare Corridor cycle repair; then run `supabase db push`.
+
+`migration repair` only updates Supabase's migration history; it does not execute SQL. Do not mark a migration as applied unless its changes are already present. For an existing database with a different schema history, inspect and reconcile the live schema before using `db push` rather than applying the baseline on top of existing tables.
+
+3. Copy [`src/environments/environment.example.ts`](./src/environments/environment.example.ts) to `src/environments/environment.ts`. Fill `supabaseUrl` and `supabaseKey` with the project URL and **publishable/anon key** from Supabase Project Settings → API. This local file is git-ignored. Never put a service-role or secret key in browser code.
+4. In Supabase Authentication → URL Configuration, set the local app URL (`http://localhost:4200`) as the Site URL and add it to Redirect URLs.
+5. Email/password signup is available in the account dialog. If email confirmation is enabled, users confirm by email before signing in; the profile is created automatically after their first successful signup.
+6. To enable Google sign-in/linking, create a Google OAuth web client. In Google Cloud, add Supabase's callback URL (shown in Supabase Authentication → Providers → Google) as an authorized redirect URI. Enable Google in that Supabase provider panel and enter its client ID/secret there. The browser app never needs the Google client secret. Google sign-in can create an account, and a signed-in email/password user can link Google from the account dialog.
+7. Run `npm start`.
 
 The schema seeds four active modes, starter targets, all 227 unique playable elite/legendary hero entries from the AFK Mine CDN snapshot (including awakened variants), and 30 pets. Hero class, attribute type (Strength/Agility/Intelligence), and role follow the AFK Arena Wiki Heroes list and individual crossover hero pages; the separate `hero_type` database column is not inferred from class. Hero and pet IDs match CDN unit IDs; each row exposes an `icon_url` generated from that ID. The seed excludes rare/common/unknown-rarity unit metadata that is not part of the playable hero catalog. `seed.sql` adds one illustrative example lineup for each active mode; these are explicitly labeled as examples and are safe to run more than once.
 
