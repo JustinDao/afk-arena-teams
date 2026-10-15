@@ -1,12 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { AuthService } from '../../../../core/auth/auth.service';
-import { collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog';
-import { CollectionBuildEditorComponent } from '../../components/collection-build-editor/collection-build-editor.component';
-import { LineupsStore } from '../../lineups.store';
-import { CollectionInventoryItem, CollectionNode, CollectionNodeStat } from '../../models';
-import { rosterClassFilterColor } from '../../roster-filter-colors';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core'
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { AuthService } from '../../../../core/auth/auth.service'
+import { collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog'
+import { CollectionBuildEditorComponent } from '../../components/collection-build-editor/collection-build-editor.component'
+import { LineupsStore } from '../../lineups.store'
+import { CollectionInventoryItem, CollectionNode, CollectionNodeStat } from '../../models'
+import { rosterClassFilterColor } from '../../roster-filter-colors'
 
 @Component({
   selector: 'app-roster-collections',
@@ -174,11 +174,12 @@ export class RosterCollectionsComponent {
   }
 
   collectionNodeLabel(node: CollectionNode): string {
+    if (node.stat === 'skill_level') return 'LEVEL';
     return `${node.tier[0].toUpperCase()} ${collectionNodeLabel(node.stat)}`;
   }
 
   collectionSummary(nodes: readonly CollectionNode[]): string {
-    return nodes.map((node) => `${this.collectionSlotLabel(node.slotIndex)}: ${this.collectionNodeLabel(node)}`).join(' · ');
+    return nodes.map((node) => `${this.collectionNodeLabel(node)}`).join(' · ');
   }
 
   collectionIcon(collectionId: number, nodes: readonly CollectionNode[]): string {

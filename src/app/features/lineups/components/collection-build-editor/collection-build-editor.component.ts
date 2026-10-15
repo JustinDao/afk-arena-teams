@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog';
-import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../../models';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core'
+import { MatButtonModule } from '@angular/material/button'
+import { collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog'
+import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../../models'
 
 @Component({
   selector: 'app-collection-build-editor',
@@ -144,7 +144,7 @@ export class CollectionBuildEditorComponent {
   }
 
   collectionIcon(collectionId: number, nodes: readonly CollectionNode[]): string {
-    return collectionIconUrl(collectionId, nodes.filter(({ stat }) => stat === 'skill_level').length + 1);
+    return collectionIconUrl(collectionId);
   }
 
   collectionSlotLabel(slotIndex: number): string {
