@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { COLLECTION_NODE_TIERS, collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog';
+import { collectionIconUrl, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog';
+import { CollectionBuildEditorComponent } from '../../components/collection-build-editor/collection-build-editor.component';
 import { LineupsStore } from '../../lineups.store';
 import { CollectionInventoryItem, CollectionNode, CollectionNodeStat } from '../../models';
 import { rosterClassFilterColor } from '../../roster-filter-colors';
@@ -10,7 +11,7 @@ import { rosterClassFilterColor } from '../../roster-filter-colors';
 @Component({
   selector: 'app-roster-collections',
   standalone: true,
-  imports: [MatButtonModule, ReactiveFormsModule],
+  imports: [CollectionBuildEditorComponent, MatButtonModule, ReactiveFormsModule],
   templateUrl: './roster-collections.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -31,7 +32,6 @@ export class RosterCollectionsComponent {
     .filter((collection) => !this.collectionClassFilter() || collection.class === this.collectionClassFilter())
     .sort((left, right) => left.name.localeCompare(right.name)));
   readonly collectionNodeStats = this.store.collectionNodeStats;
-  readonly collectionNodeTiers = COLLECTION_NODE_TIERS;
   readonly collectionNodeSlots = [
     { category: 'Attack', indices: [0, 1, 2] },
     { category: 'Defense', indices: [3, 4, 5] },
@@ -94,6 +94,53 @@ export class RosterCollectionsComponent {
     this.collectionForm.controls.catalogId.setValue(catalogId);
   }
 
+  replaceCollectionNodes(nodes: readonly CollectionNode[]): void {
+    this.collectionNodes.set([...nodes]);
+    this.collectionError.set(null);
+  }
+
+  updateCollectionNodeStat(slotIndex: number, stat: string): void {
+    if (!stat) {
+      this.removeCollectionNode(slotIndex);
+      return;
+    }
+    if (!this.collectionNodeStatsForSlot(slotIndex).includes(stat)) {
+      this.collectionError.set('Choose a stat from the collection catalog.');
+      return;
+    }
+    const current = this.collectionNodeAt(slotIndex);
+    this.replaceCollectionNodes([
+      ...this.collectionNodes().filter((node) => node.slotIndex !== slotIndex),
+      { slotIndex, stat, tier: stat === 'skill_level' ? 'mythic' : current?.tier ?? 'mythic' },
+    ].sort((left, right) => left.slotIndex - right.slotIndex));
+  }
+
+  updateCollectionNodeTier(slotIndex: number, tier: string): void {
+    if (tier !== 'elite' && tier !== 'legendary' && tier !== 'mythic') {
+      this.collectionError.set('Choose a tier from the collection catalog.');
+      return;
+    }
+    const current = this.collectionNodeAt(slotIndex);
+    if (!current) return;
+    this.replaceCollectionNodes(this.collectionNodes().map((node) =>
+      node.slotIndex === slotIndex ? { ...node, tier: node.stat === 'skill_level' ? 'mythic' : tier } : node,
+    ));
+  }
+
+  collectionNodeAt(slotIndex: number): CollectionNode | undefined {
+    return this.collectionNodes().find((node) => node.slotIndex === slotIndex);
+  }
+
+  collectionNodeStatsForSlot(slotIndex: number): readonly CollectionNodeStat[] {
+    return slotIndex < 6
+      ? this.collectionNodeStats().filter((stat) => stat !== 'skill_level')
+      : this.collectionNodeStats();
+  }
+
+  removeCollectionNode(slotIndex: number): void {
+    this.replaceCollectionNodes(this.collectionNodes().filter((node) => node.slotIndex !== slotIndex));
+  }
+
   setCollectionClass(collectionClass: string): void {
     this.collectionClassFilter.set(collectionClass);
     if (
@@ -126,66 +173,8 @@ export class RosterCollectionsComponent {
     }
   }
 
-  updateCollectionNodeStat(slotIndex: number, stat: string): void {
-    if (stat === '') {
-      this.removeCollectionNode(slotIndex);
-      return;
-    }
-    if (!this.collectionNodeStatsForSlot(slotIndex).includes(stat)) {
-      this.collectionError.set('Choose a stat from the collection catalog.');
-      return;
-    }
-    this.updateCollectionNode(slotIndex, (existing) => ({
-      slotIndex,
-      stat,
-      tier: stat === 'skill_level' ? 'mythic' : existing?.tier ?? 'mythic',
-    }));
-  }
-
-  updateCollectionNodeTier(slotIndex: number, tier: string): void {
-    if (!this.collectionNodeTiers.includes(tier as CollectionNode['tier'])) {
-      this.collectionError.set('Choose a tier from the collection catalog.');
-      return;
-    }
-    const existing = this.collectionNodes().find((node) => node.slotIndex === slotIndex);
-    if (existing) {
-      this.updateCollectionNode(slotIndex, () => ({
-        ...existing,
-        tier: existing.stat === 'skill_level' ? 'mythic' : tier as CollectionNode['tier'],
-      }));
-    }
-  }
-
-  private updateCollectionNode(slotIndex: number, update: (node: CollectionNode | undefined) => CollectionNode): void {
-    const existing = this.collectionNodes().find((node) => node.slotIndex === slotIndex);
-    this.collectionNodes.update((nodes) => [
-      ...nodes.filter((node) => node.slotIndex !== slotIndex),
-      update(existing),
-    ].sort((left, right) => left.slotIndex - right.slotIndex));
-    this.collectionError.set(null);
-  }
-
-  removeCollectionNode(slotIndex: number): void {
-    this.collectionNodes.update((nodes) => nodes.filter((item) => item.slotIndex !== slotIndex));
-    this.collectionError.set(null);
-  }
-
   collectionNodeLabel(node: CollectionNode): string {
     return `${node.tier[0].toUpperCase()} ${collectionNodeLabel(node.stat)}`;
-  }
-
-  collectionNodeStatLabel(stat: CollectionNodeStat): string {
-    return collectionNodeLabel(stat);
-  }
-
-  collectionNodeStatsForSlot(slotIndex: number): readonly CollectionNodeStat[] {
-    return slotIndex < 6
-      ? this.collectionNodeStats().filter((stat) => stat !== 'skill_level')
-      : this.collectionNodeStats();
-  }
-
-  collectionNodeAt(slotIndex: number): CollectionNode | undefined {
-    return this.collectionNodes().find((node) => node.slotIndex === slotIndex);
   }
 
   collectionSummary(nodes: readonly CollectionNode[]): string {

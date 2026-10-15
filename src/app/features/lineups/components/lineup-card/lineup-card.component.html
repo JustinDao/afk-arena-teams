@@ -36,7 +36,7 @@
                 [style.--hero-faction-color]="heroFactionColor(hero, hero.hid)"
                 [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : null"
               >
-                <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="medium" />
+                <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="medium" [ascension]="hero.ascension" [investment]="hero.inv" />
                 <span class="hero-name">{{ hero.name ?? heroName(hero.hid) }}</span>
                 @if (hero.inv) { <span class="investment">{{ investmentLabel(hero.inv) }}</span> }
                 @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
@@ -61,7 +61,14 @@
           </div>
         }
         @if (formation.beast) {
-          <p class="beast"><app-hero-icon [name]="formation.beast" [imageUrl]="formation.petIconUrl ?? null" /> Pet: {{ formation.beast }}@if (formation.petLevel !== null) { · Lv. {{ formation.petLevel }} }</p>
+          <div class="beast">
+            <app-pet-badge
+              [name]="formation.beast"
+              [imageUrl]="formation.petIconUrl ?? null"
+              [level]="formation.petLevel"
+              [tone]="petTone(formation.beast)"
+            />
+          </div>
         }
       </div>
     }

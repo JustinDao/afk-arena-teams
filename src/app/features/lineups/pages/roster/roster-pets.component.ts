@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
-import { isAwakenedPet } from '../../pet-classification';
+import { PetPickerComponent } from '../../components/pet-picker/pet-picker.component';
 import { LineupsStore } from '../../lineups.store';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
@@ -13,27 +13,19 @@ type PetConfirmation =
 @Component({
   selector: 'app-roster-pets',
   standalone: true,
-  imports: [ConfirmDialogComponent, HeroIconComponent, MatButtonModule],
+  imports: [ConfirmDialogComponent, HeroIconComponent, MatButtonModule, PetPickerComponent],
   templateUrl: './roster-pets.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RosterPetsComponent {
   readonly store = inject(LineupsStore);
   private readonly auth = inject(AuthService);
-  readonly search = signal('');
   readonly confirmation = signal<PetConfirmation | null>(null);
-  readonly filteredPets = computed(() => {
-    const query = this.search().toLocaleLowerCase();
-    return this.store.pets().filter((pet) => pet.name.toLocaleLowerCase().includes(query));
-  });
+  readonly selectedPetIds = computed(() => Object.keys(this.store.petRoster()).map(Number));
+  readonly disabledPetIds = computed(() => this.busy() ? this.store.pets().map(({ id }) => id) : []);
   readonly busy = computed(() =>
     this.auth.configured && (!this.store.backendReady() || this.store.rosterDetailsLoading()),
   );
-
-  setSearch(event: Event): void {
-    const input = event.target;
-    if (input instanceof HTMLInputElement) this.search.set(input.value);
-  }
 
   confirmClear(): void {
     this.confirmation.set({
@@ -67,8 +59,4 @@ export class RosterPetsComponent {
     if (input instanceof HTMLInputElement) this.store.updatePetLevel(petId, Number(input.value));
   }
 
-  petKind(pet: { readonly id: number; readonly name?: string; readonly isAwakened: boolean }): 'basic' | 'regular' | 'awakened' {
-    if (isAwakenedPet(pet.name ?? '', pet.isAwakened)) return 'awakened';
-    return pet.id <= 6003 ? 'basic' : 'regular';
-  }
 }

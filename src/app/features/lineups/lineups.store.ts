@@ -3,8 +3,11 @@ import { User } from '@supabase/supabase-js';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserDataService } from '../../core/data/user-data.service';
 import {
+  AscensionRank,
   CollectionInventoryItem,
   CollectionCatalogItem,
+  CollectionNode,
+  CollectionSnapshot,
   CollectionNodeStat,
   DraftFormation,
   DraftSlot,
@@ -13,9 +16,11 @@ import {
   FORMATION_LAYOUT,
   Hero,
   HeroStatus,
+  Investment,
   LineupDraft,
   ModeConfig,
   MODES,
+  displayHeroName,
   Pet,
   PetRosterEntry,
   RosterEntry,
@@ -25,7 +30,12 @@ import {
 import { HEROES, HERO_BY_ID, PETS, SAMPLE_SUBMISSIONS } from './lineup-data';
 import { COLLECTION_CATALOG } from './collection-catalog';
 import { COLLECTION_NODE_STATS } from './collection-catalog';
-import { formatInvestment as formatInvestmentCode, parseInvestment, rosterInvestment } from './investment';
+import {
+  formatInvestment as formatInvestmentCode,
+  parseInvestment,
+  rosterInvestment,
+  sanitizeInvestmentForAscension,
+} from './investment';
 
 const SORTED_HEROES = [...HEROES].sort((a, b) => a.name.localeCompare(b.name));
 const STORAGE_KEYS = { roster: 'll.roster', votes: 'll.votes', pets: 'll.pets', heroLevel: 'll.heroLevel' } as const;
@@ -67,7 +77,9 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
     petId: null,
     petLevel: null,
     time: '',
-    slots: Array.from({ length: 5 }, (): DraftSlot => ({ hid: null, merc: false, inv: '', collectionId: '' })),
+    slots: Array.from({ length: 5 }, (): DraftSlot => ({
+      hid: null, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
+    })),
   };
 }
 
@@ -103,6 +115,7 @@ export class LineupsStore {
   private backendLoadId = 0;
   private privateDataUserId: string | null | undefined;
   private collectionsUserId: string | null | undefined;
+  private rosterSaveQueue: Promise<void> = Promise.resolve();
   private readonly rosterDetailsLoadingSignal = signal(false);
   private readonly collectionsLoadingSignal = signal(false);
   private readonly collectionCatalogLoadingSignal = signal(false);
@@ -143,6 +156,7 @@ export class LineupsStore {
   readonly collections = this.collectionsSignal.asReadonly();
   readonly collectionCatalog = this.collectionCatalogSignal.asReadonly();
   readonly collectionNodeStats = this.collectionNodeStatsSignal.asReadonly();
+  readonly collectionCatalogLoading = this.collectionCatalogLoadingSignal.asReadonly();
   readonly backendError = this.backendErrorSignal.asReadonly();
   readonly backendReady = this.backendReadySignal.asReadonly();
   readonly rosterDetailsLoading = this.rosterDetailsLoadingSignal.asReadonly();
@@ -210,7 +224,7 @@ export class LineupsStore {
       if (reference.modes.length === 0) throw new Error('No enabled game modes are configured in the database.');
       if (reference.heroes.length === 0) throw new Error('No heroes are configured in the database. Add heroes before using accounts.');
       this.modesSignal.set(reference.modes);
-      this.heroesSignal.set(reference.heroes);
+      this.heroesSignal.set([...reference.heroes].sort((a, b) => displayHeroName(a).localeCompare(displayHeroName(b))));
       this.petsSignal.set(reference.pets);
       this.submissionsSignal.set(submissions);
       if (!reference.modes.some((mode) => mode.slug === this.modeSignal())) {
@@ -436,8 +450,41 @@ export class LineupsStore {
     return true;
   }
 
+  updateRosterAscension(heroId: number, ascension: AscensionRank | null): boolean {
+    const roster = this.rosterSignal();
+    const currentEntry = roster[heroId];
+    if (!currentEntry) return false;
+
+    const parsed = rosterInvestment(currentEntry);
+    const sanitized = sanitizeInvestmentForAscension(parsed, ascension);
+    const hasSanitizedChanges = sanitized !== null && (
+      sanitized.si !== parsed?.si ||
+      sanitized.furn !== parsed?.furn ||
+      sanitized.eng !== parsed?.eng
+    );
+
+    const updatedEntry: RosterEntry = {
+      ...currentEntry,
+      ascension,
+      ...(hasSanitizedChanges
+        ? {
+            inv: formatInvestmentCode(sanitized),
+            si: sanitized.si,
+            furn: sanitized.furn,
+            eng: sanitized.eng,
+          }
+        : {}),
+    };
+
+    const updated = { ...roster, [heroId]: updatedEntry };
+    this.rosterSignal.set(updated);
+    this.saveRoster(updated);
+    if (this.activeUser) void this.persistRoster();
+    return true;
+  }
+
   updateRosterInvestmentPart(heroId: number, part: 'si' | 'furn' | 'eng', value: number | null): boolean {
-    const ranges = { si: [0, 30], furn: [0, 12], eng: [0, 100] } as const;
+    const ranges = { si: [0, 50], furn: [0, 36], eng: [0, 100] } as const;
     const [min, max] = ranges[part];
     if (value !== null && (!Number.isInteger(value) || value < min || value > max)) return false;
     const existing = this.rosterSignal()[heroId];
@@ -492,6 +539,70 @@ export class LineupsStore {
   updateCollectionAssignment(slotIndex: number, collectionId: string): void {
     this.updateDraft((draft) => {
       draft.forms[draft.cur].slots[slotIndex].collectionId = collectionId;
+      draft.forms[draft.cur].slots[slotIndex].collectionSnapshot = null;
+    });
+  }
+
+  updateDraftAscension(value: AscensionRank | null, slotIndex: number): void {
+    this.updateDraft((draft) => {
+      const slot = draft.forms[draft.cur].slots[slotIndex];
+      slot.ascension = value;
+      const parsed = parseInvestment(slot.inv);
+      if (parsed) {
+        const sanitized = sanitizeInvestmentForAscension(parsed, value);
+        if (
+          sanitized &&
+          (sanitized.si !== parsed.si ||
+            sanitized.furn !== parsed.furn ||
+            sanitized.eng !== parsed.eng)
+        ) {
+          slot.inv = formatInvestmentCode(sanitized);
+        }
+      }
+    });
+  }
+
+  startDraftCollectionSnapshot(slotIndex: number): void {
+    const catalogItem = this.collectionCatalogSignal()[0];
+    if (!catalogItem) {
+      this.showToast('The collection catalog is unavailable.');
+      return;
+    }
+    this.updateDraft((draft) => {
+      const slot = draft.forms[draft.cur].slots[slotIndex];
+      slot.collectionId = '';
+      slot.collectionSnapshot = {
+        catalogId: catalogItem.id,
+        name: catalogItem.name,
+        class: catalogItem.class,
+        nodes: [],
+      };
+    });
+  }
+
+  updateDraftCollectionSnapshot(slotIndex: number, catalogId: number, nodes: readonly CollectionNode[]): void {
+    const catalogItem = this.collectionCatalogSignal().find(({ id }) => id === catalogId);
+    if (!catalogItem) {
+      this.showToast('Choose a collection from the catalog.');
+      return;
+    }
+    this.updateDraft((draft) => {
+      const slot = draft.forms[draft.cur].slots[slotIndex];
+      slot.collectionId = '';
+      slot.collectionSnapshot = {
+        catalogId: catalogItem.id,
+        name: catalogItem.name,
+        class: catalogItem.class,
+        nodes: [...nodes],
+      };
+    });
+  }
+
+  clearDraftCollection(slotIndex: number): void {
+    this.updateDraft((draft) => {
+      const slot = draft.forms[draft.cur].slots[slotIndex];
+      slot.collectionId = '';
+      slot.collectionSnapshot = null;
     });
   }
 
@@ -560,7 +671,9 @@ export class LineupsStore {
 
   clearSlot(index: number): void {
     this.updateDraft((draft) => {
-      draft.forms[draft.cur].slots[index] = { hid: null, merc: false, inv: '', collectionId: '' };
+      draft.forms[draft.cur].slots[index] = {
+        hid: null, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
+      };
     });
   }
 
@@ -581,7 +694,9 @@ export class LineupsStore {
         this.showToast('This team is full. Remove a hero first.');
         return;
       }
-      formation.slots[slotIndex] = { hid: heroId, merc: false, inv: '', collectionId: '' };
+      formation.slots[slotIndex] = {
+        hid: heroId, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
+      };
       draft.slot = formation.slots.findIndex(({ hid }) => hid === null);
     });
   }
@@ -626,7 +741,7 @@ export class LineupsStore {
     const draft = this.draftSignal();
     if (!draft) return [];
     const query = draft.q.toLocaleLowerCase();
-    return this.heroesSignal().filter((hero) => hero.name.toLocaleLowerCase().includes(query));
+    return this.heroesSignal().filter((hero) => displayHeroName(hero).toLocaleLowerCase().includes(query));
   }
 
   heroAlreadySelected(heroId: number): boolean {
@@ -677,9 +792,10 @@ export class LineupsStore {
         hid: slot.hid!,
         merc: slot.merc,
         inv: parseInvestment(slot.inv),
-        collection: slot.collectionId
+        ascension: slot.ascension,
+        collection: slot.collectionSnapshot ?? (slot.collectionId
           ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
-          : null,
+          : null),
       })),
     }));
     if (this.data.configured) {
@@ -704,7 +820,16 @@ export class LineupsStore {
               si: parseInvestment(slot.inv)?.si,
               furniture: parseInvestment(slot.inv)?.furn,
               engraving: parseInvestment(slot.inv)?.eng,
-              collection_id: slot.collectionId || null,
+              ascension: slot.ascension,
+              collection_id: slot.collectionSnapshot ? null : slot.collectionId || null,
+              collection: slot.collectionSnapshot ? {
+                catalog_id: slot.collectionSnapshot.catalogId,
+                nodes: slot.collectionSnapshot.nodes.map((node) => ({
+                  slot_index: node.slotIndex,
+                  stat_type: node.stat,
+                  tier: node.tier,
+                })),
+              } : null,
             })),
           })),
         });
@@ -747,7 +872,17 @@ export class LineupsStore {
   heroName(heroId: number): string {
     const hero = this.heroesSignal().find((entry) => entry.id === heroId) ?? HERO_BY_ID.get(heroId);
     if (!hero) throw new Error(`Unknown hero id: ${heroId}`);
-    return hero.name;
+    return displayHeroName(hero);
+  }
+
+  draftAscension(slotIndex: number): AscensionRank | null {
+    const draft = this.draftSignal();
+    return draft?.forms[draft.cur].slots[slotIndex].ascension ?? null;
+  }
+
+  draftInvestment(slotIndex: number): Investment | null {
+    const draft = this.draftSignal();
+    return draft ? parseInvestment(draft.forms[draft.cur].slots[slotIndex].inv) : null;
   }
 
   heroIconUrl(heroId: number): string | null {
@@ -999,12 +1134,14 @@ export class LineupsStore {
     if (!this.data.configured) this.writeStorage(STORAGE_KEYS.pets, roster);
   }
 
-  private async persistRoster(): Promise<void> {
-    try {
-      await this.data.replaceRoster(this.rosterSignal());
-    } catch (error) {
-      this.reportBackendError(error, 'Could not save your hero roster.');
-    }
+  private persistRoster(): void {
+    this.rosterSaveQueue = this.rosterSaveQueue.then(async () => {
+      try {
+        await this.data.replaceRoster(this.rosterSignal());
+      } catch (error) {
+        this.reportBackendError(error, 'Could not save your hero roster.');
+      }
+    });
   }
 
   private async persistPetRoster(): Promise<void> {

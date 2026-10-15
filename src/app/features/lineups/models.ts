@@ -1,18 +1,52 @@
 export interface Hero {
   readonly id: number;
   readonly name: string;
+  readonly isAwakened?: boolean;
   readonly faction?: string | null;
   readonly class?: string | null;
   readonly type?: import('./hero-classification').HeroAttribute | null;
   readonly iconUrl?: string;
 }
 
+export const ASCENSION_RANKS = [
+  'epic',
+  'legendary',
+  'mythic',
+  'ascended',
+  'ascended_1',
+  'ascended_2',
+  'ascended_3',
+  'ascended_4',
+  'ascended_5',
+] as const;
+
+export type AscensionRank = (typeof ASCENSION_RANKS)[number];
+
+export const ASCENSION_RANK_LABELS: Readonly<Record<AscensionRank, string>> = {
+  epic: 'Epic',
+  legendary: 'Legendary',
+  mythic: 'Mythic',
+  ascended: 'Ascended',
+  ascended_1: 'Ascended 1 star',
+  ascended_2: 'Ascended 2 stars',
+  ascended_3: 'Ascended 3 stars',
+  ascended_4: 'Ascended 4 stars',
+  ascended_5: 'Ascended 5 stars',
+};
+
+export function displayHeroName(hero: Pick<Hero, 'name' | 'isAwakened'>): string {
+  const baseName = hero.name.replace(/^Awakened\s+/i, '').replace(/\s+\(Awakened\)$/i, '');
+  return hero.isAwakened ? `${baseName} (Awakened)` : baseName;
+}
+
 export interface Pet {
   readonly id: number;
   readonly name: string;
-  readonly isAwakened: boolean;
+  readonly kind: PetKind;
   readonly iconUrl?: string;
 }
+
+export type PetKind = 'basic' | 'standard' | 'awakened';
 
 export interface PetRosterEntry {
   readonly level: number;
@@ -31,6 +65,7 @@ export interface HeroPick {
   readonly iconUrl?: string;
   readonly faction?: string | null;
   readonly inv: Investment | null;
+  readonly ascension: AscensionRank | null;
   readonly merc: boolean;
   readonly collection: CollectionSnapshot | null;
 }
@@ -122,6 +157,7 @@ export interface ModeConfig {
 
 export interface RosterEntry {
   inv: string;
+  ascension?: AscensionRank | null;
   si?: number | null;
   furn?: number | null;
   eng?: number | null;
@@ -131,7 +167,9 @@ export interface DraftSlot {
   hid: number | null;
   merc: boolean;
   inv: string;
+  ascension: AscensionRank | null;
   collectionId: string;
+  collectionSnapshot: CollectionSnapshot | null;
 }
 
 export interface DraftFormation {

@@ -1,16 +1,18 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus } from '../../models';
+import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus, PetKind } from '../../models';
 import { formatInvestment, formatKillTime, heroName, resultLine } from '../../lineup-display';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
+import { PetBadgeComponent } from '../pet-badge/pet-badge.component';
 import { collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
 import { rosterFilterColor } from '../../roster-filter-colors';
+import { PETS } from '../../lineup-data';
 
 @Component({
   selector: 'app-lineup-card',
   standalone: true,
-  imports: [HeroIconComponent, MatButtonModule],
+  imports: [HeroIconComponent, MatButtonModule, PetBadgeComponent],
   templateUrl: './lineup-card.component.html',
   styleUrl: './lineup-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +77,10 @@ export class LineupCardComponent {
   heroFactionColor(hero: { readonly name?: string; readonly faction?: string | null }, heroId: number): string {
     const faction = hero.faction ?? this.heroIcons.factionFor(hero.name ?? heroName(heroId));
     return rosterFilterColor('faction', faction ?? '');
+  }
+
+  petTone(petName: string): PetKind | null {
+    return PETS.find((p) => p.name.toLowerCase() === petName.toLowerCase())?.kind ?? null;
   }
 
   readonly heroName = heroName;

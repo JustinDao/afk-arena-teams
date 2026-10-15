@@ -16,12 +16,15 @@ describe('HeroIconService', () => {
       '126': { id: 126, names: { en: 'Astar' }, isAwakened: false },
       '140': { id: 140, names: { en: 'Joan of Arc' }, isAwakened: false },
       '61': { id: 61, names: { en: 'Rosaline' }, isAwakened: false },
+      '56': { id: 56, codeName: 'Bane', rarity: 'elite', names: { en: 'Ezizh' }, isAwakened: false },
+      '1034': { id: 1034, codeName: 'BossBane', names: { en: 'Ezizh' }, isAwakened: false },
     })));
     TestBed.configureTestingModule({});
     const service = TestBed.inject(HeroIconService);
 
     await service.initialize();
 
+    expect(service.unitIdFor('Ezizh')).toBe(56);
     expect(service.unitIdFor('Rowan')).toBe(52);
     expect(service.unitIdFor('Awakened Lyca')).toBe(170);
     expect(service.unitIdFor('Lyca (Awakened)')).toBe(170);
@@ -39,6 +42,39 @@ describe('HeroIconService', () => {
     expect(service.unitIdFor('Pandy Dumpty')).toBe(6019);
     expect(service.unitIdFor('Unknown Hero')).toBeNull();
     expect(service.iconUrl(52)).toBe('https://raw.githubusercontent.com/afk-mine/cdn/main/unit_icon_by_id/52.webp');
+  });
+
+  it('builds framed CDN URLs for ascension and supported investment levels', () => {
+    TestBed.configureTestingModule({});
+    const service = TestBed.inject(HeroIconService);
+    const baseUrl = 'https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/';
+    const baseRanks = [
+      ['epic', 'e'],
+      ['legendary', 'l'],
+      ['mythic', 'm'],
+      ['ascended', 'a'],
+    ] as const;
+    for (const [rank, code] of baseRanks) {
+      expect(service.framedIconUrl(98, rank, null)).toBe(`${baseUrl}98_${code}.webp`);
+    }
+    expect(service.framedIconUrl(182, 'epic', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_e.webp`);
+    expect(service.framedIconUrl(182, 'mythic', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_m_si30.webp`);
+    expect(service.framedIconUrl(182, 'ascended', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_a_si30_f9.webp`);
+    expect(service.framedIconUrl(182, 'ascended_1', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_a1_si30_f9_e60.webp`);
+    const url = (si: number) => service.framedIconUrl(98, 'ascended_5', {
+      si, furn: 9, eng: 60,
+    });
+
+    expect(url(10)).toBe(`${baseUrl}98_a5_si10_f9_e60.webp`);
+    expect(url(20)).toBe(`${baseUrl}98_a5_si20_f9_e60.webp`);
+    expect(url(30)).toBe(`${baseUrl}98_a5_si30_f9_e60.webp`);
+    expect(url(40)).toBe(`${baseUrl}98_a5_si40_f9_e60.webp`);
+    expect(service.framedIconUrl(98, 'ascended_2', { si: 30, furn: 3, eng: 30 }))
+      .toBe(`${baseUrl}98_a2_si30_f3_e30.webp`);
   });
 
   it('keeps the hero catalog and sample teams free of the audited invalid names', () => {

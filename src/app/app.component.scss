@@ -375,6 +375,7 @@ footer {
 .hero-pick {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--app-space-2);
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-sm);
@@ -419,8 +420,10 @@ footer {
   grid-template-columns: 1fr auto 110px;
 }
 
-.extra-row .collection-assignment {
+.extra-row .collection-assignment,
+.extra-row app-hero-investment-editor {
   grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .investment-row input,

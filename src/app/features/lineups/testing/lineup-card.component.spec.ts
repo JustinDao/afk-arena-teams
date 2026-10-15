@@ -46,6 +46,7 @@ describe('LineupCardComponent', () => {
     expect(await card.title()).toBe(submission.target);
     expect(fixture.nativeElement.querySelector('.tag')).toBeNull();
     expect(fixture.nativeElement.querySelector('.hero')?.style.getPropertyValue('--hero-faction-color')).toBe('#83cfff');
+    expect(fixture.nativeElement.querySelector('app-pet-badge')).not.toBeNull();
     await card.clickVote();
     expect(votedId).toBe(submission.id);
   });

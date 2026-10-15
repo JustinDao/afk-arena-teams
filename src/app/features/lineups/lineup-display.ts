@@ -1,11 +1,11 @@
 import { HERO_BY_ID } from './lineup-data';
-import { Investment, Submission } from './models';
+import { displayHeroName, Investment, Submission } from './models';
 import { formatInvestment as formatInvestmentCode } from './investment';
 
 export function heroName(heroId: number): string {
   const hero = HERO_BY_ID.get(heroId);
   if (!hero) throw new Error(`Unknown hero id: ${heroId}`);
-  return hero.name;
+  return displayHeroName(hero);
 }
 
 export function heroHue(name: string): number {

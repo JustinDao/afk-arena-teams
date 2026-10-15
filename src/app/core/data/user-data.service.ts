@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
-import { CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, Formation, GameReferenceData, ModeConfig, Pet, PetRosterEntry, RosterEntry, Submission } from '../../features/lineups/models';
+import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, ModeConfig, Pet, PetRosterEntry, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
-import { isAwakenedPet } from '../../features/lineups/pet-classification';
-import { formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
+import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
 import { supabase, supabaseConfigured } from '../supabase/supabase-client';
 
@@ -55,6 +54,7 @@ interface DatabaseSubmissionRow {
       si: number | null;
       furniture: number | null;
       engraving: number | null;
+      ascension: AscensionRank | null;
       heroes: { name: string; icon_url: string; faction: string | null; is_awakened: boolean } | null;
     }[];
     formation_collections: {
@@ -80,7 +80,7 @@ interface HeroRow {
 interface PetRow {
   id: number;
   name: string;
-  is_awakened: boolean;
+  pet_type: Pet['kind'];
   icon_url: string;
 }
 
@@ -94,6 +94,7 @@ interface UserRosterRow {
   si: number | null;
   furniture: number | null;
   engraving: number | null;
+  ascension: AscensionRank | null;
 }
 
 interface UserCollectionRow {
@@ -118,11 +119,6 @@ interface CollectionCatalogRow {
   name: string;
 }
 
-function displayHeroName(name: string, isAwakened = false): string {
-  const baseName = name.replace(/^Awakened\s+/i, '').replace(/\s+\(Awakened\)$/i, '');
-  return isAwakened ? `${baseName} (Awakened)` : baseName;
-}
-
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
   readonly configured = supabaseConfigured;
@@ -138,9 +134,15 @@ export class UserDataService {
     if (!supabase) return;
     const entries = Object.entries(roster).map(([heroId, entry]) => {
       const investment = rosterInvestment(entry) ?? { si: null, furn: null, eng: null };
-      return { hero_id: Number(heroId), si: investment.si, furniture: investment.furn, engraving: investment.eng };
+      return {
+        hero_id: Number(heroId),
+        si: investment.si,
+        furniture: investment.furn,
+        engraving: investment.eng,
+        ascension: entry.ascension ?? null,
+      };
     });
-    const { error } = await supabase.rpc('replace_user_roster', { p_entries: entries });
+    const { error } = await supabase.rpc('replace_user_roster_with_ascension', { p_entries: entries });
     if (error) throw new Error(`Could not update your hero roster: ${error.message}`);
   }
 
@@ -163,7 +165,7 @@ export class UserDataService {
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
     const { data, error } = await supabase.from('submissions')
-      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
+      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw new Error(`Could not load lineups: ${error.message}`);
@@ -193,13 +195,15 @@ export class UserDataService {
               .sort((a, b) => a.position - b.position)
               .map((hero) => {
                 const collection = formation.formation_collections.find((item) => item.hero_id === hero.hero_id);
+                const inv = { si: hero.si, furn: hero.furniture, eng: hero.engraving };
                 return {
                   pos: hero.position,
                   hid: hero.hero_id,
-                  name: hero.heroes ? displayHeroName(hero.heroes.name, hero.heroes.is_awakened) : undefined,
+                  name: hero.heroes ? displayHeroName({ name: hero.heroes.name, isAwakened: hero.heroes.is_awakened }) : undefined,
                   iconUrl: hero.heroes?.icon_url,
                   faction: hero.heroes?.faction,
-                  inv: { si: hero.si, furn: hero.furniture, eng: hero.engraving },
+                  inv,
+                  ascension: hero.ascension ?? defaultAscensionForInvestment(inv) ?? 'ascended',
                   merc: hero.is_merc,
                   collection: collection ? {
                     name: collection.collection_name,
@@ -216,7 +220,7 @@ export class UserDataService {
 
   async submitLineup(payload: Record<string, unknown>): Promise<number> {
     if (!supabase) throw new Error('Configure Supabase to submit lineups.');
-    const { data, error } = await supabase.rpc('submit_lineup', { p_payload: payload });
+    const { data, error } = await supabase.rpc('submit_lineup_with_ascension', { p_payload: payload });
     if (error) throw new Error(`Could not submit lineup: ${error.message}`);
     return Number(data);
   }
@@ -235,7 +239,7 @@ export class UserDataService {
       supabase.from('targets').select('id,mode_id,slug,name,active_from,active_to').order('name'),
       supabase.from('nightmare_corridor_cycle_bosses').select('cycle_anchor_id,boss_target_id,position').order('position'),
       supabase.from('heroes').select('id,name,icon_url,faction,class,hero_type,is_awakened').order('name'),
-      supabase.from('pets').select('id,name,is_awakened,icon_url').order('name'),
+      supabase.from('pets').select('id,name,pet_type,icon_url').order('name'),
     ]);
     if (modeResponse.error) throw new Error(`Could not load game modes: ${modeResponse.error.message}`);
     if (targetResponse.error) throw new Error(`Could not load targets: ${targetResponse.error.message}`);
@@ -257,7 +261,8 @@ export class UserDataService {
     );
     const heroes = ((heroResponse.data ?? []) as HeroRow[]).map((hero) => ({
       id: hero.id,
-      name: displayHeroName(hero.name, hero.is_awakened),
+      name: hero.name.replace(/^Awakened\s+/i, '').replace(/\s+\(Awakened\)$/i, ''),
+      isAwakened: hero.is_awakened,
       faction: hero.faction,
       class: hero.class,
       type: heroAttributeFromValue(hero.hero_type),
@@ -266,7 +271,7 @@ export class UserDataService {
     const pets = ((petResponse.data ?? []) as PetRow[]).map((pet): Pet => ({
       id: pet.id,
       name: pet.name,
-      isAwakened: isAwakenedPet(pet.name, pet.is_awakened),
+      kind: pet.pet_type,
       iconUrl: pet.icon_url,
     }));
     return { modes, heroes, pets };
@@ -292,7 +297,7 @@ export class UserDataService {
 
   async loadRoster(): Promise<Record<string, RosterEntry>> {
     if (!supabase) return {};
-    const { data, error } = await supabase.from('user_roster').select('hero_id,si,furniture,engraving');
+    const { data, error } = await supabase.from('user_roster').select('hero_id,si,furniture,engraving,ascension');
     if (error) throw new Error(`Could not load your hero roster: ${error.message}`);
     const roster: Record<string, RosterEntry> = {};
     for (const row of (data ?? []) as UserRosterRow[]) {
@@ -301,6 +306,7 @@ export class UserDataService {
         si: row.si,
         furn: row.furniture,
         eng: row.engraving,
+        ascension: row.ascension,
       };
     }
     return roster;

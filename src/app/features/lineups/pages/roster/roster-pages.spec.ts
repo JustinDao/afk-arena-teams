@@ -7,7 +7,6 @@ import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS, collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
 import { heroAttributeFromValue } from '../../hero-classification';
 import { rosterClassFilterColor } from '../../roster-filter-colors';
-import { isAwakenedPet } from '../../pet-classification';
 import { LineupsStore } from '../../lineups.store';
 import { RosterCollectionsComponent } from './roster-collections.component';
 import { RosterHeroesComponent } from './roster-heroes.component';
@@ -21,8 +20,9 @@ async function setup(): Promise<void> {
         provide: HeroIconService,
         useValue: {
           initialize: async () => {},
-          unitIdFor: () => null,
-          iconUrl: () => '',
+          unitIdFor: () => 52,
+          iconUrl: (id: number) => `https://cdn/unit_icon_by_id/${id}.webp`,
+          framedIconUrl: (id: number, rank: string) => `https://cdn/framed_unit_icon/${id}_${rank}.webp`,
           factionFor: (name: string) => name === 'Rowan' ? 'Lightbearer' : 'Wilder',
           classFor: (name: string) => name === 'Rowan' ? 'Mage' : 'Ranger',
         },
@@ -52,6 +52,16 @@ describe('roster pages', () => {
     )[0];
 
     expect(component.collectionForm.controls.catalogId.value).toBe(firstCollection.id);
+  });
+
+  it('renders collection choice button with centered content and icon', () => {
+    const fixture = TestBed.createComponent(RosterCollectionsComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const choice = element.querySelector('.collection-choice') as HTMLElement | null;
+    expect(choice).not.toBeNull();
+    const icon = choice?.querySelector('.collection-icon') as HTMLImageElement | null;
+    expect(icon).not.toBeNull();
   });
 
   it('routes /roster to heroes and gives each tab its own URL', async () => {
@@ -91,6 +101,7 @@ describe('roster pages', () => {
     component.investmentMode.set('long');
     store.clearRoster();
     store.toggleHero(1);
+    store.updateRosterAscension(1, 'ascended_1');
     harness.detectChanges();
     const root: HTMLElement = harness.routeNativeElement as HTMLElement;
 
@@ -101,10 +112,10 @@ describe('roster pages', () => {
     for (const [label, value] of [['SI', '30'], ['Furniture', '12'], ['Engraving', '60']]) {
       field(label).value = value;
       field(label).dispatchEvent(new Event('change'));
+      harness.detectChanges();
     }
-    harness.detectChanges();
 
-    expect(store.roster()[1]).toEqual({ inv: '3012e60', si: 30, furn: 12, eng: 60 });
+    expect(store.roster()[1]).toEqual({ inv: '3012e60', si: 30, furn: 12, eng: 60, ascension: 'ascended_1' });
     expect(root.querySelector('input[placeholder="309e60"]')).toBeNull();
 
     store.updateRosterInvestment(1, '303');
@@ -113,6 +124,101 @@ describe('roster pages', () => {
     component.investmentMode.set('short');
     harness.detectChanges();
     expect((root.querySelector('input[placeholder="309e60"]') as HTMLInputElement).value).toBe('303');
+  });
+
+  it('saves hero ascension rank separately from investment stats', async () => {
+    const harness = await RouterTestingHarness.create();
+    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    store.toggleHero(1);
+    store.updateRosterInvestment(1, '209e60');
+    store.updateRosterAscension(1, 'ascended_2');
+
+    expect(store.roster()[1]).toEqual({
+      inv: '209e60',
+      si: 20,
+      furn: 9,
+      eng: 60,
+      ascension: 'ascended_2',
+    });
+    harness.detectChanges();
+    const ascension = harness.routeNativeElement?.querySelector(`select[aria-label="Ascension for ${store.heroName(1)}"]`) as HTMLSelectElement;
+    expect(ascension.value).toBe('ascended_2');
+    expect(harness.routeNativeElement?.querySelector('.hero-icon.large')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.hero-icon.large.framed')).not.toBeNull();
+    const icon = harness.routeNativeElement?.querySelector('.hero-icon.large') as HTMLElement;
+    const image = icon.querySelector('img') as HTMLImageElement;
+    expect(image.getAttribute('src')).toContain('52_ascended_2.webp');
+    image.dispatchEvent(new Event('error'));
+    harness.detectChanges();
+    expect(icon.classList.contains('framed')).toBeFalse();
+    expect(image.getAttribute('src')).toContain('/unit_icon_by_id/52.webp');
+  });
+
+  it('gates investment fields by ascension and offers rank quick sets', async () => {
+    const harness = await RouterTestingHarness.create();
+    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    store.toggleHero(1);
+    component.investmentMode.set('long');
+    harness.detectChanges();
+
+    const root = harness.routeNativeElement as HTMLElement;
+    const input = (label: string) => root.querySelector(`input[aria-label="${label} for ${store.heroName(1)}"]`) as HTMLInputElement;
+    const rank = root.querySelector(`select[aria-label="Ascension for ${store.heroName(1)}"]`) as HTMLSelectElement;
+    expect(root.querySelector('.investment-field h4')?.textContent).toContain('Investment');
+    expect(input('SI').disabled).toBeTrue();
+    expect(input('Furniture').disabled).toBeTrue();
+    expect(input('Engraving').disabled).toBeTrue();
+
+    rank.value = 'mythic';
+    rank.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    expect(input('SI').disabled).toBeFalse();
+    expect(input('Furniture').disabled).toBeTrue();
+    expect(input('Engraving').disabled).toBeTrue();
+    component.investmentMode.set('short');
+    harness.detectChanges();
+    const shortCode = root.querySelector(`input[aria-label="Investment for ${store.heroName(1)}"]`) as HTMLInputElement;
+    shortCode.value = '30e60';
+    shortCode.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('Engraving requires Ascended 1 star');
+    expect(store.roster()[1].inv).toBe('');
+
+    component.investmentMode.set('long');
+    harness.detectChanges();
+    rank.value = 'ascended_1';
+    rank.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    expect(input('Furniture').disabled).toBeFalse();
+    expect(input('Engraving').disabled).toBeFalse();
+    expect(root.textContent).toContain('A1★');
+    expect(root.textContent).toContain('A5★');
+
+    component.investmentMode.set('short');
+    harness.detectChanges();
+    const ascendedShortCode = root.querySelector(`input[aria-label="Investment for ${store.heroName(1)}"]`) as HTMLInputElement;
+    ascendedShortCode.value = '309e60';
+    ascendedShortCode.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    expect(store.roster()[1].inv).toBe('309e60');
+  });
+
+  it('promotes a hero to Ascended 1 star before applying an investment quick set', async () => {
+    const harness = await RouterTestingHarness.create();
+    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    store.toggleHero(1);
+    harness.detectChanges();
+
+    const root = harness.routeNativeElement as HTMLElement;
+    const investmentQuickSet = root.querySelector(`[aria-label="Quick set investment for ${store.heroName(1)}"] button`) as HTMLButtonElement;
+    investmentQuickSet.click();
+    harness.detectChanges();
+
+    expect(store.roster()[1].ascension).toBe('ascended_1');
+    expect(store.roster()[1].inv).toBe('409e60');
   });
 
   it('confirms before clearing the hero roster and quick-sets investments', async () => {
@@ -160,6 +266,19 @@ describe('roster pages', () => {
     expect(component.factionColor({ name: 'Rowan' })).toBe('#83cfff');
   });
 
+  it('shows awakened and non-awakened heroes together in the roster picker', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    const root = harness.routeNativeElement as HTMLElement;
+
+    expect(store.heroes().some(({ name, isAwakened }) => name === 'Lyca' && !isAwakened)).toBeTrue();
+    const displayedHeroes = Array.from(root.querySelectorAll('.roster-pick button'), ({ textContent }) => textContent?.trim());
+    expect(displayedHeroes).toContain('Lyca (Awakened)');
+    expect(displayedHeroes).toContain('Lyca');
+    expect(root.querySelector('[aria-label="Awakened status"]')).toBeNull();
+  });
+
   it('confirms before clearing pets or changing all pet levels', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/roster/pets', RosterPetsComponent);
@@ -167,7 +286,12 @@ describe('roster pages', () => {
     const [first, second] = store.pets();
     store.togglePet(first.id);
     store.togglePet(second.id);
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('.pet-roster-pick app-hero-icon .hero-icon.small')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.pet-quick-set button.mat-mdc-outlined-button')).not.toBeNull();
     store.updatePetLevel(first.id, 18);
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('.extra-hero app-hero-icon .hero-icon.small')).not.toBeNull();
 
     component.quickSetLevel(15);
     expect(component.confirmation()?.action).toBe('set-level');
@@ -182,13 +306,9 @@ describe('roster pages', () => {
     expect(store.petRosterCount()).toBe(2);
     component.confirm();
     expect(store.petRosterCount()).toBe(0);
-    expect(component.petKind({ id: 6001, isAwakened: false })).toBe('basic');
-    expect(component.petKind({ id: 6004, isAwakened: false })).toBe('regular');
-    expect(component.petKind({ id: 6004, isAwakened: true })).toBe('awakened');
-    for (const name of ['Blazefang', 'Count Snickerfang', 'nightfall pegasus', 'twinlum spirit']) {
-      expect(component.petKind({ id: 6004, name, isAwakened: false })).toBe('awakened');
-      expect(isAwakenedPet(name)).toBeTrue();
-    }
+    expect(store.pets().filter(({ kind }) => kind === 'basic').map(({ id }) => id)).toEqual([6001, 6002, 6003]);
+    expect(store.pets().filter(({ kind }) => kind === 'awakened').map(({ id }) => id)).toEqual([6027, 6028, 6029, 6030]);
+    expect(store.pets().filter(({ kind }) => kind === 'standard').length).toBe(23);
   });
 
   it('offers collection icons and three attack, three defense, and two flex node slots', async () => {

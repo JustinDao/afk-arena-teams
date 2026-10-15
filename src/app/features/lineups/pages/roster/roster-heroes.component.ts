@@ -2,21 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { MatButtonModule } from '@angular/material/button';
 import { TitleCasePipe } from '@angular/common';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
+import { HeroInvestmentEditorComponent } from '../../components/hero-investment-editor/hero-investment-editor.component';
 import { HeroPickerComponent } from '../../components/hero-picker/hero-picker.component';
 import { HeroAttribute } from '../../hero-classification';
-import { rosterInvestment } from '../../investment';
 import { LineupsStore } from '../../lineups.store';
 import { rosterFilterColor } from '../../roster-filter-colors';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
-type InvestmentPart = 'si' | 'furn' | 'eng';
-
 @Component({
   selector: 'app-roster-heroes',
   standalone: true,
-  imports: [ConfirmDialogComponent, HeroIconComponent, HeroPickerComponent, MatButtonModule, TitleCasePipe],
+  imports: [ConfirmDialogComponent, HeroInvestmentEditorComponent, HeroPickerComponent, MatButtonModule, TitleCasePipe],
   templateUrl: './roster-heroes.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,7 +26,6 @@ export class RosterHeroesComponent {
   readonly typeFilter = signal<HeroAttribute | ''>('');
   readonly confirmingClear = signal(false);
   readonly investmentMode = signal<'short' | 'long'>('short');
-  readonly investmentErrors = signal<Record<number, string>>({});
   readonly factions = computed(() => this.factionOptions());
   readonly classes = ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'] as const;
   readonly types = ['strength', 'agility', 'intelligence'] as const;
@@ -94,46 +90,7 @@ export class RosterHeroesComponent {
   }
 
   quickSet(heroId: number, investment: string): void {
-    if (this.store.updateRosterInvestment(heroId, investment)) this.setError(heroId, '');
-  }
-
-  updateInvestment(heroId: number, event: Event): void {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement)) return;
-    if (this.store.updateRosterInvestment(heroId, input.value)) {
-      this.setError(heroId, '');
-    } else {
-      this.setError(heroId, 'Use a valid code, such as 303e0 or 309e60 (SI 0–40, furniture 0–12, engraving 0–100).');
-      input.value = this.store.roster()[heroId]?.inv ?? '';
-    }
-  }
-
-  investmentPart(heroId: number, part: InvestmentPart): number | '' {
-    const parsed = rosterInvestment(this.store.roster()[heroId]);
-    return parsed?.[part] ?? '';
-  }
-
-  updateInvestmentPart(heroId: number, part: InvestmentPart, event: Event): void {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement)) return;
-    const value = input.value.trim() === '' ? null : Number(input.value);
-    const valid = value === null || Number.isInteger(value);
-    if (!valid || !this.store.updateRosterInvestmentPart(heroId, part, value)) {
-      const limits = { si: '0–40', furn: '0–12', eng: '0–100' } as const;
-      this.setError(heroId, `${part === 'furn' ? 'Furniture' : part === 'si' ? 'SI' : 'Engraving'} must be a whole number from ${limits[part]}.`);
-      input.value = String(this.investmentPart(heroId, part));
-    } else {
-      this.setError(heroId, '');
-    }
-  }
-
-  private setError(heroId: number, message: string): void {
-    this.investmentErrors.update((errors) => {
-      const updated = { ...errors };
-      if (message) updated[heroId] = message;
-      else delete updated[heroId];
-      return updated;
-    });
+    this.store.updateRosterInvestment(heroId, investment);
   }
 
   private factionOptions(): string[] {

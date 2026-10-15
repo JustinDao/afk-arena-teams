@@ -24,6 +24,7 @@
   --app-space-4: 16px;
   --app-space-7: 28px;
   --app-space-8: 36px;
+  --app-control-height: 36px;
   --app-radius-sm: 8px;
   --app-radius: 10px;
   --app-radius-lg: 14px;
@@ -100,6 +101,24 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+button:not(.tab):not(.formation-slot):not(.collection-choice):not(.icon-filter-button):not(.hero-pick) {
+  height: var(--app-control-height);
+  min-height: var(--app-control-height);
+}
+
+.hero-pick .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+select {
+  height: var(--app-control-height);
+  min-height: var(--app-control-height);
 }
 
 :focus-visible {

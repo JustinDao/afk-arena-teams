@@ -15,73 +15,14 @@
           </button>
         }
       </div>
-      <div class="collection-picker" aria-label="Choose a collection">
-        @for (collection of filteredCollectionCatalog(); track collection.id) {
-          <button
-            mat-button
-            type="button"
-            class="collection-choice"
-            [class.selected]="collectionForm.controls.catalogId.value === collection.id"
-            [attr.aria-pressed]="collectionForm.controls.catalogId.value === collection.id"
-            [attr.aria-label]="collection.name + ', ' + collection.class"
-            (click)="selectCollection(collection.id)"
-          >
-            <img class="collection-icon" [src]="collectionIcon(collection.id, [])" alt="">
-            <span class="collection-choice-copy">
-              <span class="collection-choice-name">{{ collection.name }}</span>
-              <small>{{ collection.class }}</small>
-            </span>
-            @if (collectionForm.controls.catalogId.value === collection.id) {
-              <span class="collection-choice-selected">Creating</span>
-            }
-          </button>
-        }
-      </div>
-      <div class="collection-node-groups">
-        @for (group of collectionNodeSlots; track group.category) {
-          <fieldset>
-            <legend>{{ group.category }} nodes</legend>
-            @for (slotIndex of group.indices; track slotIndex) {
-              <div class="collection-node-form" [class.has-tier]="!!collectionNodeAt(slotIndex)">
-                @if (collectionNodeAt(slotIndex); as node) {
-                  <img class="collection-node-icon" [src]="collectionNodeIcon(node.stat, node.tier)" [alt]="node.stat + ' stat icon'">
-                } @else {
-                  <span class="collection-node-icon-placeholder" aria-hidden="true">{{ slotIndex + 1 }}</span>
-                }
-                <label class="field">
-                  <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} stat</span>
-                  <select
-                    [value]="collectionNodeAt(slotIndex)?.stat ?? ''"
-                    (change)="updateCollectionNodeStat(slotIndex, inputValue($event))"
-                  >
-                    <option value="">No node</option>
-                    @for (stat of collectionNodeStatsForSlot(slotIndex); track stat) {
-                      <option [value]="stat">{{ collectionNodeStatLabel(stat) }}</option>
-                    }
-                  </select>
-                </label>
-                @if (collectionNodeAt(slotIndex); as node) {
-                  @if (node.stat === 'skill_level') {
-                    <span class="collection-node-tier-fixed">Mythic</span>
-                  } @else {
-                    <label class="field">
-                      <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} tier</span>
-                      <select
-                        [value]="node.tier"
-                        (change)="updateCollectionNodeTier(slotIndex, inputValue($event))"
-                      >
-                        <option value="elite">Elite</option>
-                        <option value="legendary">Legendary</option>
-                        <option value="mythic">Mythic</option>
-                      </select>
-                    </label>
-                  }
-                }
-              </div>
-            }
-          </fieldset>
-        }
-      </div>
+      <app-collection-build-editor
+        [catalog]="filteredCollectionCatalog()"
+        [selectedCatalogId]="collectionForm.controls.catalogId.value"
+        [nodeStats]="collectionNodeStats()"
+        [nodes]="collectionNodes()"
+        (selectedCatalogIdChange)="selectCollection($event)"
+        (nodesChange)="replaceCollectionNodes($event)"
+      />
       @if (collectionError()) { <p class="auth-error" role="alert">{{ collectionError() }}</p> }
       @if (editingCollectionId()) {
         <button mat-button type="button" class="btn" (click)="cancelCollectionEdit()">Cancel edit</button>

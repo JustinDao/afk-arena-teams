@@ -1,14 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
-import { Hero } from '../../models';
+import { UnitPickerOptionComponent } from '../unit-picker-option/unit-picker-option.component';
+import { displayHeroName, Hero } from '../../models';
 import { rosterFilterColor } from '../../roster-filter-colors';
 
 @Component({
   selector: 'app-hero-picker',
   standalone: true,
-  imports: [HeroIconComponent, MatButtonModule],
+  imports: [UnitPickerOptionComponent],
   template: `
     <label class="visually-hidden" [for]="searchId()">{{ searchLabel() }}</label>
     <input
@@ -20,18 +19,14 @@ import { rosterFilterColor } from '../../roster-filter-colors';
     >
     <div class="pick">
       @for (hero of filteredHeroes(); track hero.id) {
-        <button
-          mat-button
-          type="button"
-          class="hero-pick"
-          [class.owned]="selectedIds().includes(hero.id)"
-          [style.--hero-faction-color]="factionColor(hero)"
+        <app-unit-picker-option
+          [name]="displayName(hero)"
+          [imageUrl]="hero.iconUrl ?? null"
+          [selected]="selectedIds().includes(hero.id)"
+          [factionColor]="factionColor(hero)"
           [disabled]="disabledIds().includes(hero.id)"
-          (click)="heroSelected.emit(hero.id)"
-        >
-          <app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />
-          {{ hero.name }}
-        </button>
+          (selectedChange)="heroSelected.emit(hero.id)"
+        />
       } @empty {
         <p class="muted">{{ emptyMessage() }}</p>
       }
@@ -52,8 +47,12 @@ export class HeroPickerComponent {
   readonly search = signal('');
   readonly filteredHeroes = computed(() => {
     const query = this.search().trim().toLocaleLowerCase();
-    return this.heroes().filter((hero) => hero.name.toLocaleLowerCase().includes(query));
+    return this.heroes().filter((hero) => displayHeroName(hero).toLocaleLowerCase().includes(query));
   });
+
+  displayName(hero: Hero): string {
+    return displayHeroName(hero);
+  }
 
   setSearch(event: Event): void {
     const inputElement = event.target;

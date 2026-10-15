@@ -1,4 +1,42 @@
-import { Investment, RosterEntry } from './models';
+import { ASCENSION_RANKS, AscensionRank, Investment, RosterEntry } from './models';
+
+export function isAscensionAtLeast(rank: AscensionRank | null | undefined, threshold: AscensionRank): boolean {
+  if (!rank) return false;
+  const rankIndex = ASCENSION_RANKS.indexOf(rank);
+  const thresholdIndex = ASCENSION_RANKS.indexOf(threshold);
+  return rankIndex >= 0 && thresholdIndex >= 0 && rankIndex >= thresholdIndex;
+}
+
+export function sanitizeInvestmentForAscension(
+  investment: Investment | null,
+  ascension: AscensionRank | null | undefined,
+): Investment | null {
+  if (!investment) return null;
+
+  const canSi = isAscensionAtLeast(ascension, 'mythic');
+  const canFurn = isAscensionAtLeast(ascension, 'ascended');
+  const canEng = isAscensionAtLeast(ascension, 'ascended_1');
+
+  const si = !canSi ? (investment.si !== null && investment.si !== undefined ? 0 : null) : investment.si;
+  const furn = !canFurn ? (investment.furn !== null && investment.furn !== undefined ? 0 : null) : investment.furn;
+  const eng = !canEng ? (investment.eng !== null && investment.eng !== undefined ? 0 : null) : investment.eng;
+
+  return { si, furn, eng };
+}
+
+export function defaultAscensionForInvestment(investment: Investment | null): AscensionRank | null {
+  if (!investment) return null;
+  if (investment.eng !== null && investment.eng !== undefined && investment.eng > 0) {
+    return investment.eng >= 60 ? 'ascended_1' : 'ascended_1';
+  }
+  if (investment.furn !== null && investment.furn !== undefined && investment.furn > 0) {
+    return 'ascended';
+  }
+  if (investment.si !== null && investment.si !== undefined && investment.si > 0) {
+    return 'mythic';
+  }
+  return null;
+}
 
 export function parseInvestment(value: string | undefined): Investment | null {
   const trimmed = value?.trim().toLowerCase() ?? '';
@@ -15,7 +53,7 @@ export function parseInvestment(value: string | undefined): Investment | null {
     ? (furn === null ? null : 0)
     : Number(match[5]);
 
-  if ((si !== null && si > 40) || (furn !== null && furn > 12) || (eng !== null && eng > 100)) return null;
+  if ((si !== null && si > 50) || (furn !== null && furn > 36) || (eng !== null && eng > 100)) return null;
   return { si, furn, eng };
 }
 

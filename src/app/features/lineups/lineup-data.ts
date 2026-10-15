@@ -1,63 +1,69 @@
-import { Hero, Formation, Investment, Pet, Submission } from './models';
-import { parseInvestment } from './investment';
+import { displayHeroName, Hero, Formation, Investment, Pet, Submission } from './models';
+import { defaultAscensionForInvestment, parseInvestment } from './investment';
 
 const heroNames = (
   'Rowan,Raine,Lyca,Lorsan,Ezizh,Liberta,Palmer,Odysseus,Orthros,Talimar,Tavriel,Gorok,Lavatune,Elthara,Dracula,Hybris,Lysander,Leviathan,Serenmira,Melion,Sion,Laios,Marcille,Velufira,Aurelia,Knox,Lan,Jerome,Misfortis,Awakened Envydiel,Kaelon,Gorren,Haelia,Alvida,Misha,Severin,Awakened Gavus,Albedo,Yennefer,Shuna,Atheus,Veithael,Rimuru,Saitama,Cha Hae-in,Sung Jinwoo,Randle,Brutus,Elijah & Lailah,Skylan,Terrible Tornado,Daemia,Begris,Lucilla,Selene,Adrian & Elyse,Judy Punch,Harvey,Thoran,Skriath,Pippa,Fawkes,Estrilda,Eluard,Safiya,Eironn,Kyno,Trix,Saurus,Mishka,Lucretia,Daimon,Silas,Belinda,Shemira,Thane,Baden,Scarlet,Mehira,Lucius,Rosaline,Arthur,Gwyneth,Ferael,Tasi,Nara,Alna,Hodgkin,Oden,Mortas,Framton,Merlin,Haelus,Desira,Treznor,Mezoth,Astarv,Joan,Rosa,Anasta,Talene'
 ).split(',');
-function displayHeroName(name: string): string {
-  return name.replace(/^Awakened\s+(.+)$/, '$1 (Awakened)');
+const heroesByDisplayName = new Map<string, Omit<Hero, 'id'>>();
+for (const catalogName of heroNames) {
+  const isAwakened = catalogName.startsWith('Awakened ');
+  const name = catalogName.replace(/^Awakened\s+/, '');
+  heroesByDisplayName.set(displayHeroName({ name, isAwakened }), { name, isAwakened });
+}
+for (const name of ['Lyca', 'Pippa', 'Fawkes', 'Estrilda', 'Thoran', 'Skriath', 'Eluard', 'Safiya', 'Eironn', 'Baden', 'Talene', 'Belinda', 'Thane']) {
+  const key = displayHeroName({ name, isAwakened: true });
+  if (!heroesByDisplayName.has(key)) {
+    heroesByDisplayName.set(key, { name, isAwakened: true });
+  }
 }
 
-const normalizedHeroNames = heroNames.map(displayHeroName);
-const awakenedNames = ['Lyca', 'Pippa', 'Fawkes', 'Estrilda', 'Thoran', 'Skriath', 'Eluard', 'Safiya', 'Eironn', 'Baden', 'Talene', 'Belinda', 'Thane']
-  .map((name) => `${name} (Awakened)`);
+export const HEROES: readonly Hero[] = [...heroesByDisplayName.values()]
+  .map((hero, id) => ({ ...hero, id }))
+  .sort((a, b) => displayHeroName(a).localeCompare(displayHeroName(b)));
 
-export const HEROES: readonly Hero[] = [...new Set([...normalizedHeroNames, ...awakenedNames])]
-  .map((name, id) => ({ id, name }))
-  .sort((a, b) => a.name.localeCompare(b.name));
-
-export const HERO_BY_NAME: ReadonlyMap<string, Hero> = new Map(HEROES.map((hero) => [hero.name, hero]));
+export const HERO_BY_NAME: ReadonlyMap<string, Hero> = new Map(HEROES.map((hero) => [displayHeroName(hero), hero]));
 export const HERO_BY_ID: ReadonlyMap<number, Hero> = new Map(HEROES.map((hero) => [hero.id, hero]));
 
 export const PETS: readonly Pet[] = [
-  { id: 6001, name: 'Dreary Ball', isAwakened: false },
-  { id: 6002, name: 'Tufty Ears', isAwakened: false },
-  { id: 6003, name: 'Grassy Orb', isAwakened: false },
-  { id: 6004, name: 'Polar Beast', isAwakened: false },
-  { id: 6005, name: 'Fire Breather', isAwakened: false },
-  { id: 6006, name: 'Blade Ridge', isAwakened: false },
-  { id: 6007, name: 'Winged Lion', isAwakened: false },
-  { id: 6008, name: 'Rock Crown Lizard', isAwakened: false },
-  { id: 6009, name: 'Feline Vesperio', isAwakened: false },
-  { id: 6010, name: 'Bellbellow', isAwakened: false },
-  { id: 6011, name: 'Flutterplume Owl', isAwakened: false },
-  { id: 6012, name: 'Talismane', isAwakened: false },
-  { id: 6013, name: 'Phantasmoth', isAwakened: false },
-  { id: 6014, name: 'Savage Soufflé', isAwakened: false },
-  { id: 6015, name: 'Slumber Seal', isAwakened: false },
-  { id: 6016, name: 'Fox Fatale', isAwakened: false },
-  { id: 6017, name: 'Shroom Spooder', isAwakened: false },
-  { id: 6018, name: 'Radish Rotunda', isAwakened: false },
-  { id: 6019, name: 'Pandy Dumpty', isAwakened: false },
-  { id: 6020, name: 'Ice Crown', isAwakened: false },
-  { id: 6021, name: 'Aureus', isAwakened: false },
-  { id: 6022, name: 'Pearlcrest Ibis', isAwakened: false },
-  { id: 6023, name: 'Treatspector', isAwakened: false },
-  { id: 6024, name: 'Joyous Roamer', isAwakened: false },
-  { id: 6025, name: 'Trickery Chest', isAwakened: false },
-  { id: 6026, name: 'Thistlekin', isAwakened: false },
-  { id: 6027, name: 'Nightfall Pegasus', isAwakened: true },
-  { id: 6028, name: 'Count Snickerfang', isAwakened: true },
-  { id: 6029, name: 'Twinlum Spirit', isAwakened: true },
-  { id: 6030, name: 'Blazefang', isAwakened: true },
+  { id: 6001, name: 'Dreary Ball', kind: 'basic' },
+  { id: 6002, name: 'Tufty Ears', kind: 'basic' },
+  { id: 6003, name: 'Grassy Orb', kind: 'basic' },
+  { id: 6004, name: 'Polar Beast', kind: 'standard' },
+  { id: 6005, name: 'Fire Breather', kind: 'standard' },
+  { id: 6006, name: 'Blade Ridge', kind: 'standard' },
+  { id: 6007, name: 'Winged Lion', kind: 'standard' },
+  { id: 6008, name: 'Rock Crown Lizard', kind: 'standard' },
+  { id: 6009, name: 'Feline Vesperio', kind: 'standard' },
+  { id: 6010, name: 'Bellbellow', kind: 'standard' },
+  { id: 6011, name: 'Flutterplume Owl', kind: 'standard' },
+  { id: 6012, name: 'Talismane', kind: 'standard' },
+  { id: 6013, name: 'Phantasmoth', kind: 'standard' },
+  { id: 6014, name: 'Savage Soufflé', kind: 'standard' },
+  { id: 6015, name: 'Slumber Seal', kind: 'standard' },
+  { id: 6016, name: 'Fox Fatale', kind: 'standard' },
+  { id: 6017, name: 'Shroom Spooder', kind: 'standard' },
+  { id: 6018, name: 'Radish Rotunda', kind: 'standard' },
+  { id: 6019, name: 'Pandy Dumpty', kind: 'standard' },
+  { id: 6020, name: 'Ice Crown', kind: 'standard' },
+  { id: 6021, name: 'Aureus', kind: 'standard' },
+  { id: 6022, name: 'Pearlcrest Ibis', kind: 'standard' },
+  { id: 6023, name: 'Treatspector', kind: 'standard' },
+  { id: 6024, name: 'Joyous Roamer', kind: 'standard' },
+  { id: 6025, name: 'Trickery Chest', kind: 'standard' },
+  { id: 6026, name: 'Thistlekin', kind: 'standard' },
+  { id: 6027, name: 'Nightfall Pegasus', kind: 'awakened' },
+  { id: 6028, name: 'Count Snickerfang', kind: 'awakened' },
+  { id: 6029, name: 'Twinlum Spirit', kind: 'awakened' },
+  { id: 6030, name: 'Blazefang', kind: 'awakened' },
 ];
 
 function formation(key: string, label: string, spec: string, petName = '', timeSeconds: number | null = null): Formation {
   const heroes = spec.split(';').map((entry, pos) => {
     const [name, investment, mercenary] = entry.split('|');
-    const hero = HERO_BY_NAME.get(displayHeroName(name.trim()));
+    const hero = HERO_BY_NAME.get(name.trim().replace(/^Awakened\s+(.+)$/, '$1 (Awakened)'));
     if (!hero) throw new Error(`Sample data references unknown hero "${name.trim()}".`);
-    return { pos, hid: hero.id, inv: parseInvestment(investment), merc: mercenary === 'm', collection: null };
+    const inv = parseInvestment(investment);
+    return { pos, hid: hero.id, inv, ascension: defaultAscensionForInvestment(inv) ?? 'ascended', merc: mercenary === 'm', collection: null };
   });
   const pet = PETS.find(({ name }) => name === petName);
   if (petName && !pet) throw new Error(`Sample data references unknown pet "${petName}".`);

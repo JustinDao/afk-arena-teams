@@ -63,50 +63,20 @@
     searchLabel="Search heroes"
     (heroSelected)="store.toggleHero($event)"
   />
-  <h3>Investment (optional)</h3>
-  <p class="rules">Enter SI (0–40), furniture (0–12), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
-  <div class="seg" role="group" aria-label="Investment input format">
-    <button mat-button type="button" [attr.aria-pressed]="investmentMode() === 'short'" (click)="investmentMode.set('short')">Short form</button>
-    <button mat-button type="button" [attr.aria-pressed]="investmentMode() === 'long'" (click)="investmentMode.set('long')">Long form</button>
-  </div>
-  @if (investmentMode() === 'long') {
-    <div class="investment-columns" aria-hidden="true">
-      <span></span><span>SI</span><span>Furn.</span><span>Eng.</span>
-    </div>
-  }
+  <h3>Hero investment and ascension (optional)</h3>
+  <p class="rules">Enter SI (0–50), furniture (0–36), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
   @for (hero of store.heroes(); track hero.id) {
     @if (store.roster()[hero.id]) {
-      <div class="hero-investment-entry">
-        @if (investmentMode() === 'short') {
-          <label class="investment-row">
-            <span class="extra-hero"><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</span>
-            <input
-              [value]="store.roster()[hero.id].inv"
-              placeholder="309e60"
-              [disabled]="busy()"
-              [attr.aria-label]="'Investment for ' + hero.name"
-              [attr.aria-invalid]="investmentErrors()[hero.id] ? 'true' : null"
-              (change)="updateInvestment(hero.id, $event)"
-            >
-          </label>
-        } @else {
-          <div class="investment-long-row">
-            <span class="extra-hero"><app-hero-icon [name]="hero.name" [imageUrl]="hero.iconUrl ?? null" />{{ hero.name }}</span>
-            <input type="number" min="0" max="40" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'si')" [attr.aria-label]="'SI for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'si', $event)">
-            <input type="number" min="0" max="12" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'furn')" [attr.aria-label]="'Furniture for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'furn', $event)">
-            <input type="number" min="0" max="100" step="1" [disabled]="busy()" [value]="investmentPart(hero.id, 'eng')" [attr.aria-label]="'Engraving for ' + hero.name" (change)="updateInvestmentPart(hero.id, 'eng', $event)">
-          </div>
-        }
-        <div class="quick-set" role="group" [attr.aria-label]="'Quick set investment for ' + hero.name">
-          <span>Quick set:</span>
-          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '409e60')">409e60</button>
-          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '309e60')">30960</button>
-          <button mat-button type="button" class="btn" [disabled]="busy()" (click)="quickSet(hero.id, '309e30')">30930</button>
-        </div>
-        @if (investmentErrors()[hero.id]; as investmentError) {
-          <span class="field-hint" role="alert">{{ investmentError }}</span>
-        }
-      </div>
+      <app-hero-investment-editor
+        [hero]="hero"
+        [investment]="store.roster()[hero.id].inv"
+        [ascension]="store.roster()[hero.id].ascension ?? null"
+        [disabled]="busy()"
+        [mode]="investmentMode()"
+        (modeChange)="investmentMode.set($event)"
+        (investmentChange)="store.updateRosterInvestment(hero.id, $event)"
+        (ascensionChange)="store.updateRosterAscension(hero.id, $event)"
+      />
     }
   }
   @if (!store.rosterCount()) { <p class="muted">Pick heroes above, then optionally add their investment.</p> }

@@ -79,7 +79,7 @@ create table pets (
   id           int primary key,
   slug         text unique not null,
   name         text not null,
-  is_awakened  boolean not null default false,
+  pet_type     text not null check (pet_type in ('basic', 'standard', 'awakened')),
   released_at  date,
   icon_url     text generated always as (
     'https://raw.githubusercontent.com/afk-mine/cdn/main/unit_icon_by_id/' || id::text || '.webp'
@@ -1097,45 +1097,59 @@ on conflict (id) do update set
   class = excluded.class, hero_type = excluded.hero_type, role = excluded.role, rarity = excluded.rarity,
   is_awakened = excluded.is_awakened;
 
+update heroes
+set is_awakened = true
+where slug like 'awakened-%'
+  and not is_awakened;
+
+update heroes
+set name = regexp_replace(
+  regexp_replace(name, '^Awakened\s+', '', 'i'),
+  '\s+\(Awakened\)$',
+  '',
+  'i'
+)
+where is_awakened;
+
 update heroes awakened
 set base_hero_id = base.id
 from heroes base
 where awakened.is_awakened
   and base.slug = regexp_replace(awakened.slug, '^awakened-', '');
 
-insert into pets (id, slug, name, is_awakened) values
-  (6001, 'dreary-ball', 'Dreary Ball', false),
-  (6002, 'tufty-ears', 'Tufty Ears', false),
-  (6003, 'grassy-orb', 'Grassy Orb', false),
-  (6004, 'polar-beast', 'Polar Beast', false),
-  (6005, 'fire-breather', 'Fire Breather', false),
-  (6006, 'blade-ridge', 'Blade Ridge', false),
-  (6007, 'winged-lion', 'Winged Lion', false),
-  (6008, 'rock-crown-lizard', 'Rock Crown Lizard', false),
-  (6009, 'feline-vesperio', 'Feline Vesperio', false),
-  (6010, 'bellbellow', 'Bellbellow', false),
-  (6011, 'flutterplume-owl', 'Flutterplume Owl', false),
-  (6012, 'talismane', 'Talismane', false),
-  (6013, 'phantasmoth', 'Phantasmoth', false),
-  (6014, 'savage-souffle', 'Savage Soufflé', false),
-  (6015, 'slumber-seal', 'Slumber Seal', false),
-  (6016, 'fox-fatale', 'Fox Fatale', false),
-  (6017, 'shroom-spooder', 'Shroom Spooder', false),
-  (6018, 'radish-rotunda', 'Radish Rotunda', false),
-  (6019, 'pandy-dumpty', 'Pandy Dumpty', false),
-  (6020, 'ice-crown', 'Ice Crown', false),
-  (6021, 'aureus', 'Aureus', false),
-  (6022, 'pearlcrest-ibis', 'Pearlcrest Ibis', false),
-  (6023, 'treatspector', 'Treatspector', false),
-  (6024, 'joyous-roamer', 'Joyous Roamer', false),
-  (6025, 'trickery-chest', 'Trickery Chest', false),
-  (6026, 'thistlekin', 'Thistlekin', false),
-  (6027, 'nightfall-pegasus', 'Nightfall Pegasus', false),
-  (6028, 'count-snickerfang', 'Count Snickerfang', false),
-  (6029, 'twinlum-spirit', 'Twinlum Spirit', false),
-  (6030, 'blazefang', 'Blazefang', false)
+insert into pets (id, slug, name, pet_type) values
+  (6001, 'dreary-ball', 'Dreary Ball', 'basic'),
+  (6002, 'tufty-ears', 'Tufty Ears', 'basic'),
+  (6003, 'grassy-orb', 'Grassy Orb', 'basic'),
+  (6004, 'polar-beast', 'Polar Beast', 'standard'),
+  (6005, 'fire-breather', 'Fire Breather', 'standard'),
+  (6006, 'blade-ridge', 'Blade Ridge', 'standard'),
+  (6007, 'winged-lion', 'Winged Lion', 'standard'),
+  (6008, 'rock-crown-lizard', 'Rock Crown Lizard', 'standard'),
+  (6009, 'feline-vesperio', 'Feline Vesperio', 'standard'),
+  (6010, 'bellbellow', 'Bellbellow', 'standard'),
+  (6011, 'flutterplume-owl', 'Flutterplume Owl', 'standard'),
+  (6012, 'talismane', 'Talismane', 'standard'),
+  (6013, 'phantasmoth', 'Phantasmoth', 'standard'),
+  (6014, 'savage-souffle', 'Savage Soufflé', 'standard'),
+  (6015, 'slumber-seal', 'Slumber Seal', 'standard'),
+  (6016, 'fox-fatale', 'Fox Fatale', 'standard'),
+  (6017, 'shroom-spooder', 'Shroom Spooder', 'standard'),
+  (6018, 'radish-rotunda', 'Radish Rotunda', 'standard'),
+  (6019, 'pandy-dumpty', 'Pandy Dumpty', 'standard'),
+  (6020, 'ice-crown', 'Ice Crown', 'standard'),
+  (6021, 'aureus', 'Aureus', 'standard'),
+  (6022, 'pearlcrest-ibis', 'Pearlcrest Ibis', 'standard'),
+  (6023, 'treatspector', 'Treatspector', 'standard'),
+  (6024, 'joyous-roamer', 'Joyous Roamer', 'standard'),
+  (6025, 'trickery-chest', 'Trickery Chest', 'standard'),
+  (6026, 'thistlekin', 'Thistlekin', 'standard'),
+  (6027, 'nightfall-pegasus', 'Nightfall Pegasus', 'awakened'),
+  (6028, 'count-snickerfang', 'Count Snickerfang', 'awakened'),
+  (6029, 'twinlum-spirit', 'Twinlum Spirit', 'awakened'),
+  (6030, 'blazefang', 'Blazefang', 'awakened')
 on conflict (id) do update set
-  slug = excluded.slug, name = excluded.name, is_awakened = excluded.is_awakened;
+  slug = excluded.slug, name = excluded.name, pet_type = excluded.pet_type;
 
 insert into game_modes (slug, name, target_kind, enabled, sort_order, config) values
  ('twisted-realm',      'Twisted Realm',      'boss',   true, 1, '{"formations":[{"key":"team","label":"Team"}],"collections_enabled":true,"rules":"One team per run. Heroes are level-matched to the account Resonating Crystal level; record that shared hero level with the lineup. Gear and ascension still count. The boss rotates every couple of days.","result_fields":[{"key":"damage","label":"Damage dealt","type":"damage","placeholder":"e.g. 1.84B","required":true}]}'),

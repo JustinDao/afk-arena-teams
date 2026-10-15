@@ -4,7 +4,7 @@ import { SAMPLE_SUBMISSIONS } from '../lineup-data';
 import { resultLine } from '../lineup-display';
 import { UserDataService } from '../../../core/data/user-data.service';
 import { AuthService } from '../../../core/auth/auth.service';
-import { HEROES, PETS } from '../lineup-data';
+import { HEROES, HERO_BY_NAME, PETS } from '../lineup-data';
 import { MODES } from '../models';
 import { User } from '@supabase/supabase-js';
 
@@ -66,6 +66,48 @@ describe('LineupsStore', () => {
 
     store.updateRosterInvestmentPart(1, 'si', null);
     expect(store.roster()[1]).toEqual({ inv: '--3e0', si: null, furn: 3, eng: 0 });
+  });
+
+  it('accepts the maximum SI and furniture values and rejects values above the limits', () => {
+    store.toggleHero(1);
+    expect(store.updateRosterInvestmentPart(1, 'si', 50)).toBeTrue();
+    expect(store.updateRosterInvestmentPart(1, 'furn', 36)).toBeTrue();
+    expect(store.roster()[1]).toEqual({ inv: '5036e0', si: 50, furn: 36, eng: 0 });
+
+    expect(store.updateRosterInvestmentPart(1, 'si', 51)).toBeFalse();
+    expect(store.updateRosterInvestmentPart(1, 'furn', 37)).toBeFalse();
+    expect(store.roster()[1]).toEqual({ inv: '5036e0', si: 50, furn: 36, eng: 0 });
+  });
+
+  it('resets incompatible investments to 0 when ascension drops in roster', () => {
+    store.toggleHero(1);
+    store.updateRosterAscension(1, 'ascended_1');
+    store.updateRosterInvestment(1, '309e60');
+    expect(store.roster()[1]).toEqual({ inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 });
+
+    // Downgrading to Ascended (0 stars) removes engraving (set to 0)
+    store.updateRosterAscension(1, 'ascended');
+    expect(store.roster()[1].ascension).toBe('ascended');
+    expect(store.roster()[1].eng).toBe(0);
+    expect(store.roster()[1].furn).toBe(9);
+    expect(store.roster()[1].si).toBe(30);
+    expect(store.roster()[1].inv).toBe('309e0');
+
+    // Downgrading to Mythic removes furniture and engraving (set to 0)
+    store.updateRosterAscension(1, 'mythic');
+    expect(store.roster()[1].ascension).toBe('mythic');
+    expect(store.roster()[1].eng).toBe(0);
+    expect(store.roster()[1].furn).toBe(0);
+    expect(store.roster()[1].si).toBe(30);
+    expect(store.roster()[1].inv).toBe('300e0');
+
+    // Downgrading to Legendary removes SI, furniture, and engraving
+    store.updateRosterAscension(1, 'legendary');
+    expect(store.roster()[1].ascension).toBe('legendary');
+    expect(store.roster()[1].eng).toBe(0);
+    expect(store.roster()[1].furn).toBe(0);
+    expect(store.roster()[1].si).toBe(0);
+    expect(store.roster()[1].inv).toBe('000e0');
   });
 
   it('prefills selected lineup pets with the owned pet level and requires pet ownership to match', () => {
@@ -154,6 +196,33 @@ describe('LineupsStore', () => {
     expect(treasureExamples.map(resultLine)).toEqual(['Top 1%', 'Rank 37']);
   });
 
+  it('keeps custom collection builds as submission snapshots without adding them to roster inventory', async () => {
+    store.openDraft();
+    store.changeDraftMode('twisted-realm');
+    store.setHeroLevel(600);
+    store.updateDraftTarget('Kane');
+    store.heroes().slice(0, 5).forEach(({ id }) => store.pickHero(id));
+    store.startDraftCollectionSnapshot(0);
+    store.updateDraftCollectionSnapshot(0, 1, [{ slotIndex: 0, stat: 'atk', tier: 'mythic' }]);
+
+    await store.submitDraft({
+      target: 'Kane',
+      notes: '',
+      damage: '100M',
+      placementType: 'rank',
+      placementValue: '',
+    });
+
+    const submission = store.submissions()[0];
+    expect(submission.forms[0].heroes[0].collection).toEqual({
+      catalogId: 1,
+      name: 'Temporal Cover',
+      class: 'Warrior',
+      nodes: [{ slotIndex: 0, stat: 'atk', tier: 'mythic' }],
+    });
+    expect(store.collections()).toEqual([]);
+  });
+
   it('limits mercenaries immediately across the full lineup and validates TS placement', async () => {
     store.openDraft();
     store.changeDraftMode('nightmare-corridor');
@@ -197,7 +266,7 @@ describe('LineupsStore account data loading', () => {
   beforeEach(() => {
     data = jasmine.createSpyObj<UserDataService>('UserDataService', [
       'loadReferenceData', 'loadSubmissions', 'loadRoster', 'loadVotes',
-      'loadPetRoster', 'loadHeroLevel', 'loadCollections',
+      'loadPetRoster', 'loadHeroLevel', 'loadCollections', 'replaceRoster',
     ]);
     Object.defineProperty(data, 'configured', { value: true });
     data.loadReferenceData.and.resolveTo({ modes: MODES, heroes: HEROES, pets: PETS });
@@ -216,11 +285,19 @@ describe('LineupsStore account data loading', () => {
     store = TestBed.inject(LineupsStore);
   });
 
+  it('keeps base and awakened hero records distinct in the sample catalog', () => {
+    expect(HERO_BY_NAME.get('Belinda')?.isAwakened).toBeFalse();
+    expect(HERO_BY_NAME.get('Belinda (Awakened)')?.isAwakened).toBeTrue();
+    expect(HERO_BY_NAME.get('Belinda')?.id).not.toBe(HERO_BY_NAME.get('Belinda (Awakened)')?.id);
+  });
+
   it('loads only owned heroes and votes on the main page, then fetches extra data on demand once', async () => {
     const user = { id: 'test-user' } as User;
+    data.loadRoster.and.resolveTo({ 1: { inv: '', ascension: 'ascended_5' } });
     await store.initializeBackend(user);
 
     expect(data.loadRoster).toHaveBeenCalledTimes(1);
+    expect(store.roster()[1].ascension).toBe('ascended_5');
     expect(data.loadVotes).toHaveBeenCalledTimes(1);
     expect(data.loadPetRoster).not.toHaveBeenCalled();
     expect(data.loadHeroLevel).not.toHaveBeenCalled();
@@ -234,6 +311,47 @@ describe('LineupsStore account data loading', () => {
     await store.loadCollections();
     await store.loadCollections();
     expect(data.loadCollections).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializes roster saves so an older update cannot overwrite a newer ascension', async () => {
+    await store.initializeBackend({ id: 'test-user' } as User);
+    let finishFirstSave!: () => void;
+    data.replaceRoster.and.returnValues(
+      new Promise<void>((resolve) => { finishFirstSave = resolve; }),
+      Promise.resolve(),
+    );
+
+    store.updateRosterAscension(1, 'mythic');
+    store.updateRosterAscension(1, 'ascended_2');
+    expect(data.replaceRoster).toHaveBeenCalledTimes(1);
+    expect(data.replaceRoster.calls.argsFor(0)[0][1].ascension).toBe('mythic');
+
+    finishFirstSave();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(data.replaceRoster).toHaveBeenCalledTimes(2);
+    expect(data.replaceRoster.calls.argsFor(1)[0][1].ascension).toBe('ascended_2');
+  });
+
+  it('sorts heroes by their displayed names after loading reference data', async () => {
+    data.loadReferenceData.and.resolveTo({
+      modes: MODES,
+      heroes: [
+        { id: 1, name: 'Rowan' },
+        { id: 2, name: 'Ezizh', isAwakened: true },
+        { id: 3, name: 'Ezizh' },
+      ],
+      pets: PETS,
+    });
+
+    await store.initializeBackend(null);
+
+    expect(store.heroes().map((hero) => `${hero.name}${hero.isAwakened ? ' (Awakened)' : ''}`)).toEqual([
+      'Ezizh',
+      'Ezizh (Awakened)',
+      'Rowan',
+    ]);
   });
 });
 

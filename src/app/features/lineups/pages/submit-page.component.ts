@@ -5,14 +5,26 @@ import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
+import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
+import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { HeroPickerComponent } from '../components/hero-picker/hero-picker.component';
-import { DraftFormation, ModeConfig } from '../models';
+import { PetPickerComponent } from '../components/pet-picker/pet-picker.component';
+import { DraftFormation, Hero, ModeConfig } from '../models';
 import { LineupsStore } from '../lineups.store';
 
 @Component({
   selector: 'app-submit-page',
   standalone: true,
-  imports: [HeroIconComponent, HeroPickerComponent, MatButtonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CollectionBuildEditorComponent,
+    HeroIconComponent,
+    HeroInvestmentEditorComponent,
+    HeroPickerComponent,
+    MatButtonModule,
+    PetPickerComponent,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './submit-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -24,6 +36,11 @@ export class SubmitPageComponent implements OnDestroy {
   readonly disabledHeroIds = computed(() =>
     this.store.heroes().filter((hero) => this.store.heroAlreadySelected(hero.id)).map(({ id }) => id),
   );
+  readonly selectedPetIds = computed(() => {
+    const draft = this.store.draft();
+    const petId = draft?.forms[draft.cur]?.petId;
+    return petId === null || petId === undefined ? [] : [petId];
+  });
 
   readonly submissionForm = new FormGroup({
     target: new FormControl('', { nonNullable: true }),
@@ -89,6 +106,26 @@ export class SubmitPageComponent implements OnDestroy {
   checkboxValue(event: Event): boolean {
     const input = event.target;
     return input instanceof HTMLInputElement && input.checked;
+  }
+
+  heroFor(id: number): Hero {
+    const hero = this.store.heroes().find((entry) => entry.id === id);
+    if (!hero) throw new Error(`Unknown hero id: ${id}`);
+    return hero;
+  }
+
+  startCustomCollection(slotIndex: number): void {
+    const draft = this.store.draft();
+    if (!draft || draft.forms[draft.cur].slots[slotIndex].collectionSnapshot) return;
+    this.store.startDraftCollectionSnapshot(slotIndex);
+  }
+
+  useRosterCollection(slotIndex: number): void {
+    const draft = this.store.draft();
+    const selectedId = draft?.forms[draft.cur].slots[slotIndex].collectionId;
+    if (selectedId && this.store.collections().some(({ id }) => id === selectedId)) return;
+    const collection = this.store.collections()[0];
+    if (collection) this.store.updateCollectionAssignment(slotIndex, collection.id);
   }
 
   private resetSubmissionForm(): void {

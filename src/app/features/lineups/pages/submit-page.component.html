@@ -50,7 +50,7 @@
                   </button>
                 } @else {
                   <button mat-button type="button" class="formation-slot" [class.selected]="draft.slot === slotIndex" [style.--h]="store.hue(store.heroName(slot.hid))" (click)="store.selectSlot(slotIndex)">
-                    <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" />
+                    <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" size="large" [ascension]="store.draftAscension(slotIndex)" [investment]="store.draftInvestment(slotIndex)" />
                     <span>{{ store.heroName(slot.hid) }}</span>
                     <span class="remove-slot" role="button" [attr.aria-label]="'Remove ' + store.heroName(slot.hid)" (click)="$event.stopPropagation(); store.clearSlot(slotIndex)">×</span>
                   </button>
@@ -82,30 +82,71 @@
                     Mercenary
                   </label>
                 }
-                <input [value]="slot.inv" placeholder="309e60" [attr.aria-label]="'Investment for ' + store.heroName(slot.hid)" (change)="store.updateDraftFormationField('investment', inputValue($event), slotIndex)">
-                @if (modeFor(draft.mode).collectionsEnabled && auth.user()) {
-                  <label class="field collection-assignment">Collection for {{ store.heroName(slot.hid) }}
-                    <select [value]="slot.collectionId" (change)="store.updateCollectionAssignment(slotIndex, inputValue($event))">
-                      <option value="">No collection</option>
-                      @for (collection of store.collections(); track collection.id) {
-                        <option [value]="collection.id">{{ collection.name }} · {{ collection.nodes.length }} nodes</option>
+                <app-hero-investment-editor
+                  [hero]="heroFor(slot.hid)"
+                  [investment]="slot.inv"
+                  [ascension]="slot.ascension"
+                  (investmentChange)="store.updateDraftFormationField('investment', $event, slotIndex)"
+                  (ascensionChange)="store.updateDraftAscension($event, slotIndex)"
+                />
+                @if (modeFor(draft.mode).collectionsEnabled) {
+                  <section class="collection-assignment" [attr.aria-label]="'Collection for ' + store.heroName(slot.hid)">
+                    <h4>Collection</h4>
+                    <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + store.heroName(slot.hid)">
+                      <button mat-button type="button" [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot" (click)="store.clearDraftCollection(slotIndex)">None</button>
+                      @if (auth.user() && store.collections().length) {
+                        <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionId" (click)="useRosterCollection(slotIndex)">From roster</button>
                       }
-                    </select>
-                  </label>
+                      <button mat-button type="button" [disabled]="!store.collectionCatalog().length" [attr.aria-pressed]="!!slot.collectionSnapshot" (click)="startCustomCollection(slotIndex)">New build</button>
+                    </div>
+                    @if (slot.collectionId) {
+                      <label class="field">
+                        <span>Choose a saved collection</span>
+                        <select [value]="slot.collectionId" (change)="store.updateCollectionAssignment(slotIndex, inputValue($event))">
+                          @for (collection of store.collections(); track collection.id) {
+                            <option [value]="collection.id">{{ collection.name }} · {{ collection.nodes.length }} nodes</option>
+                          }
+                        </select>
+                      </label>
+                    }
+                    @if (slot.collectionSnapshot; as snapshot) {
+                      @if (store.collectionCatalog().length) {
+                        <app-collection-build-editor
+                          [catalog]="store.collectionCatalog()"
+                          [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
+                          [nodeStats]="store.collectionNodeStats()"
+                          [nodes]="snapshot.nodes"
+                          (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(slotIndex, $event, snapshot.nodes)"
+                          (nodesChange)="store.updateDraftCollectionSnapshot(slotIndex, snapshot.catalogId ?? store.collectionCatalog()[0].id, $event)"
+                        />
+                      } @else if (store.collectionCatalogLoading()) {
+                        <p class="rules" role="status">Loading collection catalog…</p>
+                      } @else {
+                        <p class="auth-error" role="alert">The collection catalog is unavailable. Check the Supabase connection and catalog migration.</p>
+                      }
+                    }
+                  </section>
                 }
               </div>
             }
-          } @empty {
-            <p class="muted">Add heroes to set mercenary and investment details.</p>
           }
-          <label class="field">Pet
-            <select [value]="draft.forms[draft.cur].petId ?? ''" (change)="store.updateDraftPet(petIdValue($event))">
-              <option value="">No pet</option>
-              @for (pet of store.pets(); track pet.id) {
-                <option [value]="pet.id">{{ pet.name }}@if (pet.isAwakened) { (Awakened) }</option>
-              }
-            </select>
-          </label>
+          @if (filledSlots(draft.forms[draft.cur]) === 0) {
+            <p class="muted">Add heroes to set mercenary, investment, and ascension details.</p>
+          }
+          @if (filledSlots(draft.forms[draft.cur]) > 0) {
+            <p class="rules">Investment short codes use SI, furniture, and engraving, for example 309e60. Use Short form or Long form, or a quick-set button.</p>
+          }
+          <div class="field">
+            <span>Pet</span>
+            <button mat-button type="button" class="btn" (click)="store.updateDraftPet(null)">No pet</button>
+            <app-pet-picker
+              searchId="submit-pet-search"
+              searchLabel="Search pets"
+              [pets]="store.pets()"
+              [selectedIds]="selectedPetIds()"
+              (petSelected)="store.updateDraftPet($event)"
+            />
+          </div>
           @if (draft.forms[draft.cur].petId !== null) {
             <label class="field">Pet level
               <input type="number" min="1" max="18" step="1" [value]="draft.forms[draft.cur].petLevel ?? ''" placeholder="1–18" (change)="store.updateDraftPetLevel(nullableNumberValue($event))">
@@ -137,6 +178,7 @@
         </section>
 
         <label class="field">Notes (optional)
+          <span class="rules">Share helpful setup details like equipment or hero levels, plus hero, pet, or collection substitutions that worked.</span>
           <textarea formControlName="notes" rows="3" placeholder="Ultimate order, swaps, minimum investment…"></textarea>
         </label>
         @if (store.draftErrors().length) {
