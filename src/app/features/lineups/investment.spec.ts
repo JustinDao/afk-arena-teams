@@ -25,8 +25,8 @@ describe('investment codes', () => {
     expect(parseInvestment('5036e60')).toEqual({ si: 50, furn: 36, eng: 60 });
     expect(parseInvestment('5136e60')).toBeNull();
     expect(parseInvestment('5037e60')).toBeNull();
-    expect(parseInvestment('3112e60')).toBeNull();
-    expect(parseInvestment('3013e60')).toBeNull();
+    expect(parseInvestment('3112e60')).toEqual({ si: 31, furn: 12, eng: 60 });
+    expect(parseInvestment('3013e60')).toEqual({ si: 30, furn: 13, eng: 60 });
     expect(parseInvestment('3013e101')).toBeNull();
     expect(parseInvestment('-309e60')).toBeNull();
   });

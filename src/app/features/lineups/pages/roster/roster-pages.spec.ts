@@ -1,7 +1,10 @@
+import { signal, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_ROUTES } from '../../../../app.routes';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { UserDataService } from '../../../../core/data/user-data.service';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS, collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
@@ -12,7 +15,16 @@ import { RosterCollectionsComponent } from './roster-collections.component';
 import { RosterHeroesComponent } from './roster-heroes.component';
 import { RosterPetsComponent } from './roster-pets.component';
 
+async function navigateTo<T>(harness: RouterTestingHarness, url: string, component: Type<T>): Promise<T> {
+  await harness.navigateByUrl(url);
+  harness.detectChanges();
+  const match = harness.fixture.debugElement.query(By.directive(component));
+  if (!match) throw new Error(`${component.name} was not rendered at ${url}`);
+  return match.componentInstance as T;
+}
+
 async function setup(): Promise<void> {
+  localStorage.clear();
   await TestBed.configureTestingModule({
     providers: [
       provideRouter(APP_ROUTES),
@@ -29,6 +41,7 @@ async function setup(): Promise<void> {
         },
       },
       { provide: UserDataService, useValue: { configured: false } },
+      { provide: AuthService, useValue: { configured: false, user: signal(null), ready: signal(true) } },
     ],
   }).compileComponents();
 }
@@ -85,7 +98,7 @@ describe('roster pages', () => {
 
   it('lets roster investments switch between compact and separate-column editing', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     component.investmentMode.set('long');
     store.clearRoster();
@@ -118,7 +131,7 @@ describe('roster pages', () => {
 
   it('saves hero ascension rank separately from investment stats', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
     store.updateRosterInvestment(1, '209e60');
@@ -148,7 +161,7 @@ describe('roster pages', () => {
 
   it('gates investment fields by ascension and offers rank quick sets', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
     component.editingHeroId.set(1);
@@ -199,7 +212,7 @@ describe('roster pages', () => {
 
   it('promotes a hero to Ascended 1 star before applying an investment quick set', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
     component.editingHeroId.set(1);
@@ -216,7 +229,7 @@ describe('roster pages', () => {
 
   it('quick-sets hero investments', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     const heroId = store.heroes()[0].id;
     store.toggleHero(heroId);
@@ -228,7 +241,7 @@ describe('roster pages', () => {
 
   it('filters heroes by faction, class, and attribute type', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
     store.toggleHero(2);
@@ -265,7 +278,7 @@ describe('roster pages', () => {
 
   it('shows awakened and non-awakened heroes together in the roster picker', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     const root = harness.routeNativeElement as HTMLElement;
     component.addingHero.set(true);
@@ -280,7 +293,7 @@ describe('roster pages', () => {
 
   it('confirms before clearing pets or changing all pet levels', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/pets', RosterPetsComponent);
+    const component = await navigateTo(harness, '/roster/pets', RosterPetsComponent);
     const store = TestBed.inject(LineupsStore);
     const [first, second] = store.pets();
     store.togglePet(first.id);
@@ -312,7 +325,7 @@ describe('roster pages', () => {
 
   it('offers the collection catalog and node stat icons', async () => {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl('/roster/collections', RosterCollectionsComponent);
+    const component = await navigateTo(harness, '/roster/collections', RosterCollectionsComponent);
 
     expect(component.collectionCatalog().length).toBe(20);
     expect(component.collectionCatalog().map(({ name }) => name)).toEqual(

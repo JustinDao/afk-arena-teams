@@ -16,7 +16,7 @@ describe('SubmitPageComponent', () => {
       imports: [SubmitPageComponent],
       providers: [
         provideRouter(APP_ROUTES),
-        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '' } },
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
         { provide: UserDataService, useValue: { configured: false } },
       ],
     }).compileComponents();
@@ -36,7 +36,7 @@ describe('SubmitPageComponent', () => {
         imports: [AppComponent],
         providers: [
           provideRouter(APP_ROUTES),
-          { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '' } },
+          { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
           { provide: UserDataService, useValue: { configured: false } },
         ],
       }).compileComponents();
@@ -74,6 +74,8 @@ describe('SubmitPageComponent', () => {
         user: signal<User | null>(null),
         ready: signal(true),
         configured: true,
+        initialize: async () => {},
+        onUserChange: () => () => {},
         clearError() {
           this.error.set(null);
         },
@@ -85,7 +87,7 @@ describe('SubmitPageComponent', () => {
         imports: [AppComponent],
         providers: [
           provideRouter(APP_ROUTES),
-          { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '' } },
+          { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
           { provide: UserDataService, useValue: { configured: false } },
           { provide: AuthService, useValue: authMock },
         ],

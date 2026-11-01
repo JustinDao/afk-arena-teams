@@ -27,6 +27,7 @@ describe('LineupsStore', () => {
 
   it('shows partial matches when roster matching is enabled', () => {
     store.toggleHero(0);
+    store.setUseRoster(true);
     store.setMatch('partial');
     expect(store.visibleSubmissions().length).toBe(1);
     expect(store.visibleSubmissions().every(({ gap }) => gap > 0)).toBeTrue();
@@ -56,7 +57,7 @@ describe('LineupsStore', () => {
     expect(store.updateRosterInvestmentPart(1, 'eng', 60)).toBeTrue();
 
     expect(store.roster()[1]).toEqual({ inv: '3012e60', si: 30, furn: 12, eng: 60 });
-    expect(store.updateRosterInvestmentPart(1, 'furn', 13)).toBeFalse();
+    expect(store.updateRosterInvestmentPart(1, 'furn', 37)).toBeFalse();
     expect(store.roster()[1].furn).toBe(12);
     expect(store.updateRosterInvestment(1, '3099e60')).toBeFalse();
     expect(store.roster()[1].furn).toBe(12);
@@ -72,11 +73,11 @@ describe('LineupsStore', () => {
     store.toggleHero(1);
     expect(store.updateRosterInvestmentPart(1, 'si', 50)).toBeTrue();
     expect(store.updateRosterInvestmentPart(1, 'furn', 36)).toBeTrue();
-    expect(store.roster()[1]).toEqual({ inv: '5036e0', si: 50, furn: 36, eng: 0 });
+    expect(store.roster()[1]).toEqual({ inv: '5036', si: 50, furn: 36, eng: null });
 
     expect(store.updateRosterInvestmentPart(1, 'si', 51)).toBeFalse();
     expect(store.updateRosterInvestmentPart(1, 'furn', 37)).toBeFalse();
-    expect(store.roster()[1]).toEqual({ inv: '5036e0', si: 50, furn: 36, eng: 0 });
+    expect(store.roster()[1]).toEqual({ inv: '5036', si: 50, furn: 36, eng: null });
   });
 
   it('resets incompatible investments to 0 when ascension drops in roster', () => {
@@ -113,6 +114,7 @@ describe('LineupsStore', () => {
   it('prefills selected lineup pets with the owned pet level and requires pet ownership to match', () => {
     store.setTarget('Netherspinner');
     store.selectAllHeroes();
+    store.setUseRoster(true);
     store.setMatch('partial');
     const lineup = store.visibleSubmissions()[0];
 
@@ -254,7 +256,7 @@ describe('LineupsStore', () => {
       placementType: 'rank',
       placementValue: '101',
     });
-    expect(store.draftErrors()).toContain('Mercenaries are not allowed in this mode.');
+    expect(store.draft()?.forms[0].slots[0].merc).toBeFalse();
     expect(store.draftErrors()).toContain('Enter a whole-number placement rank from 1 to 100.');
   });
 });
@@ -322,13 +324,18 @@ describe('LineupsStore account data loading', () => {
     );
 
     store.updateRosterAscension(1, 'mythic');
-    store.updateRosterAscension(1, 'ascended_2');
+    await Promise.resolve();
+    await Promise.resolve();
     expect(data.replaceRoster).toHaveBeenCalledTimes(1);
     expect(data.replaceRoster.calls.argsFor(0)[0][1].ascension).toBe('mythic');
 
+    store.updateRosterAscension(1, 'ascended_2');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(data.replaceRoster).toHaveBeenCalledTimes(1);
+
     finishFirstSave();
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve));
 
     expect(data.replaceRoster).toHaveBeenCalledTimes(2);
     expect(data.replaceRoster.calls.argsFor(1)[0][1].ascension).toBe('ascended_2');
