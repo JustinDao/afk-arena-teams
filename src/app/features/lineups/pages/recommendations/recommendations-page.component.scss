@@ -1,0 +1,44 @@
+.recommendations-page {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.recommendations-page .panel {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
+.recommendation-list {
+  display: grid;
+  gap: var(--app-space-3);
+  margin: var(--app-space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recommendation {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  padding: var(--app-space-3);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-panel-variant);
+}
+
+.recommendation-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  min-width: 0;
+}
+
+.mode-count {
+  padding: 2px var(--app-space-2);
+  border-radius: 999px;
+  background: var(--app-panel);
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}

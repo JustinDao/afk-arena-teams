@@ -7,3 +7,6 @@
 
 # Supabase CLI local link state
 supabase/.temp/
+
+# Local secrets (service role key for scripts)
+.env.local

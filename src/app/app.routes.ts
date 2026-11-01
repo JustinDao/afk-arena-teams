@@ -35,6 +35,10 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/lineups/pages/submit-page.component').then((m) => m.SubmitPageComponent),
   },
   {
+    path: 'recommendations',
+    loadComponent: () => import('./features/lineups/pages/recommendations/recommendations-page.component').then((m) => m.RecommendationsPageComponent),
+  },
+  {
     path: 'roster',
     loadComponent: () => import('./features/lineups/pages/roster/roster-page.component').then((m) => m.RosterPageComponent),
     children: [

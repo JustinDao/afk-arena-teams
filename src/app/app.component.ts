@@ -49,10 +49,10 @@ export class AppComponent {
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         const path = this.routePath();
-        this.onRoster.set(path.startsWith('roster'));
+        this.onRoster.set(this.isStandalonePage(path));
         if (path === 'submit') void this.store.loadCollections();
       });
-    this.onRoster.set(this.routePath().startsWith('roster'));
+    this.onRoster.set(this.isStandalonePage(this.routePath()));
     this.auth.onUserChange((user) => {
       void this.initializePageData(user);
       this.accountMessage.set(null);
@@ -135,6 +135,10 @@ export class AppComponent {
     const path = this.routePath();
     if (path.startsWith('roster')) await this.store.loadRosterDetails();
     if (path === 'roster/collections' || path === 'submit') await this.store.loadCollections();
+  }
+
+  private isStandalonePage(path: string): boolean {
+    return path.startsWith('roster') || path.startsWith('recommendations');
   }
 
   private routePath(): string {

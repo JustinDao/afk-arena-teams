@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, ModeConfig, Pet, PetRosterEntry, RosterEntry, Submission } from '../../features/lineups/models';
+import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRosterEntry, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
@@ -82,6 +82,20 @@ interface PetRow {
   name: string;
   pet_type: Pet['kind'];
   icon_url: string;
+}
+
+interface RecommendationRow {
+  hero_id: number;
+  kind: 'build' | 'invest';
+  score: string | number;
+  complete_count: number;
+  near_count: number;
+  rec_si: number | null;
+  rec_furniture: number | null;
+  rec_engraving: number | null;
+  rec_ascension: AscensionRank | null;
+  by_mode: Record<string, number> | null;
+  submission_ids: number[] | null;
 }
 
 interface UserPetRow {
@@ -286,6 +300,47 @@ export class UserDataService {
       roster[row.pet_id] = { level: row.level };
     }
     return roster;
+  }
+
+  async loadRecommendationSettings(): Promise<RecommendationSettings> {
+    if (!supabase) return { modes: [], refreshedAt: null };
+    const [profile, meta] = await Promise.all([
+      supabase.from('profiles').select('recommendation_modes').maybeSingle(),
+      supabase.from('recommendation_meta').select('refreshed_at').maybeSingle(),
+    ]);
+    if (profile.error) throw new Error(`Could not load your recommendation settings: ${profile.error.message}`);
+    return {
+      modes: Array.isArray(profile.data?.recommendation_modes) ? profile.data.recommendation_modes : [],
+      refreshedAt: typeof meta.data?.refreshed_at === 'string' ? meta.data.refreshed_at : null,
+    };
+  }
+
+  async saveRecommendationModes(modes: readonly string[]): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase.rpc('set_recommendation_modes', { p_slugs: modes });
+    if (error) throw new Error(`Could not save your recommendation modes: ${error.message}`);
+  }
+
+  async loadRecommendations(modes: readonly string[]): Promise<readonly HeroRecommendation[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase.rpc('recommend_builds', {
+      p_mode_slugs: modes.length ? modes : null,
+      p_limit: 12,
+    });
+    if (error) throw new Error(`Could not load recommendations: ${error.message}`);
+    return ((data ?? []) as RecommendationRow[]).map((row) => ({
+      heroId: row.hero_id,
+      kind: row.kind,
+      score: Number(row.score),
+      completeCount: row.complete_count,
+      nearCount: row.near_count,
+      investment: row.rec_si === null && row.rec_furniture === null && row.rec_engraving === null
+        ? null
+        : { si: row.rec_si, furn: row.rec_furniture, eng: row.rec_engraving },
+      ascension: row.rec_ascension,
+      byMode: row.by_mode ?? {},
+      submissionIds: row.submission_ids ?? [],
+    }));
   }
 
   async loadHeroLevel(): Promise<number | null> {

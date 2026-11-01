@@ -313,3 +313,20 @@ export const MODES: readonly ModeConfig[] = [
 ];
 
 export const UPCOMING_MODES = ['Arena of Heroes', "Legends' Challenger", 'Temporal Rift'] as const;
+
+export interface HeroRecommendation {
+  readonly heroId: number;
+  readonly kind: 'build' | 'invest';
+  readonly score: number;
+  readonly completeCount: number;
+  readonly nearCount: number;
+  readonly investment: Investment | null;
+  readonly ascension: AscensionRank | null;
+  readonly byMode: Readonly<Record<string, number>>;
+  readonly submissionIds: readonly number[];
+}
+
+export interface RecommendationSettings {
+  readonly modes: readonly string[];
+  readonly refreshedAt: string | null;
+}

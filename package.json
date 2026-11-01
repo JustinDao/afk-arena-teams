@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "test": "ng test",
-    "test:ci": "ng test --watch=false --browsers=ChromeHeadless"
+    "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
+    "refresh:recommendations": "node --env-file-if-exists=.env.local scripts/refresh-recommendations.mjs"
   },
   "dependencies": {
     "@angular/animations": "^19.2.0",
