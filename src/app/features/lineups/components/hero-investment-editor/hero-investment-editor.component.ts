@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component'
-import { formatInvestment, parseInvestment, sanitizeInvestmentForAscension } from '../../investment'
+import { formatInvestment, normalizeInvestmentCode, parseInvestment, sanitizeInvestmentForAscension } from '../../investment'
 import { ASCENSION_RANK_LABELS, ASCENSION_RANKS, AscensionRank, displayHeroName, Hero, Investment } from '../../models'
 
 type InvestmentPart = 'si' | 'furn' | 'eng';
@@ -192,7 +192,7 @@ export class HeroInvestmentEditorComponent {
       this.setError(event.target, 'Engraving requires Ascended 1 star or higher.');
       return;
     }
-    this.update(event.target.value, event.target);
+    this.update(normalizeInvestmentCode(event.target.value), event.target);
   }
 
   updatePart(part: InvestmentPart, event: Event): void {

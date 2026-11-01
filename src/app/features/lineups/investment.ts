@@ -38,8 +38,20 @@ export function defaultAscensionForInvestment(investment: Investment | null): As
   return null;
 }
 
-export function parseInvestment(value: string | undefined): Investment | null {
+// Accepts codes typed without the 'e', such as 20960 (= 209e60) or 2036100 (= 2036e100).
+export function normalizeInvestmentCode(value: string | undefined): string {
   const trimmed = value?.trim().toLowerCase() ?? '';
+  const digits = /^(\d{2})(\d{3,})$/.exec(trimmed);
+  if (!digits) return trimmed;
+  const rest = digits[2];
+  // 3 digits: 1-digit furniture + 2-digit engraving (20330 = 203e30). 4+ digits: 2-digit furniture when valid.
+  const furnLength = rest.length >= 4 && Number(rest.slice(0, 2)) <= 36 ? 2 : 1;
+  const eng = rest.slice(furnLength);
+  return `${digits[1]}${rest.slice(0, furnLength)}e${eng || '0'}`;
+}
+
+export function parseInvestment(value: string | undefined): Investment | null {
+  const trimmed = normalizeInvestmentCode(value);
   if (!trimmed) return null;
 
   const match = /^(?:(\d{2})(\d{1,2})?|(--)(\d{1,2})?)?(?:e(\d{1,3}))?$/.exec(trimmed);

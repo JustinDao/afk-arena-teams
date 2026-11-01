@@ -8,6 +8,16 @@ import {
 } from './investment';
 
 describe('investment codes', () => {
+  it('accepts codes typed without the e', () => {
+    expect(parseInvestment('20960')).toEqual({ si: 20, furn: 9, eng: 60 });
+    expect(parseInvestment('2036100')).toEqual({ si: 20, furn: 36, eng: 100 });
+    expect(parseInvestment('209e60')).toEqual({ si: 20, furn: 9, eng: 60 });
+    expect(parseInvestment('2036')).toEqual({ si: 20, furn: 36, eng: 0 });
+    expect(parseInvestment('20330')).toEqual({ si: 20, furn: 3, eng: 30 });
+    expect(parseInvestment('20910')).toEqual({ si: 20, furn: 9, eng: 10 });
+    expect(parseInvestment('203610')).toEqual({ si: 20, furn: 36, eng: 10 });
+  });
+
   it('treats a compact code without an engraving suffix as zero engraving', () => {
     expect(parseInvestment('303')).toEqual({ si: 30, furn: 3, eng: 0 });
     expect(parseInvestment('309')).toEqual({ si: 30, furn: 9, eng: 0 });
