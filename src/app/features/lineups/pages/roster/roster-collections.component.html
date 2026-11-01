@@ -1,76 +1,51 @@
 <section aria-label="Collections">
-  <p class="rules">Choose a collection, then optionally record its three Attack, three Defense, and two Flex nodes.</p>
   @if (!auth.user()) {
     <p class="muted">Sign in to manage collections saved to your account.</p>
   } @else {
-    <form [formGroup]="collectionForm" (ngSubmit)="saveCollection()">
-      <div class="icon-filter-row collection-class-filters" role="group" aria-label="Filter collections by class">
-        <span class="icon-filter-label">Class</span>
-        <button mat-button type="button" class="icon-filter-button" [class.active]="!collectionClassFilter()" [attr.aria-pressed]="!collectionClassFilter()" aria-label="All classes" title="All classes" (click)="setCollectionClass('')">
-          <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
-        </button>
-        @for (collectionClass of collectionClasses(); track collectionClass) {
-          <button mat-button type="button" class="icon-filter-button" [class.active]="collectionClassFilter() === collectionClass" [attr.aria-pressed]="collectionClassFilter() === collectionClass" [attr.aria-label]="collectionClass" [attr.title]="collectionClass" (click)="setCollectionClass(collectionClass)">
-            <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="collectionClassColor(collectionClass)">{{ collectionClassToken(collectionClass) }}</span><span class="filter-caption">{{ collectionClass }}</span></span>
-          </button>
-        }
-      </div>
-      <app-collection-build-editor
-        [catalog]="filteredCollectionCatalog()"
-        [selectedCatalogId]="collectionForm.controls.catalogId.value"
-        [nodeStats]="collectionNodeStats()"
-        [nodes]="collectionNodes()"
-        (selectedCatalogIdChange)="selectCollection($event)"
-        (nodesChange)="replaceCollectionNodes($event)"
-      />
-      @if (collectionError()) { <p class="auth-error" role="alert">{{ collectionError() }}</p> }
-      @if (editingCollectionId()) {
-        <button mat-button type="button" class="btn" (click)="cancelCollectionEdit()">Cancel edit</button>
-      }
-      <button mat-flat-button class="btn primary submit-button" [disabled]="collectionForm.invalid || collectionCatalog().length === 0">
-        {{ editingCollectionId() ? 'Update collection' : 'Save collection' }}
-      </button>
-    </form>
-    <h3>Saved inventory</h3>
+    <div class="row-wrap">
+      <button mat-flat-button class="btn primary" [disabled]="store.collectionsLoading()" (click)="addingCollection.set(true)">Add collection</button>
+    </div>
+    <app-hero-filters
+      label="Filter collections"
+      [showFaction]="false"
+      [showType]="false"
+      [(heroClass)]="collectionClassFilter"
+    />
     @if (store.collectionsLoading()) {
       <p class="muted" role="status">Loading saved collections…</p>
     }
-    @for (collection of savedCollections(); track collection.id) {
-      <article class="collection-item">
-        @if (collection.catalogId !== undefined) {
-          <img
-            class="collection-icon"
-            [src]="collectionIcon(collection.catalogId, collection.nodes)"
-            [alt]="collection.name + ' icon'"
-          >
-        }
-        <div class="collection-item-main">
-          <strong>{{ collection.name }}</strong>
-          @if (collection.class) { <span class="collection-class">{{ collection.class }}</span> }
-          <p class="rules">{{ collection.nodes.length ? collectionSummary(collection.nodes) : 'No stat nodes added yet.' }}</p>
-          <div class="collection-node-icons" aria-label="Collection stat nodes">
-            @for (node of collection.nodes; track node.slotIndex) {
-              <img
-                class="collection-node-icon"
-                [src]="collectionNodeIcon(node.stat, node.tier)"
-                [alt]="collectionSlotLabel(node.slotIndex) + ' ' + collectionNodeLabel(node)"
-                [title]="collectionSlotLabel(node.slotIndex) + ' ' + collectionNodeLabel(node)"
-              >
-            }
-          </div>
-          @if (collection.catalogId === undefined) {
-            <p class="rules">Legacy custom collection. Its saved build is preserved, but it is not editable in the catalog editor.</p>
-          }
-        </div>
-        <div class="collection-actions">
+    <div class="hero-box captioned" role="list" aria-label="Collection box">
+      @for (collection of savedCollections(); track collection.id) {
+        <button type="button" class="hero-box-tile" role="listitem" [attr.aria-label]="'Edit ' + displayName(collection)" [attr.title]="collectionSummary(collection.nodes) || displayName(collection)" [disabled]="collection.catalogId === undefined" (click)="editingCollectionId.set(collection.id)">
           @if (collection.catalogId !== undefined) {
-            <button mat-button type="button" class="btn" (click)="editCollection(collection)">Edit</button>
+            <img class="collection-icon" [src]="collectionIcon(collection)" alt="">
           }
-          <button mat-button type="button" class="btn" (click)="deleteCollection(collection)">Delete</button>
-        </div>
-      </article>
-    } @empty {
-      <p class="muted">No collections saved yet.</p>
+          <span class="collection-tile-name">{{ displayName(collection) }}</span>
+        </button>
+      }
+    </div>
+    @if (!store.collections().length && !store.collectionsLoading()) {
+      <p class="muted">No collections saved yet. Use “Add collection” to record your collections and their nodes.</p>
+    } @else if (!savedCollections().length) {
+      <p class="muted">No collections match this filter.</p>
     }
   }
 </section>
+@if (addingCollection()) {
+  <app-add-collection-modal
+    [catalog]="collectionCatalog()"
+    (collectionSelected)="startNewCollection($event)"
+    (closed)="addingCollection.set(false)"
+  />
+}
+@if (editorCatalogItem(); as catalogItem) {
+  <app-collection-editor-modal
+    [catalogItem]="catalogItem"
+    [existing]="editingCollection()"
+    [nodeStats]="store.collectionNodeStats()"
+    [busy]="saving()"
+    (saved)="saveCollection($event)"
+    (removed)="removeCollection()"
+    (closed)="closeEditor()"
+  />
+}

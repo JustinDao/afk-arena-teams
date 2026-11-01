@@ -1,4 +1,4 @@
-import { CollectionCatalogItem, CollectionNodeStat, CollectionNodeTier } from './models';
+import { CollectionCatalogItem, CollectionNode, CollectionNodeStat, CollectionNodeTier } from './models';
 
 const CDN_BASE = 'https://raw.githubusercontent.com/afk-mine/cdn/main';
 
@@ -35,9 +35,23 @@ export const COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [
 export const COLLECTION_NODE_TIERS: readonly CollectionNodeTier[] = ['elite', 'legendary', 'mythic'];
 
 export function collectionIconUrl(collectionId: number, level = 1, mythicStats = 0): string {
-  const lvl = level > 1 ? `_lvl${level}` : '';
+  const lvl = `_lvl${level}`;
   const mythic = mythicStats ? `_ms${mythicStats}` : '';
   return `${CDN_BASE}/collection_icon/${collectionId}${lvl}${mythic}_cl.webp`;
+}
+
+export function collectionIconUrlForNodes(collectionId: number, nodes: readonly CollectionNode[]): string {
+  const levelNodes = nodes.filter(({ stat }) => stat === 'skill_level').length;
+  const mythicStats = nodes.filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic').length;
+  return collectionIconUrl(collectionId, levelNodes + 1, mythicStats);
+}
+
+export function defaultCollectionName(catalogName: string, nodes: readonly CollectionNode[]): string {
+  const labels = [...nodes]
+    .filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic')
+    .sort((left, right) => left.slotIndex - right.slotIndex)
+    .map(({ stat }) => collectionNodeLabel(stat));
+  return labels.length ? labels.join(', ') : catalogName;
 }
 
 export function collectionNodeIconUrl(stat: CollectionNodeStat, tier: CollectionNodeTier): string {

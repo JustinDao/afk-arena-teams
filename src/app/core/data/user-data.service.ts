@@ -386,6 +386,7 @@ export class UserDataService {
       p_collection: {
         ...('id' in collection ? { id: collection.id } : {}),
         catalog_id: collection.catalogId,
+        name: collection.name,
         nodes: collection.nodes.map((node) => ({
           slot_index: node.slotIndex,
           stat_type: node.stat,

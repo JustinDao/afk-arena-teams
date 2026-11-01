@@ -4,3 +4,6 @@
 /.angular
 /out-tsc
 /src/environments/environment.ts
+
+# Supabase CLI local link state
+supabase/.temp/

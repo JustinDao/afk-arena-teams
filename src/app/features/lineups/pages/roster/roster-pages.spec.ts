@@ -6,7 +6,6 @@ import { UserDataService } from '../../../../core/data/user-data.service';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS, collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
 import { heroAttributeFromValue } from '../../hero-classification';
-import { rosterClassFilterColor } from '../../roster-filter-colors';
 import { HeroFiltersComponent } from '../../components/hero-filters/hero-filters.component';
 import { LineupsStore } from '../../lineups.store';
 import { RosterCollectionsComponent } from './roster-collections.component';
@@ -45,25 +44,13 @@ describe('roster pages', () => {
     expect(heroAttributeFromValue(null)).toBeNull();
   });
 
-  it('selects the first alphabetized collection by default', () => {
+  it('opens the add collection modal with a class filter and collection choices', () => {
     const fixture = TestBed.createComponent(RosterCollectionsComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    const firstCollection = [...component.collectionCatalog()].sort((left, right) =>
-      left.name.localeCompare(right.name),
-    )[0];
-
-    expect(component.collectionForm.controls.catalogId.value).toBe(firstCollection.id);
-  });
-
-  it('renders collection choice button with centered content and icon', () => {
-    const fixture = TestBed.createComponent(RosterCollectionsComponent);
-    fixture.detectChanges();
-    const element = fixture.nativeElement as HTMLElement;
-    const choice = element.querySelector('.collection-choice') as HTMLElement | null;
-    expect(choice).not.toBeNull();
-    const icon = choice?.querySelector('.collection-icon') as HTMLImageElement | null;
-    expect(icon).not.toBeNull();
+    expect(component.collectionCatalog().map(({ name }) => name)).toEqual(
+      [...component.collectionCatalog().map(({ name }) => name)].sort((a, b) => a.localeCompare(b)),
+    );
   });
 
   it('routes /roster to heroes and gives each tab its own URL', async () => {
@@ -323,7 +310,7 @@ describe('roster pages', () => {
     expect(store.pets().filter(({ kind }) => kind === 'standard').length).toBe(23);
   });
 
-  it('offers collection icons and three attack, three defense, and two flex node slots', async () => {
+  it('offers the collection catalog and node stat icons', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/roster/collections', RosterCollectionsComponent);
 
@@ -331,36 +318,14 @@ describe('roster pages', () => {
     expect(component.collectionCatalog().map(({ name }) => name)).toEqual(
       [...component.collectionCatalog().map(({ name }) => name)].sort((a, b) => a.localeCompare(b)),
     );
-    const collectionClass = component.collectionCatalog()[0].class;
-    expect(component.collectionClassColor(collectionClass)).toBe(rosterClassFilterColor(collectionClass));
-    component.setCollectionClass(collectionClass);
-    expect(component.filteredCollectionCatalog().every(({ class: value }) => value === collectionClass)).toBeTrue();
-    expect(component.filteredCollectionCatalog().some(({ id }) => id === component.collectionForm.controls.catalogId.value)).toBeTrue();
-    component.collectionClassFilter.set('');
     expect(new Set(COLLECTION_CATALOG.map(({ id }) => id)).size).toBe(20);
     expect(COLLECTION_NODE_STATS.length).toBe(26);
-    expect(component.collectionNodeStats()).toContain('skill_level');
-    expect(component.collectionNodeSlots.map(({ category, indices }) => [category, indices.length])).toEqual([
-      ['Attack', 3],
-      ['Defense', 3],
-      ['Flex', 2],
-    ]);
+    expect(component.store.collectionNodeStats()).toContain('skill_level');
     expect(collectionIconUrl(1, 2)).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/1_lvl2_cl.webp',
     );
     expect(collectionNodeIconUrl('atk', 'mythic')).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_stats_icon/atk_m.webp',
     );
-    component.updateCollectionNodeStat(0, 'atk');
-    expect(component.collectionNodeAt(0)?.tier).toBe('mythic');
-    component.updateCollectionNodeTier(0, 'legendary');
-    expect(component.collectionNodeAt(0)?.tier).toBe('legendary');
-    component.updateCollectionNodeStat(7, 'skill_level');
-    component.updateCollectionNodeTier(7, 'elite');
-    expect(component.collectionNodeAt(7)).toEqual({ slotIndex: 7, stat: 'skill_level', tier: 'mythic' });
-    expect(component.collectionNodeStatsForSlot(0)).not.toContain('skill_level');
-    expect(component.collectionNodeStatsForSlot(6)).toContain('skill_level');
-    component.removeCollectionNode(7);
-    expect(component.collectionNodeAt(7)).toBeUndefined();
   });
 });

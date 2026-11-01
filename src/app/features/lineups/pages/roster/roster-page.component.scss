@@ -69,57 +69,6 @@
   padding-inline: var(--app-space-2);
 }
 
-.collection-item {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--app-space-3);
-  padding-block: var(--app-space-2);
-  border-bottom: 1px solid var(--app-line);
-}
-
-.collection-item-main {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.collection-item-main .rules {
-  width: 100%;
-}
-
-.collection-class {
-  color: var(--app-muted);
-  font-size: 0.8rem;
-}
-
-.collection-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--app-space-2);
-}
-
-.collection-actions .btn {
-  border: 1px solid var(--app-line);
-  background: var(--app-panel);
-  color: var(--app-ink);
-}
-
-.collection-actions .btn:hover:not(:disabled) {
-  border-color: var(--app-primary);
-  background: var(--app-panel-variant);
-}
-
-.collection-node-icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--app-space-1);
-}
-
-
-
 .collection-node-tier-fixed {
   color: var(--app-muted);
   font-size: 0.9rem;
@@ -222,26 +171,6 @@
   white-space: nowrap;
 }
 
-.collection-class-filters {
-  margin-block: var(--app-space-2);
-}
-
-@media (max-width: 520px) {
-  .collection-item {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-
-  .collection-item > .collection-icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .collection-actions {
-    grid-column: 2;
-    justify-content: center;
-  }
-}
-
 .roster-page .panel.hero-modal {
   width: min(1040px, 100%);
   border: 1px solid var(--app-line);
@@ -283,6 +212,60 @@
 .hero-box-tile:focus-visible {
   border-color: var(--app-primary);
   background: var(--app-panel);
+}
+
+.hero-box.captioned {
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: var(--app-space-2);
+}
+
+.hero-box.captioned .hero-box-tile {
+  gap: 4px;
+  padding: 6px 2px;
+}
+
+.hero-box.captioned .collection-icon {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.hero-box.captioned .collection-tile-name {
+  display: -webkit-box;
+  width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.collection-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-3);
+}
+
+.collection-modal-head .collection-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.collection-name-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-modal .collection-roster-pick {
+  max-height: min(420px, 45vh);
+  overflow-y: auto;
 }
 
 .hero-modal .modal-actions {

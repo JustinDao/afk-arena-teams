@@ -11,7 +11,8 @@ import { rosterFilterColor } from '../../roster-filter-colors';
   imports: [MatButtonModule, TitleCasePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="roster-filters" role="group" aria-label="Filter heroes">
+    <div class="roster-filters" role="group" [attr.aria-label]="label()">
+      @if (showFaction()) {
       <div class="icon-filter-row" role="group" aria-label="Faction">
         <span class="icon-filter-label">Faction</span>
         <button mat-button type="button" class="icon-filter-button" [class.active]="!faction()" [attr.aria-pressed]="!faction()" aria-label="All factions" title="All factions" (click)="faction.set('')">
@@ -23,6 +24,7 @@ import { rosterFilterColor } from '../../roster-filter-colors';
           </button>
         }
       </div>
+      }
       <div class="icon-filter-row" role="group" aria-label="Class">
         <span class="icon-filter-label">Class</span>
         <button mat-button type="button" class="icon-filter-button" [class.active]="!heroClass()" [attr.aria-pressed]="!heroClass()" aria-label="All classes" title="All classes" (click)="heroClass.set('')">
@@ -34,6 +36,7 @@ import { rosterFilterColor } from '../../roster-filter-colors';
           </button>
         }
       </div>
+      @if (showType()) {
       <div class="icon-filter-row" role="group" aria-label="Type">
         <span class="icon-filter-label">Type</span>
         <button mat-button type="button" class="icon-filter-button" [class.active]="!type()" [attr.aria-pressed]="!type()" aria-label="All types" title="All types" (click)="type.set('')">
@@ -45,11 +48,15 @@ import { rosterFilterColor } from '../../roster-filter-colors';
           </button>
         }
       </div>
+      }
     </div>
   `,
 })
 export class HeroFiltersComponent {
-  readonly factions = input.required<readonly string[]>();
+  readonly factions = input<readonly string[]>([]);
+  readonly showFaction = input(true);
+  readonly showType = input(true);
+  readonly label = input('Filter heroes');
   readonly faction = model('');
   readonly heroClass = model('');
   readonly type = model<HeroAttribute | ''>('');

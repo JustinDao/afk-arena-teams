@@ -553,6 +553,7 @@ begin
   if v_collection_name is null then
     raise exception 'Choose a collection from the catalog.';
   end if;
+  v_collection_name := coalesce(nullif(left(trim(p_collection ->> 'name'), 80), ''), v_collection_name);
 
   select count(*), count(distinct (value ->> 'slot_index')::smallint)
   into v_node_count, v_slot_count

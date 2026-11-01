@@ -5,7 +5,7 @@ import { formatInvestment, formatKillTime, heroName, resultLine } from '../../li
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { PetBadgeComponent } from '../pet-badge/pet-badge.component';
-import { collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
+import { collectionIconUrlForNodes, collectionNodeIconUrl } from '../../collection-catalog';
 import { rosterFilterColor } from '../../roster-filter-colors';
 import { PETS } from '../../lineup-data';
 
@@ -67,7 +67,7 @@ export class LineupCardComponent {
   collectionIcon(catalogId: number | undefined, nodes: readonly CollectionNode[]): string | null {
     return catalogId === undefined
       ? null
-      : collectionIconUrl(catalogId, nodes.filter(({ tier }) => tier === 'mythic').length);
+      : collectionIconUrlForNodes(catalogId, nodes);
   }
 
   collectionNodeIcon(stat: string, tier: CollectionNode['tier']): string {
