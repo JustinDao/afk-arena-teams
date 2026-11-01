@@ -87,6 +87,7 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
 export class LineupsStore {
   private readonly modeSignal = signal('nightmare-corridor');
   private readonly targetSignal = signal<string | null>(null);
+  private readonly teamCountSignal = signal<number | null>(null);
   private readonly useRosterSignal = signal(false);
   private readonly matchSignal = signal<'strict' | 'partial'>('strict');
   private readonly scopeSignal = signal<'all' | 'slot'>('all');
@@ -136,6 +137,7 @@ export class LineupsStore {
 
   readonly mode = this.modeSignal.asReadonly();
   readonly target = this.targetSignal.asReadonly();
+  readonly teamCount = this.teamCountSignal.asReadonly();
   readonly useRoster = this.useRosterSignal.asReadonly();
   readonly match = this.matchSignal.asReadonly();
   readonly scope = this.scopeSignal.asReadonly();
@@ -172,6 +174,7 @@ export class LineupsStore {
     const rosterSize = Object.keys(roster).length;
     const currentMode = this.modeSignal();
     const selectedTarget = this.targetSignal();
+    const teamCount = this.teamCountSignal();
     const useRoster = this.useRosterSignal() && rosterSize > 0;
     const checkInvestment = this.checkInvestmentSignal();
     const match = this.matchSignal();
@@ -181,7 +184,8 @@ export class LineupsStore {
 
     const petRoster = this.petRosterSignal();
     const rows = this.submissionsSignal()
-      .filter((submission) => submission.mode === currentMode && (!selectedTarget || submission.target === selectedTarget))
+      .filter((submission) => submission.mode === currentMode && (!selectedTarget || submission.target === selectedTarget)
+        && (teamCount === null || submission.forms.length === teamCount))
     .map((submission) => this.evaluateSubmission(
       submission, roster, petRoster, this.heroLevelSignal(), useRoster, checkInvestment, votes, scope,
     ));
@@ -313,7 +317,12 @@ export class LineupsStore {
     this.getMode(slug);
     this.modeSignal.set(slug);
     this.targetSignal.set(null);
+    this.teamCountSignal.set(null);
     this.scopeSignal.set('all');
+  }
+
+  setTeamCount(count: number | null): void {
+    this.teamCountSignal.set(count);
   }
 
   setTarget(target: string | null): void {
@@ -653,6 +662,21 @@ export class LineupsStore {
     });
   }
 
+  setDraftTeamCount(count: number): void {
+    this.updateDraft((draft) => {
+      const mode = this.getMode(draft.mode);
+      if (!mode.variable) return;
+      const target = Math.min(mode.variable.max, Math.max(mode.variable.min, Math.trunc(count)));
+      while (draft.forms.length < target) {
+        const number = draft.forms.length + 1;
+        draft.forms.push(makeEmptyFormation(`t${number}`, `Team ${number}`));
+      }
+      if (draft.forms.length > target) draft.forms.length = target;
+      draft.cur = Math.min(draft.cur, draft.forms.length - 1);
+      draft.slot = -1;
+    });
+  }
+
   removeTeam(): void {
     this.updateDraft((draft) => {
       const mode = this.getMode(draft.mode);
@@ -928,6 +952,11 @@ export class LineupsStore {
     return `${this.formatDamage(Number(result['damage']))} damage${submission.mode === 'cursed-realm' ? ' in total' : ''}`;
   }
 
+  private initialTeamCount(slug: string, variable: { min: number; max: number; default?: number }): number {
+    const selected = this.modeSignal() === slug ? this.teamCountSignal() : null;
+    return selected ?? variable.default ?? variable.min;
+  }
+
   private newDraft(slug: string): LineupDraft {
     const mode = this.getMode(slug);
     const result: Record<string, unknown> = {};
@@ -937,7 +966,7 @@ export class LineupsStore {
       : (slug === 'nightmare-corridor' ? mode.targets[0] ?? '' : '');
     const targetFormations = mode.targetFormations?.[target];
     const forms = mode.variable
-      ? Array.from({ length: mode.variable.min }, (_, index) => makeEmptyFormation(`t${index + 1}`, `Team ${index + 1}`))
+      ? Array.from({ length: this.initialTeamCount(slug, mode.variable) }, (_, index) => makeEmptyFormation(`t${index + 1}`, `Team ${index + 1}`))
       : (targetFormations ?? mode.formations ?? []).map(({ key, label }) => makeEmptyFormation(key, label));
     return {
       mode: slug,

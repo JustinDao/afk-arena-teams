@@ -31,6 +31,16 @@
       </div>
     }
 
+    @if (store.activeMode().variable; as variable) {
+      <div class="row-wrap" role="group" aria-label="Number of teams">
+        <span class="muted">Teams</span>
+        <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === null" (click)="store.setTeamCount(null)">All</button>
+        @for (count of teamCounts(variable); track count) {
+          <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === count" (click)="store.setTeamCount(count)">{{ count }}</button>
+        }
+      </div>
+    }
+
     <div class="row-wrap">
       @if (store.rosterCount()) {
         <label class="check">

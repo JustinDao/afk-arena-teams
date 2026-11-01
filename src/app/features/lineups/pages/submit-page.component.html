@@ -33,8 +33,14 @@
               </button>
             }
             @if (modeFor(draft.mode).variable; as variable) {
-              <button mat-button type="button" [disabled]="draft.forms.length >= variable.max" (click)="store.addTeam()">Add team</button>
-              <button mat-button type="button" [disabled]="draft.forms.length <= variable.min" (click)="store.removeTeam()">Remove last</button>
+              <label class="check team-count">
+                Number of teams
+                <select [value]="draft.forms.length" (change)="store.setDraftTeamCount(teamCountValue($event))">
+                  @for (count of teamCounts(variable); track count) {
+                    <option [value]="count" [selected]="count === draft.forms.length">{{ count }}</option>
+                  }
+                </select>
+              </label>
             }
           </div>
         }

@@ -40,6 +40,10 @@ export class LineupsPageComponent {
     return 'votes';
   }
 
+  teamCounts(variable: { readonly min: number; readonly max: number }): readonly number[] {
+    return Array.from({ length: variable.max - variable.min + 1 }, (_, index) => variable.min + index);
+  }
+
   setTarget(event: Event): void {
     const select = event.target;
     if (select instanceof HTMLSelectElement) this.store.setTarget(select.value || null);

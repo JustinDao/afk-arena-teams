@@ -98,6 +98,14 @@ export class SubmitPageComponent implements OnDestroy {
     return Number.isInteger(petId) && this.store.pets().some((pet) => pet.id === petId) ? petId : null;
   }
 
+  teamCounts(variable: { readonly min: number; readonly max: number }): readonly number[] {
+    return Array.from({ length: variable.max - variable.min + 1 }, (_, index) => variable.min + index);
+  }
+
+  teamCountValue(event: Event): number {
+    return Number(this.inputValue(event));
+  }
+
   inputValue(event: Event): string {
     const input = event.target;
     return input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? input.value : '';

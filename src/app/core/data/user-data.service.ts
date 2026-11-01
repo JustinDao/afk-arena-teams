@@ -442,7 +442,7 @@ export class UserDataService {
     const formations = row.slug === 'nightmare-corridor'
       ? undefined
       : config['formations'] as ModeConfig['formations'] | undefined;
-    const variableFormations = config['variable_formations'] as { min: number; max: number } | undefined;
+    const variableFormations = config['variable_formations'] as { min: number; max: number; default?: number } | undefined;
     const cycleRows = row.slug === 'nightmare-corridor'
       ? targetRows
         .filter((target) => cycleBosses.some((boss) => boss.cycle_anchor_id === target.id))

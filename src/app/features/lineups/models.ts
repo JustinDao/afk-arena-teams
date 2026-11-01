@@ -148,7 +148,7 @@ export interface ModeConfig {
   readonly targetFormations?: Readonly<Record<string, readonly { readonly key: string; readonly label: string }[]>>;
   readonly rules: string;
   readonly formations?: readonly { readonly key: string; readonly label: string }[];
-  readonly variable?: { readonly min: number; readonly max: number };
+  readonly variable?: { readonly min: number; readonly max: number; readonly default?: number };
   readonly mercMax?: number;
   readonly uniqueAcross?: boolean;
   readonly collectionsEnabled?: boolean;
@@ -303,8 +303,8 @@ export const MODES: readonly ModeConfig[] = [
     targetLabel: 'Debuff',
     targetAll: 'All debuffs',
     targets: ['Fire', 'Frost', 'Forest', 'Fog', 'Fountain'],
-    rules: 'A lineup contains seven teams for one debuff cycle. Heroes are level 360 with no artifact bonuses, mercenaries are not allowed, and a hero can only appear once per run.',
-    variable: { min: 7, max: 7 },
+    rules: 'A lineup contains two to seven teams, depending on the division, for one debuff cycle. Heroes are level 360 with no artifact bonuses, mercenaries are not allowed, and a hero can only appear once per run.',
+    variable: { min: 2, max: 7, default: 7 },
     uniqueAcross: true,
     mercMax: 0,
     collectionsEnabled: false,

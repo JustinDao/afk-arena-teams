@@ -144,6 +144,25 @@ describe('LineupsStore', () => {
     expect(store.draft()?.forms[1].slots.every(({ hid }) => hid === null)).toBeTrue();
   });
 
+  it('lets Treasure Scramble drafts use two to seven teams and filters lineups by team count', () => {
+    store.openDraft();
+    store.changeDraftMode('treasure-scramble');
+    store.setDraftTeamCount(2);
+    expect(store.draft()?.forms.length).toBe(2);
+    store.setDraftTeamCount(9);
+    expect(store.draft()?.forms.length).toBe(7);
+    store.setDraftTeamCount(1);
+    expect(store.draft()?.forms.length).toBe(2);
+
+    store.setMode('treasure-scramble');
+    const all = store.visibleSubmissions().length;
+    store.setTeamCount(7);
+    expect(store.visibleSubmissions().length).toBeLessThan(all);
+    expect(store.visibleSubmissions().every(({ submission }) => submission.forms.length === 7)).toBeTrue();
+    store.setMode('twisted-realm');
+    expect(store.teamCount()).toBeNull();
+  });
+
   it('includes a pet on every team in each Cursed Realm example', () => {
     const cursedExamples = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'cursed-realm');
     expect(cursedExamples.length).toBeGreaterThan(0);
