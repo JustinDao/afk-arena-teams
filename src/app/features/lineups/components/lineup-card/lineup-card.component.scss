@@ -68,7 +68,7 @@ h3 {
   gap: var(--app-space-2);
   padding: var(--app-space-3) var(--app-space-2);
   border-radius: var(--app-radius);
-  background: var(--app-panel-variant);
+  background: var(--app-board);
 }
 
 .board.run {
@@ -87,7 +87,7 @@ h3 {
 .hero-row {
   display: flex;
   justify-content: center;
-  gap: var(--app-space-2);
+  gap: var(--app-space-3);
 }
 
 .hero-row.back {
@@ -102,20 +102,14 @@ h3 {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  min-width: 78px;
-  max-width: 104px;
-  padding: var(--app-space-2) var(--app-space-1);
-  border: 1.5px solid color-mix(in srgb, var(--app-ink) 30%, transparent);
+  padding: 2px;
+  border: 1.5px solid transparent;
   border-radius: var(--app-radius-sm);
-  background: color-mix(in srgb, var(--hero-faction-color) 38%, var(--app-panel));
+  background: transparent;
   color: var(--app-chip-ink);
   font-size: 0.8rem;
   line-height: 1.2;
   text-align: center;
-}
-
-.hero-name {
-  overflow-wrap: anywhere;
 }
 
 .hero.ok {
@@ -130,12 +124,6 @@ h3 {
   border-style: dashed;
   border-color: var(--app-error);
   opacity: 0.78;
-}
-
-.investment {
-  display: block;
-  font-size: 0.7rem;
-  opacity: 0.75;
 }
 
 .collection-tag {

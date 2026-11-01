@@ -9,6 +9,7 @@
   --app-bg: var(--mat-sys-surface);
   --app-panel: var(--mat-sys-surface-container-low);
   --app-panel-variant: var(--mat-sys-surface-container);
+  --app-board: var(--mat-sys-surface-container-high);
   --app-ink: var(--mat-sys-on-surface);
   --app-muted: var(--mat-sys-on-surface-variant);
   --app-line: var(--mat-sys-outline-variant);
@@ -34,6 +35,7 @@
 }
 
 :root.theme-dark {
+  --app-board: var(--app-panel-variant);
   color-scheme: dark;
   --mat-sys-surface: color-mix(in srgb, var(--mat-sys-neutral10) 88%, var(--mat-sys-scrim));
   --mat-sys-surface-bright: var(--mat-sys-surface-container-lowest);
@@ -58,6 +60,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.theme-light) {
     color-scheme: dark;
+    --app-board: var(--app-panel-variant);
     --mat-sys-surface: color-mix(in srgb, var(--mat-sys-neutral10) 88%, var(--mat-sys-scrim));
     --mat-sys-surface-bright: var(--mat-sys-surface-container-lowest);
     --mat-sys-surface-container-low: color-mix(in srgb, var(--mat-sys-neutral10) 80%, var(--mat-sys-outline));

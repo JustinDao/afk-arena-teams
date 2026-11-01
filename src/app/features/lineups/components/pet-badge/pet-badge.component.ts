@@ -18,12 +18,11 @@ export type PetTone = 'basic' | 'standard' | 'awakened';
       <span class="pet-icon-container">
         <app-hero-icon [name]="name()" [imageUrl]="imageUrl()" size="small" />
       </span>
-      <span class="pet-label">
-        <span class="pet-name">{{ name() }}</span>
-        @if (level() !== null) {
-          <span class="pet-level"> · Lv. {{ level() }}</span>
-        }
-      </span>
+      @if (level() !== null) {
+        <span class="pet-label">
+          <span class="pet-level">Lv. {{ level() }}</span>
+        </span>
+      }
     </span>
   `,
   styles: `
@@ -77,10 +76,6 @@ export type PetTone = 'basic' | 'standard' | 'awakened';
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    .pet-name {
-      font-weight: 600;
     }
 
     .pet-level {
