@@ -7,6 +7,7 @@ import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS, collectionIconUrl, collectionNodeIconUrl } from '../../collection-catalog';
 import { heroAttributeFromValue } from '../../hero-classification';
 import { rosterClassFilterColor } from '../../roster-filter-colors';
+import { HeroFiltersComponent } from '../../components/hero-filters/hero-filters.component';
 import { LineupsStore } from '../../lineups.store';
 import { RosterCollectionsComponent } from './roster-collections.component';
 import { RosterHeroesComponent } from './roster-heroes.component';
@@ -23,6 +24,7 @@ async function setup(): Promise<void> {
           unitIdFor: () => 52,
           iconUrl: (id: number) => `https://cdn/unit_icon_by_id/${id}.webp`,
           framedIconUrl: (id: number, rank: string) => `https://cdn/framed_unit_icon/${id}_${rank}.webp`,
+          lowestAscensionFor: () => 'epic',
           factionFor: (name: string) => name === 'Rowan' ? 'Lightbearer' : 'Wilder',
           classFor: (name: string) => name === 'Rowan' ? 'Mage' : 'Ranger',
         },
@@ -102,6 +104,7 @@ describe('roster pages', () => {
     store.clearRoster();
     store.toggleHero(1);
     store.updateRosterAscension(1, 'ascended_1');
+    component.editingHeroId.set(1);
     harness.detectChanges();
     const root: HTMLElement = harness.routeNativeElement as HTMLElement;
 
@@ -133,6 +136,7 @@ describe('roster pages', () => {
     store.toggleHero(1);
     store.updateRosterInvestment(1, '209e60');
     store.updateRosterAscension(1, 'ascended_2');
+    component.editingHeroId.set(1);
 
     expect(store.roster()[1]).toEqual({
       inv: '209e60',
@@ -160,6 +164,7 @@ describe('roster pages', () => {
     const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
+    component.editingHeroId.set(1);
     component.investmentMode.set('long');
     harness.detectChanges();
 
@@ -210,6 +215,7 @@ describe('roster pages', () => {
     const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     store.toggleHero(1);
+    component.editingHeroId.set(1);
     harness.detectChanges();
 
     const root = harness.routeNativeElement as HTMLElement;
@@ -221,19 +227,11 @@ describe('roster pages', () => {
     expect(store.roster()[1].inv).toBe('409e60');
   });
 
-  it('confirms before clearing the hero roster and quick-sets investments', async () => {
+  it('quick-sets hero investments', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     const heroId = store.heroes()[0].id;
-    store.toggleHero(heroId);
-    component.confirmingClear.set(true);
-    harness.detectChanges();
-    expect(harness.routeNativeElement?.querySelector('[role="alertdialog"]')).not.toBeNull();
-    expect(store.rosterCount()).toBe(1);
-    component.confirmClear();
-    expect(store.rosterCount()).toBe(0);
-
     store.toggleHero(heroId);
     component.quickSet(heroId, '409e60');
     expect(store.roster()[heroId]).toEqual({ inv: '409e60', si: 40, furn: 9, eng: 60 });
@@ -244,33 +242,47 @@ describe('roster pages', () => {
   it('filters heroes by faction, class, and attribute type', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    store.toggleHero(1);
+    store.toggleHero(2);
+    harness.detectChanges();
     const root = harness.routeNativeElement as HTMLElement;
-    component.setFaction('Lightbearer');
-    component.setClass('Mage');
-    component.setType('intelligence');
-    harness.detectChanges();
-    expect(root.querySelector('.roster-pick')?.textContent).toContain('Rowan');
-    expect(root.querySelector('.roster-pick')?.textContent).not.toContain('Lyca');
+    const names = () => Array.from(root.querySelectorAll('.hero-box-tile'), (tile) => tile.getAttribute('aria-label'));
+    expect(names().length).toBe(2);
 
-    component.setFaction('Wilder');
+    component.factionFilter.set('Lightbearer');
+    component.classFilter.set('Mage');
+    component.typeFilter.set('intelligence');
     harness.detectChanges();
-    expect(root.querySelector('.roster-pick')?.textContent).not.toContain('Rowan');
+    expect(component.filteredHeroes().every(({ name }) => name === 'Rowan')).toBeTrue();
+
+    component.factionFilter.set('Wilder');
+    harness.detectChanges();
+    expect(component.filteredHeroes().some(({ name }) => name === 'Rowan')).toBeFalse();
     expect(component.factions()).toContain('Lightbearer');
-    expect(component.classes).toContain('Mage');
-    expect(component.classes).toEqual(['Warrior', 'Tank', 'Ranger', 'Mage', 'Support']);
     expect(root.querySelector('[aria-label="Filter heroes"] .icon-filter-row')).not.toBeNull();
+  });
+
+  it('exposes filter tokens, colors, and ordered class options from the filter component', async () => {
+    await TestBed.configureTestingModule({ imports: [HeroFiltersComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(HeroFiltersComponent);
+    fixture.componentRef.setInput('factions', ['Lightbearer']);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.classes).toEqual(['Warrior', 'Tank', 'Ranger', 'Mage', 'Support']);
     expect(component.filterToken('faction', 'Lightbearer')).toBe('LB');
     expect(component.filterColor('faction', 'Lightbearer')).toBe('#83cfff');
     expect(component.filterColor('faction', 'Graveborn')).toBe('#24613b');
     expect(component.filterColor('class', 'Mage')).toBe('#6b9ee8');
-    expect(component.factionColor({ name: 'Rowan' })).toBe('#83cfff');
   });
 
   it('shows awakened and non-awakened heroes together in the roster picker', async () => {
     const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
+    const component = await harness.navigateByUrl('/roster/heroes', RosterHeroesComponent);
     const store = TestBed.inject(LineupsStore);
     const root = harness.routeNativeElement as HTMLElement;
+    component.addingHero.set(true);
+    harness.detectChanges();
 
     expect(store.heroes().some(({ name, isAwakened }) => name === 'Lyca' && !isAwakened)).toBeTrue();
     const displayedHeroes = Array.from(root.querySelectorAll('.roster-pick button'), ({ textContent }) => textContent?.trim());

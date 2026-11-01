@@ -38,6 +38,7 @@ interface UnitMetadata {
   readonly id: number;
   readonly faction: string | null;
   readonly heroClass: string | null;
+  readonly rarity: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +63,10 @@ export class HeroIconService {
 
   classFor(heroName: string): string | null {
     return this.unitFor(heroName)?.heroClass ?? null;
+  }
+
+  lowestAscensionFor(heroName: string): AscensionRank {
+    return this.unitFor(heroName)?.rarity === 'legendary' ? 'legendary' : 'epic';
   }
 
   iconUrl(unitId: number): string {
@@ -128,6 +133,7 @@ export class HeroIconService {
             id,
             faction: typeof unit.faction === 'string' ? unit.faction : null,
             heroClass: typeof unit.class === 'string' ? unit.class : null,
+            rarity: typeof unit.rarity === 'string' ? unit.rarity : null,
           });
         }
       }

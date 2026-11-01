@@ -103,7 +103,7 @@ textarea {
   color: inherit;
 }
 
-button:not(.tab):not(.formation-slot):not(.collection-choice):not(.icon-filter-button):not(.hero-pick) {
+button:not(.tab):not(.formation-slot):not(.collection-choice):not(.icon-filter-button):not(.hero-pick):not(.hero-box-tile) {
   height: var(--app-control-height);
   min-height: var(--app-control-height);
 }

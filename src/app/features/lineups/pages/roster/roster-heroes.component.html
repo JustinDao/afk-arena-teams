@@ -16,76 +16,51 @@
     >
   </label>
   <div class="row-wrap">
-    <button mat-button class="btn" [disabled]="busy()" (click)="store.selectAllHeroes()">Select all</button>
-    <button mat-button class="btn" [disabled]="busy()" (click)="confirmingClear.set(true)">Clear all heroes</button>
+    <button mat-flat-button class="btn primary" [disabled]="busy()" (click)="addingHero.set(true)">Add hero</button>
   </div>
-  <div class="roster-filters" role="group" aria-label="Filter heroes">
-    <div class="icon-filter-row" role="group" aria-label="Faction">
-      <span class="icon-filter-label">Faction</span>
-      <button mat-button type="button" class="icon-filter-button" [class.active]="!factionFilter()" [attr.aria-pressed]="!factionFilter()" aria-label="All factions" title="All factions" (click)="setFaction('')">
-        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
-      </button>
-      @for (faction of factions(); track faction) {
-        <button mat-button type="button" class="icon-filter-button" [class.active]="factionFilter() === faction" [attr.aria-pressed]="factionFilter() === faction" [attr.aria-label]="faction" [attr.title]="faction" (click)="setFaction(faction)">
-          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('faction', faction)">{{ filterToken('faction', faction) }}</span><span class="filter-caption">{{ faction }}</span></span>
-        </button>
-      }
-    </div>
-    <div class="icon-filter-row" role="group" aria-label="Class">
-      <span class="icon-filter-label">Class</span>
-      <button mat-button type="button" class="icon-filter-button" [class.active]="!classFilter()" [attr.aria-pressed]="!classFilter()" aria-label="All classes" title="All classes" (click)="setClass('')">
-        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
-      </button>
-      @for (heroClass of classes; track heroClass) {
-        <button mat-button type="button" class="icon-filter-button" [class.active]="classFilter() === heroClass" [attr.aria-pressed]="classFilter() === heroClass" [attr.aria-label]="heroClass" [attr.title]="heroClass" (click)="setClass(heroClass)">
-          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('class', heroClass)">{{ filterToken('class', heroClass) }}</span><span class="filter-caption">{{ heroClass }}</span></span>
-        </button>
-      }
-    </div>
-    <div class="icon-filter-row" role="group" aria-label="Type">
-      <span class="icon-filter-label">Type</span>
-      <button mat-button type="button" class="icon-filter-button" [class.active]="!typeFilter()" [attr.aria-pressed]="!typeFilter()" aria-label="All types" title="All types" (click)="setType('')">
-        <span class="filter-option-content"><span class="filter-token">ALL</span><span class="filter-caption">All</span></span>
-      </button>
-      @for (type of types; track type) {
-        <button mat-button type="button" class="icon-filter-button" [class.active]="typeFilter() === type" [attr.aria-pressed]="typeFilter() === type" [attr.aria-label]="type | titlecase" [attr.title]="type | titlecase" (click)="setType(type)">
-          <span class="filter-option-content"><span class="filter-token" [style.--filter-color]="filterColor('type', type)">{{ filterToken('type', type) }}</span><span class="filter-caption">{{ type | titlecase }}</span></span>
-        </button>
-      }
-    </div>
-  </div>
-  <app-hero-picker
-    class="roster-pick hero-roster-pick"
-    [heroes]="filteredHeroes()"
-    [disabledIds]="disabledHeroIds()"
-    [selectedIds]="ownedHeroIds()"
-    searchId="roster-search"
-    searchLabel="Search heroes"
-    (heroSelected)="store.toggleHero($event)"
+  <app-hero-filters
+    [factions]="factions()"
+    [(faction)]="factionFilter"
+    [(heroClass)]="classFilter"
+    [(type)]="typeFilter"
   />
-  <h3>Hero investment and ascension (optional)</h3>
-  <p class="rules">Enter SI (0–50), furniture (0–36), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
-  @for (hero of store.heroes(); track hero.id) {
-    @if (store.roster()[hero.id]) {
+  <div class="hero-box" role="list" aria-label="Hero box">
+    @for (hero of ownedFilteredHeroes(); track hero.id) {
+      <button type="button" class="hero-box-tile" role="listitem" [attr.aria-label]="'Edit ' + displayName(hero)" [attr.title]="displayName(hero)" [disabled]="busy()" (click)="editingHeroId.set(hero.id)">
+        <app-hero-icon [name]="displayName(hero)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="ascensionOf(hero)" [investment]="investmentOf(hero.id)" />
+      </button>
+    }
+  </div>
+  @if (!store.rosterCount()) { <p class="muted">Your hero box is empty. Use “Add hero” to add heroes and their investment.</p> }
+  @else if (!ownedFilteredHeroes().length) { <p class="muted">No owned heroes match these filters.</p> }
+</section>
+@if (addingHero()) {
+  <app-add-hero-modal
+    [heroes]="store.heroes()"
+    [ownedIds]="ownedHeroIds()"
+    [disabledIds]="disabledHeroIds()"
+    (heroSelected)="addHero($event)"
+    (closed)="addingHero.set(false)"
+  />
+}
+@if (editingHero(); as hero) {
+  <div class="overlay" role="presentation" (click)="editingHeroId.set(null)">
+    <section class="panel hero-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Edit ' + displayName(hero)" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()">
+      <p class="rules">Enter SI (0–50), furniture (0–36), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
       <app-hero-investment-editor
         [hero]="hero"
         [investment]="store.roster()[hero.id].inv"
-        [ascension]="store.roster()[hero.id].ascension ?? null"
+        [ascension]="ascensionOf(hero)"
         [disabled]="busy()"
         [mode]="investmentMode()"
         (modeChange)="investmentMode.set($event)"
         (investmentChange)="store.updateRosterInvestment(hero.id, $event)"
         (ascensionChange)="store.updateRosterAscension(hero.id, $event)"
       />
-    }
-  }
-  @if (!store.rosterCount()) { <p class="muted">Pick heroes above, then optionally add their investment.</p> }
-</section>
-@if (confirmingClear()) {
-  <app-confirm-dialog
-    title="Clear hero roster?"
-    message="This removes all selected heroes and their investment values from your roster."
-    (confirmed)="confirmClear()"
-    (cancelled)="confirmingClear.set(false)"
-  />
+      <div class="row-wrap modal-actions">
+        <button mat-button type="button" class="btn" [disabled]="busy()" (click)="removeHero(hero.id)">Remove from roster</button>
+        <button mat-flat-button type="button" class="btn primary" (click)="editingHeroId.set(null)">Done</button>
+      </div>
+    </section>
+  </div>
 }

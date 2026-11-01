@@ -200,7 +200,7 @@ footer {
   align-items: flex-start;
   justify-content: center;
   padding: max(var(--app-space-3), env(safe-area-inset-top, 0px)) var(--app-space-3) max(var(--app-space-3), env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--app-ink) 72%, transparent);
+  background: rgb(0 0 0 / 65%);
 }
 
 .panel {

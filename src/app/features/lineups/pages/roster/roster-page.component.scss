@@ -150,8 +150,10 @@
 }
 
 .icon-filter-button.mat-mdc-button {
-  min-width: 52px;
-  min-height: 58px;
+  width: 66px;
+  min-width: 66px;
+  height: 66px;
+  min-height: 66px;
   padding: 2px 3px;
   border: 1px solid transparent;
   border-radius: var(--app-radius-sm);
@@ -180,9 +182,21 @@
   border: 2px solid color-mix(in srgb, var(--filter-color, #a8b4ca) 78%, white);
   border-radius: 50%;
   background: color-mix(in srgb, var(--filter-color, #a8b4ca) 25%, #241e1a);
-  color: var(--app-ink);
+  color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+:root.theme-light .filter-token {
+  border-color: color-mix(in srgb, var(--filter-color, #a8b4ca) 80%, #3a322c);
+  background: color-mix(in srgb, var(--filter-color, #a8b4ca) 55%, #3a322c);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark) .filter-token {
+    border-color: color-mix(in srgb, var(--filter-color, #a8b4ca) 80%, #3a322c);
+    background: color-mix(in srgb, var(--filter-color, #a8b4ca) 55%, #3a322c);
+  }
 }
 
 .icon-filter-button.active {
@@ -197,7 +211,6 @@
 }
 
 .icon-filter-button.active .filter-token {
-  border-color: color-mix(in srgb, var(--filter-color, #a8b4ca) 72%, white);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--filter-color, #a8b4ca) 30%, transparent),
     0 0 10px color-mix(in srgb, var(--filter-color, #a8b4ca) 50%, transparent);
@@ -227,4 +240,66 @@
     grid-column: 2;
     justify-content: center;
   }
+}
+
+.roster-page .panel.hero-modal {
+  width: min(1040px, 100%);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-lg);
+}
+
+.hero-box {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 66px);
+  justify-content: center;
+  gap: var(--app-space-1);
+  margin-block: var(--app-space-3);
+  padding: var(--app-space-2);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-panel-variant);
+}
+
+.hero-box:empty {
+  display: none;
+}
+
+.hero-box-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: 1px;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-ink);
+  cursor: pointer;
+  font: inherit;
+  justify-content: center;
+}
+
+.hero-box-tile:hover:not(:disabled),
+.hero-box-tile:focus-visible {
+  border-color: var(--app-primary);
+  background: var(--app-panel);
+}
+
+.hero-modal .modal-actions {
+  justify-content: flex-end;
+  margin-top: var(--app-space-4);
+  padding-bottom: var(--app-space-2);
+}
+
+.hero-modal .roster-filters {
+  margin-bottom: var(--app-space-3);
+}
+
+.hero-modal .icon-filter-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.hero-modal .pick {
+  max-height: min(420px, 45vh);
 }
