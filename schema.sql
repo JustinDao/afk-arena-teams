@@ -1314,6 +1314,7 @@ join (values
   ('nightmare-corridor','abyssal-maestro','Abyssal Maestro'),
   ('nightmare-corridor','abyssal-murmur','Abyssal Murmur'),
   ('nightmare-corridor','abyssal-terror','Abyssal Terror'),
+  ('nightmare-corridor','ashen-prophet','Ashen Prophet'),
   ('nightmare-corridor','astral-devourer','Astral Devourer'),
   ('nightmare-corridor','blighted-seraph','Blighted Seraph'),
   ('nightmare-corridor','bloodvine-wraith','Bloodvine Wraith'),
@@ -1370,6 +1371,22 @@ cross join (values
   (4, 'dual-mantel'),
   (5, 'cursed-caprihornus'),
   (6, 'netherspinner')
+) as cycle(position, boss_slug)
+join targets boss on boss.mode_id = gm.id and boss.slug = cycle.boss_slug
+where gm.slug = 'nightmare-corridor'
+on conflict (cycle_anchor_id, position) do update set boss_target_id = excluded.boss_target_id;
+
+insert into nightmare_corridor_cycle_bosses (cycle_anchor_id, boss_target_id, position)
+select anchor.id, boss.id, cycle.position
+from game_modes gm
+join targets anchor on anchor.mode_id = gm.id and anchor.slug = 'infernal-overlord'
+cross join (values
+  (1, 'molten-crystalline-worm-queen'),
+  (2, 'cindercrow-specter'),
+  (3, 'demonic-puppet'),
+  (4, 'ashen-prophet'),
+  (5, 'mirror-demon'),
+  (6, 'infernal-overlord')
 ) as cycle(position, boss_slug)
 join targets boss on boss.mode_id = gm.id and boss.slug = cycle.boss_slug
 where gm.slug = 'nightmare-corridor'

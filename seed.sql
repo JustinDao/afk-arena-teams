@@ -17,6 +17,7 @@ declare
   v_formation_id bigint;
   v_hero_id int;
   v_pet_id int;
+  v_collection jsonb;
 begin
   for v_seed in
     select * from (values
@@ -34,58 +35,6 @@ begin
             {"slug":"silas","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"daimon","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
             {"slug":"ezizh","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
-          ]}
-        ]'::jsonb
-      ),
-      (
-        'example-nightmare-corridor-netherspinner',
-        'nightmare-corridor',
-        'netherspinner',
-        '{}'::jsonb,
-        null::smallint,
-        'Illustrative seeded example; verify the current cycle and results before using.',
-        '[
-          {"key":"soulweaver","label":"Soulweaver","pet":"polar-beast","pet_level":18,"time":196,"heroes":[
-            {"slug":"saurus","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"mishka","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"scarlet","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
-            {"slug":"oden","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"mortas","ascension":"ascended","si":20,"furniture":9,"engraving":0}
-          ]},
-          {"key":"the-devourer","label":"The Devourer","pet":"fire-breather","pet_level":18,"time":178,"heroes":[
-            {"slug":"rowan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"lyca","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"lorsan","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"ezizh","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"raine","ascension":"ascended_1","si":30,"furniture":9,"engraving":30}
-          ]},
-          {"key":"astral-devourer","label":"Astral Devourer","pet":"dreary-ball","pet_level":18,"time":142,"heroes":[
-            {"slug":"dracula","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"awakened-hybris","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"awakened-estrilda","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"lyca","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"rowan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
-          ]},
-          {"key":"dual-mantle","label":"Dual-Mantle","pet":"pandy-dumpty","pet_level":18,"time":171,"heroes":[
-            {"slug":"highborn-odysseus","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"orthros","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"liberta","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"palmer","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
-            {"slug":"talimar","ascension":"ascended_1","si":30,"furniture":9,"engraving":60,"merc":true}
-          ]},
-          {"key":"cursed-caprihornus","label":"Cursed Caprihornus","pet":"tufty-ears","pet_level":18,"time":205,"heroes":[
-            {"slug":"highborn-elthara","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"alvida","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"rowan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"misha","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
-            {"slug":"highborn-severin","ascension":"ascended_1","si":30,"furniture":9,"engraving":30}
-          ]},
-          {"key":"netherspinner","label":"Netherspinner","pet":"grassy-orb","pet_level":18,"time":189,"heroes":[
-            {"slug":"tavriel","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"gorok","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"lavatune","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"talimar","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"highborn-lan","ascension":"ascended_1","si":20,"furniture":9,"engraving":30}
           ]}
         ]'::jsonb
       ),
@@ -199,6 +148,58 @@ begin
             {"slug":"hodgkin","ascension":"ascended_1","si":30,"furniture":9,"engraving":30}
           ]}
         ]'::jsonb
+      ),
+      (
+        'nc-guide-2026-10-infernal-overlord',
+        'nightmare-corridor',
+        'infernal-overlord',
+        '{}'::jsonb,
+        null::smallint,
+        'Source: r/afkarena Nightmare Corridor 0:53 guide (Oct 2026) by ManuelAlcayaga and Rakudayyy. Hero notes: Alvida E36 haste; Misha E65 DEF with 15F on mid and bottom; Sion E68 ATK CRIT CDA; Pippa E61 haste; Envydiel E67 ATK PP CRIT; Aurelia E62 haste; Talimar E61 haste; Thalassa E61 heal; Lysander E62 PP haste; Estrilda E61 haste; Begris E41 HP haste dodge; Hybris E68 ATK PP IS CRIT; Lavatune E62 IS haste; Athena E33 TY.',
+        '[
+          {"key":"molten-crystalline-worm-queen","label":"Molten Crystalline Worm Queen","pet":"twinlum-spirit","pet_level":18,"time":6,"heroes":[
+            {"slug":"highborn-elthara","si":40,"furniture":9,"engraving":60,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"erosion","tier":"mythic"},{"slotIndex":1,"stat":"mp","tier":"mythic"}]}},
+            {"slug":"alvida","si":40,"furniture":9,"engraving":36,"collection":{"catalog":3,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"}]}},
+            {"slug":"rowan","si":30,"furniture":0,"engraving":0,"collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"misha","si":40,"furniture":15,"engraving":65,"collection":{"catalog":9,"nodes":[{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"highborn-severin","si":40,"furniture":9,"engraving":60,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":1,"stat":"atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}}
+          ]},
+          {"key":"cindercrow-specter","label":"Cindercrow Specter","pet":"blazefang","pet_level":27,"time":9,"heroes":[
+            {"slug":"misfortis","si":30,"furniture":9,"engraving":60,"collection":{"catalog":17,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"highborn-lan","si":40,"furniture":9,"engraving":0,"collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"atk","tier":"mythic"},{"slotIndex":1,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"highborn-kaelon","si":40,"furniture":9,"engraving":60,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"awakened-safiya","collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"kyno","si":30,"furniture":9,"engraving":60,"collection":{"catalog":17,"nodes":[{"slotIndex":0,"stat":"def","tier":"mythic"},{"slotIndex":1,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}}
+          ]},
+          {"key":"demonic-puppet","label":"Demonic Puppet","pet":"count-snickerfang","pet_level":27,"time":7,"heroes":[
+            {"slug":"sion","si":40,"furniture":12,"engraving":68,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"harvey","si":30,"furniture":9,"engraving":60,"collection":{"catalog":3,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"}]}},
+            {"slug":"tavriel","si":20,"furniture":0,"engraving":60,"collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"is","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"kafka-hibino","si":30,"furniture":9,"engraving":30,"collection":{"catalog":3,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"}]}},
+            {"slug":"awakened-pippa","si":40,"furniture":12,"engraving":61,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"is","tier":"mythic"}]}}
+          ]},
+          {"key":"ashen-prophet","label":"Ashen Prophet","pet":"aureus","pet_level":18,"time":14,"heroes":[
+            {"slug":"awakened-envydiel","si":40,"furniture":12,"engraving":67,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"aurelia","si":40,"furniture":9,"engraving":62,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"erosion","tier":"mythic"}]}},
+            {"slug":"gorok","si":20,"furniture":3,"engraving":30,"collection":{"catalog":11,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":1,"stat":"buffer","tier":"mythic"}]}},
+            {"slug":"talimar","si":30,"furniture":9,"engraving":61,"collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"highborn-thalassa","si":40,"furniture":12,"engraving":61,"collection":{"catalog":10,"nodes":[{"slotIndex":0,"stat":"heal","tier":"mythic"},{"slotIndex":1,"stat":"full_atk","tier":"mythic"}]}}
+          ]},
+          {"key":"mirror-demon","label":"Mirror Demon","pet":"nightfall-pegasus","pet_level":27,"time":13,"heroes":[
+            {"slug":"lysander","si":30,"furniture":9,"engraving":62,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"pp","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"daemia","si":30,"furniture":9,"engraving":60,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":1,"stat":"mp","tier":"mythic"}]}},
+            {"slug":"awakened-eluard","si":40,"furniture":9,"engraving":60,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"awakened-estrilda","si":40,"furniture":9,"engraving":61,"collection":{"catalog":3,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"}]}},
+            {"slug":"begris","si":40,"furniture":12,"engraving":41,"collection":{"catalog":11,"nodes":[{"slotIndex":0,"stat":"ty","tier":"mythic"}]}}
+          ]},
+          {"key":"infernal-overlord","label":"Infernal Overlord","pet":"trickery-chest","pet_level":18,"time":6,"heroes":[
+            {"slug":"awakened-hybris","si":40,"furniture":9,"engraving":68,"collection":{"catalog":2,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":1,"stat":"atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"lavatune","si":40,"furniture":12,"engraving":62,"collection":{"catalog":9,"nodes":[{"slotIndex":0,"stat":"err","tier":"mythic"},{"slotIndex":1,"stat":"is","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"awakened-theowyn","si":40,"furniture":9,"engraving":60,"collection":{"catalog":9,"nodes":[{"slotIndex":0,"stat":"err","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"dracula","si":30,"furniture":9,"engraving":30,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":1,"stat":"ll","tier":"mythic"}]}},
+            {"slug":"athena","si":30,"furniture":12,"engraving":33,"collection":{"catalog":17,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":1,"stat":"hp","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}}
+          ]}
+        ]'::jsonb
       )
     ) as seeds(seed_key, mode_slug, target_slug, result, hero_level, notes, formations)
   loop
@@ -213,6 +214,11 @@ begin
         where submission_id = v_submission_id and slot_key = (v_form.value ->> 'key');
 
         if found then
+          update formations
+          set pet_id = (select id from pets where slug = v_form.value ->> 'pet'),
+              pet_level = nullif(v_form.value ->> 'pet_level', '')::smallint,
+              result_time_seconds = nullif(v_form.value ->> 'time', '')::int
+          where id = v_formation_id and v_form.value ? 'pet';
           for v_hero_entry in select value, (ordinality - 1)::smallint as pos
                              from jsonb_array_elements(v_form.value -> 'heroes') with ordinality
           loop
@@ -234,6 +240,24 @@ begin
                 ),
                 is_merc = coalesce((v_hero ->> 'merc')::boolean, false)
             where formation_id = v_formation_id and position = v_hero_entry.pos;
+
+            select id into v_hero_id from heroes where slug = v_hero ->> 'slug';
+
+            v_collection := v_hero -> 'collection';
+        if v_collection is not null then
+          insert into formation_collections (
+            submission_id, formation_id, hero_id, catalog_id, collection_class, collection_name, nodes
+          )
+          select v_submission_id, v_formation_id, v_hero_id, cc.id, cc.class, cc.name, v_collection -> 'nodes'
+          from collection_catalog cc
+          where cc.id = (v_collection ->> 'catalog')::smallint
+          on conflict (formation_id, hero_id) do update
+            set catalog_id = excluded.catalog_id, collection_class = excluded.collection_class,
+                collection_name = excluded.collection_name, nodes = excluded.nodes;
+          if not found then
+            raise exception 'Cannot seed example lineup: collection "%" not found.', v_collection ->> 'catalog';
+          end if;
+        end if;
           end loop;
         end if;
       end loop;
@@ -311,6 +335,22 @@ begin
             end
           )
         );
+
+        v_collection := v_hero -> 'collection';
+        if v_collection is not null then
+          insert into formation_collections (
+            submission_id, formation_id, hero_id, catalog_id, collection_class, collection_name, nodes
+          )
+          select v_submission_id, v_formation_id, v_hero_id, cc.id, cc.class, cc.name, v_collection -> 'nodes'
+          from collection_catalog cc
+          where cc.id = (v_collection ->> 'catalog')::smallint
+          on conflict (formation_id, hero_id) do update
+            set catalog_id = excluded.catalog_id, collection_class = excluded.collection_class,
+                collection_name = excluded.collection_name, nodes = excluded.nodes;
+          if not found then
+            raise exception 'Cannot seed example lineup: collection "%" not found.', v_collection ->> 'catalog';
+          end if;
+        end if;
       end loop;
     end loop;
   end loop;
