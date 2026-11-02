@@ -39,18 +39,19 @@
                 <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
                 @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
                 @if (hero.collection; as collection) {
-                  <span class="collection-tag">
+                  <span class="collection-tag" [attr.title]="collection.name">
                     @if (collectionIcon(collection.catalogId, collection.nodes); as iconUrl) {
                       <img class="collection-icon" [src]="iconUrl" [alt]="collection.name + ' icon'">
                     }
-                    {{ collection.name }}
                     @for (node of collection.nodes; track node.slotIndex) {
-                      <img
-                        class="collection-node-icon"
-                        [src]="collectionNodeIcon(node.stat, node.tier)"
-                        [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                        [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                      >
+                      @if (node.stat !== 'skill_level') {
+                        <img
+                          class="collection-node-icon"
+                          [src]="collectionNodeIcon(node.stat, node.tier)"
+                          [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                          [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                        >
+                      }
                     }
                   </span>
                 }

@@ -155,7 +155,15 @@ begin
         'infernal-overlord',
         '{}'::jsonb,
         null::smallint,
-        'Source: r/afkarena Nightmare Corridor 0:53 guide (Oct 2026) by ManuelAlcayaga and Rakudayyy. Hero notes: Alvida E36 haste; Misha E65 DEF with 15F on mid and bottom; Sion E68 ATK CRIT CDA; Pippa E61 haste; Envydiel E67 ATK PP CRIT; Aurelia E62 haste; Talimar E61 haste; Thalassa E61 heal; Lysander E62 PP haste; Estrilda E61 haste; Begris E41 HP haste dodge; Hybris E68 ATK PP IS CRIT; Lavatune E62 IS haste; Athena E33 TY.',
+        'Source: r/afkarena Nightmare Corridor 0:53 guide (Oct 2026) by ManuelAlcayaga and Rakudayyy.
+
+Hero notes:
+R1: Alvida E36 haste; Misha E65 DEF, 15F on mid and bottom
+R2: none
+R3: Sion E68 ATK CRIT CDA; Pippa E61 haste
+R4: Envydiel E67 ATK PP CRIT; Aurelia E62 haste; Talimar E61 haste; Thalassa E61 heal
+R5: Lysander E62 PP haste; Estrilda E61 haste; Begris E41 HP haste dodge
+R6: Hybris E68 ATK PP IS CRIT; Lavatune E62 IS haste; Athena E33 TY',
         '[
           {"key":"molten-crystalline-worm-queen","label":"Molten Crystalline Worm Queen","pet":"twinlum-spirit","pet_level":18,"time":6,"heroes":[
             {"slug":"highborn-elthara","si":40,"furniture":9,"engraving":60,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"erosion","tier":"mythic"},{"slotIndex":1,"stat":"mp","tier":"mythic"}]}},
