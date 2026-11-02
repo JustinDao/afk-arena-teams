@@ -48,6 +48,11 @@
       </div>
       }
 
+      <div>
+        <p class="muted">Click a position to add a hero or edit its investment{{ modeFor(draft.mode).collectionsEnabled
+          ? ' and collection' : '' }}.</p>
+      </div>
+
       <div class="formation-board">
         @for (rowIndex of [0, 1]; track rowIndex) {
         <div class="formation-row" [class.back]="rowIndex > 0">
@@ -72,12 +77,10 @@
           }
         </div>
         }
-        <p class="muted">Click a position to add a hero or edit its investment{{ modeFor(draft.mode).collectionsEnabled
-          ? ' and collection' : '' }}.</p>
       </div>
       <section class="extras">
         <div class="field">
-          <span>Pet</span>
+          <h3>Pet <span class="muted">(optional)</span></h3>
           <button mat-button type="button" class="btn" (click)="store.updateDraftPet(null)">Remove pet</button>
           <app-pet-picker searchId="submit-pet-search" searchLabel="Search pets" [pets]="store.pets()"
             [selectedIds]="selectedPetIds()" (petSelected)="store.updateDraftPet($event)" />
