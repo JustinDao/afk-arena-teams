@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { Router } from '@angular/router';
-import { MODE_PATHS } from '../../../../app.routes';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UserDataService } from '../../../../core/data/user-data.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
+import { countLabel } from '../../plural';
 import { formatInvestment } from '../../investment';
 import { ASCENSION_RANK_LABELS, displayHeroName, Hero, HeroRecommendation, RECOMMENDATION_CATEGORIES } from '../../models';
 import { LineupsStore } from '../../lineups.store';
@@ -31,7 +30,6 @@ export class RecommendationsPageComponent {
   readonly store = inject(LineupsStore);
   readonly auth = inject(AuthService);
   private readonly data = inject(UserDataService);
-  private readonly router = inject(Router);
 
   readonly selectedModes = signal<readonly string[]>([]);
   readonly recommendations = signal<readonly HeroRecommendation[]>([]);
@@ -67,6 +65,7 @@ export class RecommendationsPageComponent {
       .filter((view) => view.recommendation.category === key)
       .sort((left, right) => left.recommendation.rank - right.recommendation.rank),
   })));
+  readonly countLabel = countLabel;
   readonly hasRoster = computed(() => Object.keys(this.store.roster()).length > 0);
 
   constructor() {
@@ -94,14 +93,6 @@ export class RecommendationsPageComponent {
       this.error.set(error instanceof Error ? error.message : 'Could not save your modes.');
     }
     await this.refresh();
-  }
-
-  viewLineups(view: RecommendationView): void {
-    const slug = view.modeCounts[0]?.slug;
-    const path = slug ? MODE_PATHS[slug] : null;
-    if (!slug || !path) return;
-    this.store.setMode(slug);
-    void this.router.navigateByUrl(path);
   }
 
   private async initialize(userId: string): Promise<void> {
@@ -134,7 +125,7 @@ export class RecommendationsPageComponent {
 
   private reasonFor(recommendation: HeroRecommendation, total: number): string {
     const { kind, completeCount, nearCount } = recommendation;
-    const plural = (count: number) => `${count} top team${count === 1 ? '' : 's'}`;
+    const plural = (count: number) => countLabel(count, 'top team');
     if (completeCount === 0 && nearCount === 0) return `Used in ${plural(total)}`;
     const parts: string[] = [];
     if (completeCount > 0) parts.push(`${kind === 'build' ? 'Completes' : 'Fully unlocks'} ${plural(completeCount)}`);

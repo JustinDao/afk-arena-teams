@@ -29,6 +29,7 @@ import {
 } from './models';
 import { HEROES, HERO_BY_ID, PETS, SAMPLE_SUBMISSIONS } from './lineup-data';
 import { COLLECTION_CATALOG } from './collection-catalog';
+import { countLabel } from './plural';
 import { COLLECTION_NODE_STATS } from './collection-catalog';
 import {
   formatInvestment as formatInvestmentCode,
@@ -730,7 +731,7 @@ export class LineupsStore {
       const formation = draft.forms[draft.cur];
       if (field === 'investment') formation.slots[slotIndex].inv = String(value);
       else if (Boolean(value) && this.isMercenaryLimitReached(draft, slotIndex)) {
-        this.showToast(`Only ${this.getMode(draft.mode).mercMax} mercenary is allowed across this lineup.`);
+        this.showToast(this.mercenaryLimitMessage(this.getMode(draft.mode).mercMax));
       } else formation.slots[slotIndex].merc = Boolean(value);
     });
   }
@@ -942,7 +943,7 @@ export class LineupsStore {
   resultLine(submission: Submission): string {
     const result = submission.result;
     if (submission.mode === 'nightmare-corridor') {
-      return `${submission.forms.length} boss kill times`;
+      return countLabel(submission.forms.length, 'boss kill time');
     }
     if (submission.mode === 'treasure-scramble') {
       return result['placementType'] === 'rank'
@@ -994,6 +995,12 @@ export class LineupsStore {
     };
     update(draft);
     this.draftSignal.set(draft);
+  }
+
+  private mercenaryLimitMessage(mercMax = 0): string {
+    return mercMax === 0
+      ? 'Mercenaries are not allowed in this mode.'
+      : `Only ${countLabel(mercMax, 'mercenary')} is allowed across this lineup.`;
   }
 
   private isMercenaryLimitReached(draft: LineupDraft, slotIndex: number): boolean {
@@ -1097,9 +1104,7 @@ export class LineupsStore {
     if (mode.mercMax !== undefined) {
       const mercCount = draft.forms.reduce((total, form) => total + form.slots.filter(({ merc }) => merc).length, 0);
       if (mercCount > mode.mercMax) {
-        errors.push(mode.mercMax === 0
-          ? 'Mercenaries are not allowed in this mode.'
-          : `Only ${mode.mercMax} mercenary is allowed across this lineup.`);
+        errors.push(this.mercenaryLimitMessage(mode.mercMax));
       }
     }
     for (const form of draft.forms) {

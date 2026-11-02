@@ -1,5 +1,6 @@
 import { HERO_BY_ID } from './lineup-data';
 import { displayHeroName, Investment, Submission } from './models';
+import { countLabel } from './plural';
 import { formatInvestment as formatInvestmentCode } from './investment';
 
 export function heroName(heroId: number): string {
@@ -21,7 +22,7 @@ export function formatInvestment(investment: Investment | null): string {
 export function resultLine(submission: Submission): string {
   const result = submission.result;
   if (submission.mode === 'nightmare-corridor') {
-    return `${submission.forms.length} boss kill times`;
+    return `${countLabel(submission.forms.length, 'boss kill time')}`;
   }
   if (submission.mode === 'treasure-scramble') {
     return result['placementType'] === 'rank'

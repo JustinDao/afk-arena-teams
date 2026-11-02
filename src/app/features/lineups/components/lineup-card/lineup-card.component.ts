@@ -1,3 +1,4 @@
+import { countLabel, pluralNoun } from '../../plural';
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus, PetKind } from '../../models';
@@ -18,6 +19,7 @@ import { PETS } from '../../lineup-data';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LineupCardComponent {
+  readonly countLabel = countLabel;
   private readonly heroIcons = inject(HeroIconService);
   readonly row = input.required<EvaluatedSubmission>();
   readonly scope = input.required<'all' | 'slot'>();
@@ -45,10 +47,10 @@ export class LineupCardComponent {
       ? `needs more investment on ${row.lowInvestmentHeroes.slice(0, 4).map(heroName).join(', ')}`
       : '';
     const missingPets = row.missingPetNames.length
-      ? `missing pet${row.missingPetNames.length === 1 ? '' : 's'} ${row.missingPetNames.slice(0, 4).join(', ')}`
+      ? `missing ${pluralNoun(row.missingPetNames.length, 'pet')} ${row.missingPetNames.slice(0, 4).join(', ')}`
       : '';
     const lowPetLevels = row.underLevelPetNames.length
-      ? `needs higher pet level${row.underLevelPetNames.length === 1 ? '' : 's'} for ${row.underLevelPetNames.slice(0, 4).join(', ')}`
+      ? `needs higher ${pluralNoun(row.underLevelPetNames.length, 'pet level')} for ${row.underLevelPetNames.slice(0, 4).join(', ')}`
       : '';
     const lowHeroLevel = row.heroLevelMismatch
       ? `requires hero level ${row.heroLevelMismatch.required}, yours is ${row.heroLevelMismatch.owned}`

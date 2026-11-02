@@ -76,7 +76,7 @@
   @if (row().active && row().gap > 0) {
     <p class="gap">
       @if (row().submission.forms.length > 1 && scope() === 'slot') {
-        Closest slot is {{ row().gap }} roster item{{ row().gap === 1 ? '' : 's' }} short.
+        Closest slot is {{ countLabel(row().gap, 'roster item') }} short.
       }
       {{ missingSummary() }}.
     </p>

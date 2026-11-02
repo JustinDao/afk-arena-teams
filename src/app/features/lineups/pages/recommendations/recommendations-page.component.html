@@ -1,7 +1,7 @@
 <main class="recommendations-page">
   <section class="panel" aria-labelledby="recommendations-title">
     <div class="panel-header">
-      <h2 id="recommendations-title">Recommended builds</h2>
+      <h2 id="recommendations-title">Recommended heroes</h2>
     </div>
     <p class="rules">
       The best next step for your roster in each hero category: building a new hero or investing more in one you own, whichever would improve your options the most.
@@ -43,11 +43,10 @@
                   @if (view.target) { <span class="muted">{{ view.recommendation.kind === 'build' ? 'Build toward' : 'Invest toward' }} {{ view.target }}</span> }
                   <span class="row-wrap">
                     @for (mode of view.modeCounts; track mode.slug) {
-                      <span class="mode-count" [attr.title]="mode.count + ' teams'">{{ mode.short }} {{ mode.count }}</span>
+                      <span class="mode-count" [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
                     }
                   </span>
                 </div>
-                <button mat-button class="btn" (click)="viewLineups(view)">View lineups</button>
               </li>
             }
           </ol>
