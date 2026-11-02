@@ -67,25 +67,25 @@ begin
             {"slug":"rowan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
           ]},
           {"key":"dual-mantle","label":"Dual-Mantle","pet":"pandy-dumpty","pet_level":18,"time":171,"heroes":[
-            {"slug":"odysseus","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
+            {"slug":"highborn-odysseus","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"orthros","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"liberta","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"palmer","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
             {"slug":"talimar","ascension":"ascended_1","si":30,"furniture":9,"engraving":60,"merc":true}
           ]},
           {"key":"cursed-caprihornus","label":"Cursed Caprihornus","pet":"tufty-ears","pet_level":18,"time":205,"heroes":[
-            {"slug":"elthara","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
+            {"slug":"highborn-elthara","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"alvida","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"rowan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"misha","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
-            {"slug":"severin","ascension":"ascended_1","si":30,"furniture":9,"engraving":30}
+            {"slug":"highborn-severin","ascension":"ascended_1","si":30,"furniture":9,"engraving":30}
           ]},
           {"key":"netherspinner","label":"Netherspinner","pet":"grassy-orb","pet_level":18,"time":189,"heroes":[
             {"slug":"tavriel","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"gorok","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"lavatune","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"talimar","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"lan","ascension":"ascended_1","si":20,"furniture":9,"engraving":30}
+            {"slug":"highborn-lan","ascension":"ascended_1","si":20,"furniture":9,"engraving":30}
           ]}
         ]'::jsonb
       ),
@@ -109,13 +109,13 @@ begin
             {"slug":"tavriel","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"gorok","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"lavatune","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
-            {"slug":"elthara","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
+            {"slug":"highborn-elthara","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
           ]},
           {"key":"sg3","label":"SG3","pet":"grassy-orb","pet_level":18,"heroes":[
             {"slug":"dracula","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"awakened-hybris","ascension":"ascended_1","si":30,"furniture":9,"engraving":30},
             {"slug":"lysander","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"leviathan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
+            {"slug":"highborn-leviathan","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"serenmira","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
           ]},
           {"key":"sg4","label":"SG4","pet":"polar-beast","pet_level":18,"heroes":[
@@ -128,7 +128,7 @@ begin
           {"key":"sg5","label":"SG5","pet":"fire-breather","pet_level":18,"heroes":[
             {"slug":"aurelia","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"knox","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
-            {"slug":"lan","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
+            {"slug":"highborn-lan","ascension":"ascended_1","si":20,"furniture":9,"engraving":30},
             {"slug":"jerome","ascension":"ascended_1","si":30,"furniture":9,"engraving":60},
             {"slug":"misfortis","ascension":"ascended_1","si":30,"furniture":9,"engraving":60}
           ]},
