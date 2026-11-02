@@ -30,7 +30,12 @@ function normalizeName(name: string): string {
 
 function cdnLookupName(name: string): string {
   const awakenedSuffix = name.match(/^(.*?)\s+\(Awakened\)$/i);
-  const candidate = awakenedSuffix ? `Awakened ${awakenedSuffix[1]}` : name;
+  const highbornSuffix = name.match(/^(.*?)\s+\(Highborn\)$/i);
+  const candidate = awakenedSuffix
+    ? `Awakened ${awakenedSuffix[1]}`
+    : highbornSuffix
+      ? `Highborn ${highbornSuffix[1]}`
+      : name;
   return NAME_ALIASES[normalizeName(candidate)] ?? candidate;
 }
 
@@ -118,6 +123,7 @@ export class HeroIconService {
       }
 
       const index = new Map<string, UnitMetadata>();
+      const highbornPlain: [string, UnitMetadata][] = [];
       for (const value of Object.values(payload)) {
         if (!value || typeof value !== 'object') continue;
         const unit = value as CdnUnit;
@@ -126,16 +132,23 @@ export class HeroIconService {
         if (typeof name !== 'string' || !Number.isInteger(id) || id <= 0) continue;
         const codeName = typeof unit.codeName === 'string' ? unit.codeName : '';
         const isBossVariant = codeName.startsWith('Boss') || codeName.startsWith('WBoss') || codeName.startsWith('RBoss');
-        const key = normalizeName(unit.isAwakened === true ? `Awakened ${name}` : name);
+        const isHighborn = unit.faction === 'Draconis' && unit.rarity === 'legendary' && unit.isAwakened !== true;
+        const key = normalizeName(unit.isAwakened === true ? `Awakened ${name}` : isHighborn ? `Highborn ${name}` : name);
         // Prefer playable/standard hero definitions over NPC boss variations (e.g. BossBane vs Bane for Ezizh)
         if (!index.has(key) || (!isBossVariant && unit.rarity !== undefined)) {
-          index.set(key, {
+          const metadata = {
             id,
             faction: typeof unit.faction === 'string' ? unit.faction : null,
             heroClass: typeof unit.class === 'string' ? unit.class : null,
             rarity: typeof unit.rarity === 'string' ? unit.rarity : null,
-          });
+          };
+          index.set(key, metadata);
+          // Highborns are also reachable by plain name unless another hero already owns it (e.g. the two Gwyneths).
+          if (isHighborn) highbornPlain.push([normalizeName(name), metadata]);
         }
+      }
+      for (const [plainKey, metadata] of highbornPlain) {
+        if (!index.has(plainKey)) index.set(plainKey, metadata);
       }
       if (index.size === 0) throw new Error('The CDN unit index contains no usable hero entries.');
       this.units.set(index);
