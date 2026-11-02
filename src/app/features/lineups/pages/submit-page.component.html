@@ -51,13 +51,12 @@
               @for (slot of draft.forms[draft.cur].slots.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track $index; let inRowIndex = $index) {
                 @let slotIndex = rowIndex === 0 ? inRowIndex : inRowIndex + 2;
                 @if (slot.hid === null) {
-                  <button mat-button type="button" class="formation-slot empty-slot" [class.selected]="draft.slot === slotIndex" (click)="store.selectSlot(slotIndex)">
-                    {{ rowIndex ? 'Back' : 'Front' }} slot
+                  <button mat-button type="button" class="formation-slot empty-slot" [class.selected]="draft.slot === slotIndex" (click)="openSlot(slotIndex)">
+                    {{ rowIndex ? 'Back' : 'Front' }}
                   </button>
                 } @else {
-                  <button mat-button type="button" class="formation-slot" [class.selected]="draft.slot === slotIndex" [style.--h]="store.hue(store.heroName(slot.hid))" (click)="store.selectSlot(slotIndex)">
+                  <button mat-button type="button" class="formation-slot" [class.selected]="draft.slot === slotIndex" [style.--h]="store.hue(store.heroName(slot.hid))" [attr.aria-label]="'Edit ' + store.heroName(slot.hid)" (click)="openSlot(slotIndex)">
                     <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" size="large" [ascension]="store.draftAscension(slotIndex)" [investment]="store.draftInvestment(slotIndex)" />
-                    <span>{{ store.heroName(slot.hid) }}</span>
                     <span class="remove-slot" role="button" [attr.aria-label]="'Remove ' + store.heroName(slot.hid)" (click)="$event.stopPropagation(); store.clearSlot(slotIndex)">×</span>
                   </button>
                 }
@@ -65,83 +64,9 @@
             </div>
           }
         </div>
-        <app-hero-picker
-          class="hero-roster-pick"
-          [heroes]="store.heroes()"
-          [disabledIds]="disabledHeroIds()"
-          [searchId]="'submit-search-' + draft.mode"
-          searchLabel="Search heroes to add"
-          searchPlaceholder="Search heroes to add"
-          emptyMessage="No hero matches that search."
-          (heroSelected)="store.pickHero($event)"
-        />
-
         <section class="extras">
-          <h3>Details for {{ draft.forms[draft.cur].label }} <span class="muted">(optional)</span></h3>
-          @for (slot of draft.forms[draft.cur].slots; track $index; let slotIndex = $index) {
-            @if (slot.hid !== null) {
-              <div class="extra-row">
-                <span class="extra-hero"><app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" />{{ store.heroName(slot.hid) }}</span>
-                @if (draft.mode !== 'twisted-realm' && modeFor(draft.mode).mercMax !== 0) {
-                  <label class="check">
-                    <input type="checkbox" [checked]="slot.merc" [disabled]="!slot.merc && store.mercenaryLimitReached(slotIndex)" (change)="store.updateDraftFormationField('mercenary', checkboxValue($event), slotIndex)">
-                    Mercenary
-                  </label>
-                }
-                <app-hero-investment-editor
-                  [hero]="heroFor(slot.hid)"
-                  [investment]="slot.inv"
-                  [ascension]="slot.ascension"
-                  (investmentChange)="store.updateDraftFormationField('investment', $event, slotIndex)"
-                  (ascensionChange)="store.updateDraftAscension($event, slotIndex)"
-                />
-                @if (modeFor(draft.mode).collectionsEnabled) {
-                  <section class="collection-assignment" [attr.aria-label]="'Collection for ' + store.heroName(slot.hid)">
-                    <h4>Collection</h4>
-                    <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + store.heroName(slot.hid)">
-                      <button mat-button type="button" [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot" (click)="store.clearDraftCollection(slotIndex)">None</button>
-                      @if (auth.user() && store.collections().length) {
-                        <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionId" (click)="useRosterCollection(slotIndex)">From roster</button>
-                      }
-                      <button mat-button type="button" [disabled]="!store.collectionCatalog().length" [attr.aria-pressed]="!!slot.collectionSnapshot" (click)="startCustomCollection(slotIndex)">New build</button>
-                    </div>
-                    @if (slot.collectionId) {
-                      <label class="field">
-                        <span>Choose a saved collection</span>
-                        <select [value]="slot.collectionId" (change)="store.updateCollectionAssignment(slotIndex, inputValue($event))">
-                          @for (collection of store.collections(); track collection.id) {
-                            <option [value]="collection.id">{{ collection.name }} · {{ collection.nodes.length }} nodes</option>
-                          }
-                        </select>
-                      </label>
-                    }
-                    @if (slot.collectionSnapshot; as snapshot) {
-                      @if (store.collectionCatalog().length) {
-                        <app-collection-build-editor
-                          [catalog]="store.collectionCatalog()"
-                          [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
-                          [nodeStats]="store.collectionNodeStats()"
-                          [nodes]="snapshot.nodes"
-                          (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(slotIndex, $event, snapshot.nodes)"
-                          (nodesChange)="store.updateDraftCollectionSnapshot(slotIndex, snapshot.catalogId ?? store.collectionCatalog()[0].id, $event)"
-                        />
-                      } @else if (store.collectionCatalogLoading()) {
-                        <p class="rules" role="status">Loading collection catalog…</p>
-                      } @else {
-                        <p class="auth-error" role="alert">The collection catalog is unavailable. Check the Supabase connection and catalog migration.</p>
-                      }
-                    }
-                  </section>
-                }
-              </div>
-            }
-          }
-          @if (filledSlots(draft.forms[draft.cur]) === 0) {
-            <p class="muted">Add heroes to set mercenary, investment, and ascension details.</p>
-          }
-          @if (filledSlots(draft.forms[draft.cur]) > 0) {
-            <p class="rules">Investment short codes use SI, furniture, and engraving, for example 309e60. Use Short form or Long form, or a quick-set button.</p>
-          }
+          <h3>Pet <span class="muted">(optional)</span></h3>
+          <p class="muted">Click a position to add a hero or edit its investment{{ modeFor(draft.mode).collectionsEnabled ? ' and collection' : '' }}.</p>
           <div class="field">
             <span>Pet</span>
             <button mat-button type="button" class="btn" (click)="store.updateDraftPet(null)">No pet</button>
@@ -198,4 +123,82 @@
       </form>
     </section>
   </main>
+}
+
+@if (editingSlot(); as editing) {
+  @if (store.draft(); as draft) {
+    @let slot = draft.forms[draft.cur].slots[editing.index];
+    @if (slot.hid === null) {
+      <app-add-hero-modal
+        [heroes]="store.heroes()"
+        [disabledIds]="disabledHeroIds()"
+        (heroSelected)="store.pickHero($event, editing.index)"
+        (closed)="closeSlot()"
+      />
+    } @else {
+      <div class="overlay" role="presentation" (click)="closeSlot()">
+        <section class="panel hero-modal slot-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Edit ' + store.heroName(slot.hid)" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()">
+          <div class="slot-modal-head">
+            <h2 class="extra-hero"><app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" />{{ store.heroName(slot.hid) }}</h2>
+            @if (draft.mode !== 'twisted-realm' && modeFor(draft.mode).mercMax !== 0) {
+            <label class="check">
+              <input type="checkbox" [checked]="slot.merc" [disabled]="!slot.merc && store.mercenaryLimitReached(editing.index)" (change)="store.updateDraftFormationField('mercenary', checkboxValue($event), editing.index)">
+              Mercenary
+            </label>
+            }
+          </div>
+          <p class="rules">Investment short codes use SI, furniture, and engraving, for example 309e60.</p>
+          <app-hero-investment-editor
+            [hero]="heroFor(slot.hid)"
+            [investment]="slot.inv"
+            [ascension]="slot.ascension"
+            (investmentChange)="store.updateDraftFormationField('investment', $event, editing.index)"
+            (ascensionChange)="store.updateDraftAscension($event, editing.index)"
+          />
+          @if (modeFor(draft.mode).collectionsEnabled) {
+            <section class="collection-assignment" [attr.aria-label]="'Collection for ' + store.heroName(slot.hid)">
+              <h4>Collection</h4>
+              <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + store.heroName(slot.hid)">
+                <button mat-button type="button" [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot" (click)="store.clearDraftCollection(editing.index)">None</button>
+                @if (auth.user() && collectionsForSlot(editing.index).length) {
+                  <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionId" (click)="useRosterCollection(editing.index)">From roster</button>
+                }
+                <button mat-button type="button" [disabled]="!catalogForSlot(editing.index).length" [attr.aria-pressed]="!!slot.collectionSnapshot" (click)="startCustomCollection(editing.index)">New build</button>
+              </div>
+              @if (slot.collectionId) {
+                <label class="field">
+                  <span>Choose a saved collection</span>
+                  <select [value]="slot.collectionId" (change)="store.updateCollectionAssignment(editing.index, inputValue($event))">
+                    @for (collection of collectionsForSlot(editing.index); track collection.id) {
+                      <option [value]="collection.id">{{ collection.name }} · {{ collection.nodes.length }} nodes</option>
+                    }
+                  </select>
+                </label>
+              }
+              @if (slot.collectionSnapshot; as snapshot) {
+                @if (store.collectionCatalog().length) {
+                  <app-collection-build-editor
+                    [catalog]="catalogForSlot(editing.index)"
+                    [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
+                    [nodeStats]="store.collectionNodeStats()"
+                    [nodes]="snapshot.nodes"
+                    (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(editing.index, $event, snapshot.nodes)"
+                    (nodesChange)="store.updateDraftCollectionSnapshot(editing.index, snapshot.catalogId ?? store.collectionCatalog()[0].id, $event)"
+                  />
+                } @else if (store.collectionCatalogLoading()) {
+                  <p class="rules" role="status">Loading collection catalog…</p>
+                } @else {
+                  <p class="auth-error" role="alert">The collection catalog is unavailable. Check the Supabase connection and catalog migration.</p>
+                }
+              }
+            </section>
+          }
+          <div class="row-wrap modal-actions">
+            <button mat-button type="button" class="btn" (click)="store.clearSlot(editing.index); closeSlot()">Remove hero</button>
+            <button mat-flat-button type="button" class="btn primary" (click)="closeSlot()">Done</button>
+          </div>
+        </section>
+      </div>
+    }
+  }
 }

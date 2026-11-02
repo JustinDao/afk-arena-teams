@@ -279,6 +279,7 @@ export const MODES: readonly ModeConfig[] = [
       { key: 'netherspinner', label: 'Netherspinner' },
     ],
     mercMax: 1,
+    uniqueAcross: true,
     collectionsEnabled: true,
     fields: [],
   },

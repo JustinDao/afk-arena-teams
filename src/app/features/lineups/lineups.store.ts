@@ -578,8 +578,8 @@ export class LineupsStore {
     });
   }
 
-  startDraftCollectionSnapshot(slotIndex: number): void {
-    const catalogItem = this.collectionCatalogSignal()[0];
+  startDraftCollectionSnapshot(slotIndex: number, heroClass?: string | null): void {
+    const catalogItem = this.collectionCatalogSignal().find((item) => !heroClass || item.class.toLowerCase() === heroClass.toLowerCase());
     if (!catalogItem) {
       this.showToast('The collection catalog is unavailable.');
       return;
@@ -708,7 +708,7 @@ export class LineupsStore {
     });
   }
 
-  pickHero(heroId: number): void {
+  pickHero(heroId: number, targetSlot?: number): void {
     this.updateDraft((draft) => {
       const mode = this.getMode(draft.mode);
       const formation = draft.forms[draft.cur];
@@ -720,7 +720,7 @@ export class LineupsStore {
         this.showToast('A hero can only appear once per run in this mode.');
         return;
       }
-      const slotIndex = draft.slot >= 0 ? draft.slot : formation.slots.findIndex(({ hid }) => hid === null);
+      const slotIndex = targetSlot ?? (draft.slot >= 0 ? draft.slot : formation.slots.findIndex(({ hid }) => hid === null));
       if (slotIndex < 0) {
         this.showToast('This team is full. Remove a hero first.');
         return;

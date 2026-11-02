@@ -321,18 +321,57 @@ footer {
 
 .formation-slot {
   position: relative;
-  min-width: 84px;
-  min-height: 46px;
+  width: 74px;
+  height: 74px;
+  min-width: 0;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--app-space-1);
   border: 1.5px solid var(--app-line);
-  border-radius: var(--app-radius-sm);
+  border-radius: 18px;
   background: hsl(var(--h, 200) var(--app-chip-saturation) var(--app-chip-lightness));
   color: var(--app-chip-ink);
   font-size: 0.8rem;
   line-height: 1.2;
+}
+
+.formation-slot.mat-mdc-button {
+  width: 74px;
+  height: 74px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 18px;
+}
+
+.slot-modal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-2);
+}
+
+.slot-modal-head h2,
+.slot-modal-head .check {
+  margin: 0;
+}
+
+.slot-modal-head .check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-2);
+}
+
+.slot-modal .collection-assignment {
+  margin-top: var(--app-space-3);
+}
+
+.slot-modal .modal-actions {
+  margin-top: var(--app-space-4);
+  padding-top: var(--app-space-3);
+  border-top: 1px solid var(--app-line);
 }
 
 .formation-slot.empty-slot {
@@ -348,8 +387,8 @@ footer {
 
 .remove-slot {
   position: absolute;
-  top: -8px;
-  right: -6px;
+  top: 0;
+  right: 0;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -480,9 +519,10 @@ footer {
     grid-column: 1 / -1;
   }
 
-  .formation-slot {
-    min-width: 70px;
-    padding-inline: var(--app-space-1);
+  .formation-slot,
+  .formation-slot.mat-mdc-button {
+    width: 68px;
+    height: 68px;
   }
 }
 

@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnDestroy } from '@angular/core';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnDestroy, signal, ViewEncapsulation } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
+import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
-import { HeroPickerComponent } from '../components/hero-picker/hero-picker.component';
 import { PetPickerComponent } from '../components/pet-picker/pet-picker.component';
 import { DraftFormation, Hero, ModeConfig } from '../models';
 import { LineupsStore } from '../lineups.store';
@@ -16,16 +17,19 @@ import { LineupsStore } from '../lineups.store';
   selector: 'app-submit-page',
   standalone: true,
   imports: [
+    AddHeroModalComponent,
+    CdkTrapFocus,
     CollectionBuildEditorComponent,
     HeroIconComponent,
     HeroInvestmentEditorComponent,
-    HeroPickerComponent,
     MatButtonModule,
     PetPickerComponent,
     ReactiveFormsModule,
     RouterLink,
   ],
   templateUrl: './submit-page.component.html',
+  styleUrl: './roster/roster-page.component.scss',
+  encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SubmitPageComponent implements OnDestroy {
@@ -41,6 +45,8 @@ export class SubmitPageComponent implements OnDestroy {
     const petId = draft?.forms[draft.cur]?.petId;
     return petId === null || petId === undefined ? [] : [petId];
   });
+
+  readonly editingSlot = signal<{ readonly index: number } | null>(null);
 
   readonly submissionForm = new FormGroup({
     target: new FormControl('', { nonNullable: true }),
@@ -61,6 +67,14 @@ export class SubmitPageComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.store.draft()) this.store.closeDraft();
+  }
+
+  openSlot(index: number): void {
+    this.editingSlot.set({ index });
+  }
+
+  closeSlot(): void {
+    this.editingSlot.set(null);
   }
 
   changeDraftMode(slug: string): void {
@@ -122,17 +136,37 @@ export class SubmitPageComponent implements OnDestroy {
     return hero;
   }
 
+  classOfSlot(slotIndex: number): string | null {
+    const draft = this.store.draft();
+    const hid = draft?.forms[draft.cur].slots[slotIndex].hid;
+    return hid === null || hid === undefined ? null : this.heroFor(hid).class ?? null;
+  }
+
+  private sameClass(itemClass: string | null | undefined, heroClass: string | null): boolean {
+    return !heroClass || !itemClass || itemClass.toLowerCase() === heroClass.toLowerCase();
+  }
+
+  collectionsForSlot(slotIndex: number) {
+    const heroClass = this.classOfSlot(slotIndex);
+    return this.store.collections().filter((collection) => this.sameClass(collection.class, heroClass));
+  }
+
+  catalogForSlot(slotIndex: number) {
+    const heroClass = this.classOfSlot(slotIndex);
+    return this.store.collectionCatalog().filter((item) => this.sameClass(item.class, heroClass));
+  }
+
   startCustomCollection(slotIndex: number): void {
     const draft = this.store.draft();
     if (!draft || draft.forms[draft.cur].slots[slotIndex].collectionSnapshot) return;
-    this.store.startDraftCollectionSnapshot(slotIndex);
+    this.store.startDraftCollectionSnapshot(slotIndex, this.classOfSlot(slotIndex));
   }
 
   useRosterCollection(slotIndex: number): void {
     const draft = this.store.draft();
     const selectedId = draft?.forms[draft.cur].slots[slotIndex].collectionId;
     if (selectedId && this.store.collections().some(({ id }) => id === selectedId)) return;
-    const collection = this.store.collections()[0];
+    const collection = this.collectionsForSlot(slotIndex)[0];
     if (collection) this.store.updateCollectionAssignment(slotIndex, collection.id);
   }
 
