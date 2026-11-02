@@ -1,12 +1,11 @@
 <main class="recommendations-page">
   <section class="panel" aria-labelledby="recommendations-title">
     <div class="panel-header">
-      <h2 id="recommendations-title">Recommended heroes</h2>
+      <h2 id="recommendations-title">Recommendations</h2>
     </div>
     <p class="rules">
-      The best next step for your roster in each hero category: building a new hero or investing more in one you own, whichever would improve your options the most.
-      Based on the current top lineups, ranked by upvotes first and results second.
-      Recommendations are refreshed nightly@if (refreshedAt(); as refreshed) { (last refreshed {{ refreshed | date: 'medium' }}) }, so new lineups and votes can take a day to show up.
+      The best next step for your account, based on the current top lineups ranked by upvotes first and results second.
+      Recommendations are refreshed nightly@if (state.refreshedAt(); as refreshed) { (last refreshed {{ refreshed | date: 'medium' }}) }, so new lineups and votes can take a day to show up.
     </p>
 
     @if (!auth.user()) {
@@ -14,48 +13,20 @@
     } @else {
       <div class="row-wrap" role="group" aria-label="Modes to recommend for">
         <span class="muted">Modes</span>
-        <button mat-button class="chip" [attr.aria-pressed]="selectedModes().length === 0" (click)="toggleMode(null)">All</button>
+        <button mat-button class="chip" [attr.aria-pressed]="state.selectedModes().length === 0" (click)="state.toggleMode(null)">All</button>
         @for (mode of store.modes(); track mode.slug) {
-          <button mat-button class="chip" [attr.aria-pressed]="modeSelected(mode.slug)" (click)="toggleMode(mode.slug)">{{ mode.name }}</button>
+          <button mat-button class="chip" [attr.aria-pressed]="state.modeSelected(mode.slug)" (click)="state.toggleMode(mode.slug)">{{ mode.name }}</button>
         }
       </div>
 
-      @if (error()) { <p class="auth-error" role="alert">{{ error() }}</p> }
+      <nav class="recommendation-tabs" aria-label="Recommendation categories">
+        <a mat-button routerLink="heroes" routerLinkActive #heroes="routerLinkActive" [attr.aria-current]="heroes.isActive ? 'page' : null">Heroes</a>
+        <a mat-button routerLink="collections" routerLinkActive #collections="routerLinkActive" [attr.aria-current]="collections.isActive ? 'page' : null">Collections</a>
+        <a mat-button routerLink="pets" routerLinkActive #pets="routerLinkActive" [attr.aria-current]="pets.isActive ? 'page' : null">Pets</a>
+      </nav>
 
-      @if (!hasRoster() && views().length) {
-        <p class="rules">Add heroes to your roster for personalised picks. Until then, these are the most-used heroes in the top lineups.</p>
-      }
-
-      @for (group of groups(); track group.key) {
-        <h3>{{ group.label }}</h3>
-        @if (group.items.length) {
-          <ol class="recommendation-list">
-            @for (view of group.items; track view.hero.id; let first = $first) {
-              <li class="recommendation" [class.best]="first">
-                <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
-                <div class="recommendation-body">
-                  <span class="row-wrap">
-                    <strong>{{ view.name }}</strong>
-                    <span class="mode-count">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
-                    @if (first) { <span class="mode-count best-tag">Best next step</span> }
-                  </span>
-                  <span>{{ view.reason }}</span>
-                  @if (view.target) { <span class="muted">{{ view.recommendation.kind === 'build' ? 'Build toward' : 'Invest toward' }} {{ view.target }}</span> }
-                  <span class="row-wrap">
-                    @for (mode of view.modeCounts; track mode.slug) {
-                      <span class="mode-count" [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
-                    }
-                  </span>
-                </div>
-              </li>
-            }
-          </ol>
-        } @else if (loading()) {
-          <p class="muted">Loading recommendations…</p>
-        } @else {
-          <p class="muted">Nothing to recommend here for these modes. You may already have everything the top lineups use.</p>
-        }
-      }
+      @if (state.error()) { <p class="auth-error" role="alert">{{ state.error() }}</p> }
+      <router-outlet />
     }
   </section>
 </main>

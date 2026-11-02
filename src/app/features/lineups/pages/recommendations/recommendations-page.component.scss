@@ -9,6 +9,24 @@
   border-radius: 0;
 }
 
+.recommendation-tabs {
+  display: flex;
+  gap: var(--app-space-1);
+  margin-block: var(--app-space-3);
+  border-bottom: 1px solid var(--app-line);
+}
+
+.recommendation-tabs a {
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--app-muted);
+}
+
+.recommendation-tabs a[aria-current='page'] {
+  border-bottom-color: var(--app-primary);
+  color: var(--app-ink);
+}
+
 .recommendation-list {
   display: grid;
   gap: var(--app-space-3);
@@ -50,4 +68,11 @@
 .best-tag {
   background: var(--app-primary);
   color: var(--app-on-primary);
+}
+
+.recommendation-icon {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
 }

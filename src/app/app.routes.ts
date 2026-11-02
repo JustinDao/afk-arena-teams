@@ -37,6 +37,21 @@ export const APP_ROUTES: Routes = [
   {
     path: 'recommendations',
     loadComponent: () => import('./features/lineups/pages/recommendations/recommendations-page.component').then((m) => m.RecommendationsPageComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'heroes' },
+      {
+        path: 'heroes',
+        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-heroes.component').then((m) => m.RecommendationHeroesComponent),
+      },
+      {
+        path: 'collections',
+        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-collections.component').then((m) => m.RecommendationCollectionsComponent),
+      },
+      {
+        path: 'pets',
+        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-pets.component').then((m) => m.RecommendationPetsComponent),
+      },
+    ],
   },
   {
     path: 'roster',

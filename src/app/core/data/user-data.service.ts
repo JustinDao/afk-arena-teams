@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
+import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionRecommendation, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRecommendation, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
@@ -96,6 +96,33 @@ interface RecommendationRow {
   rec_furniture: number | null;
   rec_engraving: number | null;
   rec_ascension: AscensionRank | null;
+  by_mode: Record<string, number> | null;
+  submission_ids: number[] | null;
+}
+
+interface CollectionRecommendationRow {
+  catalog_id: number;
+  class: CollectionRecommendation['collectionClass'];
+  rank: number;
+  kind: 'build' | 'upgrade';
+  score: string | number;
+  complete_count: number;
+  near_count: number;
+  rec_level_nodes: number;
+  rec_mythic_stats: string[] | null;
+  by_mode: Record<string, number> | null;
+  submission_ids: number[] | null;
+}
+
+interface PetRecommendationRow {
+  pet_id: number;
+  pet_type: PetRecommendation['petKind'];
+  rank: number;
+  kind: 'build' | 'upgrade';
+  score: string | number;
+  complete_count: number;
+  near_count: number;
+  rec_level: number;
   by_mode: Record<string, number> | null;
   submission_ids: number[] | null;
 }
@@ -342,6 +369,49 @@ export class UserDataService {
         ? null
         : { si: row.rec_si, furn: row.rec_furniture, eng: row.rec_engraving },
       ascension: row.rec_ascension,
+      byMode: row.by_mode ?? {},
+      submissionIds: row.submission_ids ?? [],
+    }));
+  }
+
+  async loadCollectionRecommendations(modes: readonly string[]): Promise<readonly CollectionRecommendation[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase.rpc('recommend_collections', {
+      p_mode_slugs: modes.length ? modes : null,
+      p_limit: 3,
+    });
+    if (error) throw new Error(`Could not load collection recommendations: ${error.message}`);
+    return ((data ?? []) as CollectionRecommendationRow[]).map((row) => ({
+      catalogId: row.catalog_id,
+      collectionClass: row.class,
+      rank: row.rank,
+      kind: row.kind,
+      score: Number(row.score),
+      completeCount: row.complete_count,
+      nearCount: row.near_count,
+      levelNodes: row.rec_level_nodes,
+      mythicStats: row.rec_mythic_stats ?? [],
+      byMode: row.by_mode ?? {},
+      submissionIds: row.submission_ids ?? [],
+    }));
+  }
+
+  async loadPetRecommendations(modes: readonly string[]): Promise<readonly PetRecommendation[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase.rpc('recommend_pets', {
+      p_mode_slugs: modes.length ? modes : null,
+      p_limit: 3,
+    });
+    if (error) throw new Error(`Could not load pet recommendations: ${error.message}`);
+    return ((data ?? []) as PetRecommendationRow[]).map((row) => ({
+      petId: row.pet_id,
+      petKind: row.pet_type,
+      rank: row.rank,
+      kind: row.kind,
+      score: Number(row.score),
+      completeCount: row.complete_count,
+      nearCount: row.near_count,
+      level: row.rec_level,
       byMode: row.by_mode ?? {},
       submissionIds: row.submission_ids ?? [],
     }));

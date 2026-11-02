@@ -155,7 +155,7 @@
           </div>
           @if (draft.forms[draft.cur].petId !== null) {
             <label class="field">Pet level
-              <input type="number" min="1" max="18" step="1" [value]="draft.forms[draft.cur].petLevel ?? ''" placeholder="1–18" (change)="store.updateDraftPetLevel(nullableNumberValue($event))">
+              <input type="number" min="1" [attr.max]="store.petMaxFor(draft.forms[draft.cur].petId)" step="1" [value]="draft.forms[draft.cur].petLevel ?? ''" [placeholder]="'1–' + store.petMaxFor(draft.forms[draft.cur].petId)" (change)="store.updateDraftPetLevel(nullableNumberValue($event))">
             </label>
           }
         </section>

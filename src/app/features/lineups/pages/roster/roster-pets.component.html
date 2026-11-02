@@ -2,7 +2,7 @@
   <p class="rules" role="status">Loading pet roster and hero level…</p>
 }
 <section aria-label="Pets">
-  <p class="rules">Select each pet you own, then record its current level (1–18).</p>
+  <p class="rules">Select each pet you own, then record its current level (1–{{ maxLevel }}; the three basic pets stop at 18).</p>
   <div class="row-wrap">
     <button mat-button class="btn" [disabled]="busy()" (click)="store.selectAllPets()">Select all pets</button>
     <button mat-button class="btn" [disabled]="busy()" (click)="confirmClear()">Clear all pets</button>
@@ -17,7 +17,7 @@
   <h3>Pet levels</h3>
   <div class="quick-set pet-quick-set" role="group" aria-label="Quick set all pet levels">
     <span>Set all levels:</span>
-    @for (level of [12, 15, 18]; track level) {
+    @for (level of [12, 18, 24, 30, 36]; track level) {
       <button mat-stroked-button type="button" class="btn" [disabled]="busy() || !store.petRosterCount()" (click)="quickSetLevel(level)">{{ level }}</button>
     }
   </div>
@@ -28,7 +28,7 @@
         <input
           type="number"
           min="1"
-          max="18"
+          [attr.max]="store.petMaxFor(pet.id)"
           step="1"
           [value]="ownedPet.level"
           [attr.aria-label]="'Level for ' + pet.name"

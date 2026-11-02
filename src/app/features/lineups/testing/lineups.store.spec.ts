@@ -50,6 +50,21 @@ describe('LineupsStore', () => {
     expect(JSON.parse(localStorage.getItem('ll.pets') ?? '{}')['6019']).toEqual({ level: 18 });
   });
 
+  it('caps pet levels at 18 for basic pets and 36 for every other pet', () => {
+    store.togglePet(6001);
+    store.togglePet(6019);
+    store.updatePetLevel(6001, 18);
+    store.updatePetLevel(6001, 19);
+    store.updatePetLevel(6019, 36);
+    store.updatePetLevel(6019, 37);
+    expect(store.petRoster()[6001]).toEqual({ level: 18 });
+    expect(store.petRoster()[6019]).toEqual({ level: 36 });
+
+    store.setAllPetLevels(30);
+    expect(store.petRoster()[6001]).toEqual({ level: 18 });
+    expect(store.petRoster()[6019]).toEqual({ level: 30 });
+  });
+
   it('updates independent roster investment values and preserves additional furniture', () => {
     store.toggleHero(1);
     expect(store.updateRosterInvestmentPart(1, 'si', 30)).toBeTrue();

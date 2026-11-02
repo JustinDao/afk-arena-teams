@@ -48,6 +48,13 @@ export interface Pet {
 
 export type PetKind = 'basic' | 'standard' | 'awakened';
 
+export const BASIC_PET_MAX_LEVEL = 18;
+export const PET_MAX_LEVEL = 36;
+
+export function petMaxLevel(kind: PetKind | undefined): number {
+  return kind === 'basic' ? BASIC_PET_MAX_LEVEL : PET_MAX_LEVEL;
+}
+
 export interface PetRosterEntry {
   readonly level: number;
 }
@@ -334,6 +341,33 @@ export interface HeroRecommendation {
   readonly nearCount: number;
   readonly investment: Investment | null;
   readonly ascension: AscensionRank | null;
+  readonly byMode: Readonly<Record<string, number>>;
+  readonly submissionIds: readonly number[];
+}
+
+export interface CollectionRecommendation {
+  readonly catalogId: number;
+  readonly collectionClass: CollectionCatalogItem['class'];
+  readonly rank: number;
+  readonly kind: 'build' | 'upgrade';
+  readonly score: number;
+  readonly completeCount: number;
+  readonly nearCount: number;
+  readonly levelNodes: number;
+  readonly mythicStats: readonly string[];
+  readonly byMode: Readonly<Record<string, number>>;
+  readonly submissionIds: readonly number[];
+}
+
+export interface PetRecommendation {
+  readonly petId: number;
+  readonly petKind: Exclude<PetKind, 'basic'>;
+  readonly rank: number;
+  readonly kind: 'build' | 'upgrade';
+  readonly score: number;
+  readonly completeCount: number;
+  readonly nearCount: number;
+  readonly level: number;
   readonly byMode: Readonly<Record<string, number>>;
   readonly submissionIds: readonly number[];
 }

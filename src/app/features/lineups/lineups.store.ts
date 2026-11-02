@@ -22,6 +22,8 @@ import {
   MODES,
   displayHeroName,
   Pet,
+  PET_MAX_LEVEL,
+  petMaxLevel,
   PetRosterEntry,
   RosterEntry,
   Submission,
@@ -417,22 +419,26 @@ export class LineupsStore {
     if (this.activeUser) void this.persistPetRoster();
   }
 
+  petMaxFor(petId: number | null): number {
+    return petMaxLevel(this.pets().find((pet) => pet.id === petId)?.kind);
+  }
+
   clearPetRoster(): void {
     this.savePetRoster({});
     if (this.activeUser) void this.persistPetRoster();
   }
 
   updatePetLevel(petId: number, value: number): void {
-    if (!Number.isInteger(value) || value < 1 || value > 18 || !this.petRosterSignal()[petId]) return;
+    if (!Number.isInteger(value) || value < 1 || value > this.petMaxFor(petId) || !this.petRosterSignal()[petId]) return;
     const roster = { ...this.petRosterSignal(), [petId]: { level: value } };
     this.savePetRoster(roster);
     if (this.activeUser) void this.persistPetRoster();
   }
 
   setAllPetLevels(value: number): void {
-    if (!Number.isInteger(value) || value < 1 || value > 18) return;
+    if (!Number.isInteger(value) || value < 1 || value > PET_MAX_LEVEL) return;
     const roster = Object.fromEntries(
-      Object.keys(this.petRosterSignal()).map((petId) => [petId, { level: value }]),
+      Object.keys(this.petRosterSignal()).map((petId) => [petId, { level: Math.min(value, this.petMaxFor(Number(petId))) }]),
     );
     this.savePetRoster(roster);
     if (this.activeUser) void this.persistPetRoster();
@@ -750,7 +756,8 @@ export class LineupsStore {
   }
 
   updateDraftPetLevel(value: number | null): void {
-    if (value !== null && (!Number.isInteger(value) || value < 1 || value > 18)) return;
+    const petId = this.draftSignal()?.forms[this.draftSignal()!.cur].petId ?? null;
+    if (value !== null && (!Number.isInteger(value) || value < 1 || value > this.petMaxFor(petId))) return;
     this.updateDraft((draft) => { draft.forms[draft.cur].petLevel = value; });
   }
 
@@ -1108,8 +1115,9 @@ export class LineupsStore {
       }
     }
     for (const form of draft.forms) {
-      if (form.petLevel !== null && (!Number.isInteger(form.petLevel) || form.petLevel < 1 || form.petLevel > 18)) {
-        errors.push('Pet levels must be between 1 and 18.');
+      const petMax = this.petMaxFor(form.petId);
+      if (form.petLevel !== null && (!Number.isInteger(form.petLevel) || form.petLevel < 1 || form.petLevel > petMax)) {
+        errors.push(`Pet levels must be between 1 and ${petMax}.`);
       }
       const heroIds = form.slots.flatMap(({ hid }) => hid === null ? [] : [hid]);
       if (new Set(heroIds).size !== heroIds.length) errors.push('A hero can only appear once in each team.');

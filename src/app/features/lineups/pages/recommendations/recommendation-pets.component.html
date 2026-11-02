@@ -1,0 +1,34 @@
+<section aria-label="Recommended pets">
+  <p class="rules">The next pet to get or level up. Only pet levels above 18 count.</p>
+
+  @for (group of groups(); track group.key) {
+    <h3>{{ group.label }}</h3>
+    @if (group.items.length) {
+      <ol class="recommendation-list">
+        @for (view of group.items; track view.pet.id; let first = $first) {
+          <li class="recommendation" [class.best]="first">
+            <app-hero-icon [name]="view.pet.name" [imageUrl]="view.pet.iconUrl ?? null" size="large" />
+            <div class="recommendation-body">
+              <span class="row-wrap">
+                <strong>{{ view.pet.name }}</strong>
+                <span class="mode-count">{{ view.recommendation.kind === 'build' ? 'Get' : 'Level up' }}</span>
+                @if (first) { <span class="mode-count best-tag">Best next step</span> }
+              </span>
+              <span>{{ view.reason }}</span>
+              <span class="muted">{{ view.recommendation.kind === 'build' ? 'Get and level to' : 'Level up to' }} {{ view.recommendation.level }}</span>
+              <span class="row-wrap">
+                @for (mode of view.modeCounts; track mode.slug) {
+                  <span class="mode-count" [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                }
+              </span>
+            </div>
+          </li>
+        }
+      </ol>
+    } @else if (state.loading()) {
+      <p class="muted">Loading recommendations…</p>
+    } @else {
+      <p class="muted">Nothing to recommend here. Pets only show up once top lineups use them above level 18.</p>
+    }
+  }
+</section>

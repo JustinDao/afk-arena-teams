@@ -1,0 +1,38 @@
+<section aria-label="Recommended heroes">
+  <p class="rules">The best next step for your roster in each hero category: building a new hero or investing more in one you own, whichever would improve your options the most.</p>
+
+  @if (!hasRoster() && views().length) {
+    <p class="rules">Add heroes to your roster for personalised picks. Until then, these are the most-used heroes in the top lineups.</p>
+  }
+
+  @for (group of groups(); track group.key) {
+    <h3>{{ group.label }}</h3>
+    @if (group.items.length) {
+      <ol class="recommendation-list">
+        @for (view of group.items; track view.hero.id; let first = $first) {
+          <li class="recommendation" [class.best]="first">
+            <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
+            <div class="recommendation-body">
+              <span class="row-wrap">
+                <strong>{{ view.name }}</strong>
+                <span class="mode-count">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                @if (first) { <span class="mode-count best-tag">Best next step</span> }
+              </span>
+              <span>{{ view.reason }}</span>
+              @if (view.target) { <span class="muted">{{ view.recommendation.kind === 'build' ? 'Build toward' : 'Invest toward' }} {{ view.target }}</span> }
+              <span class="row-wrap">
+                @for (mode of view.modeCounts; track mode.slug) {
+                  <span class="mode-count" [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                }
+              </span>
+            </div>
+          </li>
+        }
+      </ol>
+    } @else if (state.loading()) {
+      <p class="muted">Loading recommendations…</p>
+    } @else {
+      <p class="muted">Nothing to recommend here for these modes. You may already have everything the top lineups use.</p>
+    }
+  }
+</section>

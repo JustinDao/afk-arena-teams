@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { PetPickerComponent } from '../../components/pet-picker/pet-picker.component';
+import { PET_MAX_LEVEL } from '../../models';
 import { LineupsStore } from '../../lineups.store';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
@@ -20,6 +21,7 @@ type PetConfirmation =
 export class RosterPetsComponent {
   readonly store = inject(LineupsStore);
   private readonly auth = inject(AuthService);
+  readonly maxLevel = PET_MAX_LEVEL;
   readonly confirmation = signal<PetConfirmation | null>(null);
   readonly selectedPetIds = computed(() => Object.keys(this.store.petRoster()).map(Number));
   readonly disabledPetIds = computed(() => this.busy() ? this.store.pets().map(({ id }) => id) : []);
@@ -41,7 +43,7 @@ export class RosterPetsComponent {
     this.confirmation.set({
       action: 'set-level',
       title: `Set all pet levels to ${level}?`,
-      message: `This will change the level of every pet in your roster to ${level}.`,
+      message: `This will change the level of every pet in your roster to ${level}${level > 18 ? ' (basic pets stay at 18)' : ''}.`,
       level,
     });
   }
