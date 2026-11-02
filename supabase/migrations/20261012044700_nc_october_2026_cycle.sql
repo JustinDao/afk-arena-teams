@@ -1,6 +1,16 @@
 -- Ashen Prophet boss and the October 2026 Nightmare Corridor cycle, anchored on Infernal Overlord.
 insert into targets (mode_id, slug, name)
-select id, 'ashen-prophet', 'Ashen Prophet' from game_modes where slug = 'nightmare-corridor'
+select gm.id, t.slug, t.name
+from game_modes gm
+cross join (values
+  ('molten-crystalline-worm-queen', 'Molten Crystalline Worm Queen'),
+  ('cindercrow-specter', 'Cindercrow Specter'),
+  ('demonic-puppet', 'Demonic Puppet'),
+  ('ashen-prophet', 'Ashen Prophet'),
+  ('mirror-demon', 'Mirror Demon'),
+  ('infernal-overlord', 'Infernal Overlord')
+) as t(slug, name)
+where gm.slug = 'nightmare-corridor'
 on conflict (mode_id, slug) do update set name = excluded.name;
 
 insert into nightmare_corridor_cycle_bosses (cycle_anchor_id, boss_target_id, position)
