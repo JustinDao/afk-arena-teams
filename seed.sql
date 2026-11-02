@@ -169,7 +169,7 @@ R6: Hybris E68 ATK PP IS CRIT; Lavatune E62 IS haste; Athena E33 TY',
             {"slug":"highborn-elthara","si":40,"furniture":9,"engraving":60,"collection":{"catalog":14,"nodes":[{"slotIndex":0,"stat":"erosion","tier":"mythic"},{"slotIndex":1,"stat":"mp","tier":"mythic"}]}},
             {"slug":"alvida","si":40,"furniture":9,"engraving":36,"collection":{"catalog":3,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"}]}},
             {"slug":"rowan","si":30,"furniture":0,"engraving":0,"collection":{"catalog":15,"nodes":[{"slotIndex":0,"stat":"full_atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
-            {"slug":"misha","si":40,"furniture":15,"engraving":65,"collection":{"catalog":9,"nodes":[{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
+            {"slug":"misha","si":40,"furniture":15,"engraving":65,"collection":{"catalog":9,"nodes":[{"slotIndex":0,"stat":"err","tier":"mythic"},{"slotIndex":1,"stat":"def","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}},
             {"slug":"highborn-severin","si":40,"furniture":9,"engraving":60,"collection":{"catalog":13,"nodes":[{"slotIndex":0,"stat":"cda","tier":"mythic"},{"slotIndex":1,"stat":"atk","tier":"mythic"},{"slotIndex":6,"stat":"skill_level","tier":"mythic"},{"slotIndex":7,"stat":"skill_level","tier":"mythic"}]}}
           ]},
           {"key":"cindercrow-specter","label":"Cindercrow Specter","pet":"blazefang","pet_level":27,"time":9,"heroes":[
