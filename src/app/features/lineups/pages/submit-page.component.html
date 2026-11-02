@@ -69,7 +69,7 @@
             [style.--h]="store.hue(store.heroName(slot.hid))" [attr.aria-label]="'Edit ' + store.heroName(slot.hid)"
             (click)="openSlot(slotIndex)">
             <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" size="large"
-              [ascension]="store.draftAscension(slotIndex)" [investment]="store.draftInvestment(slotIndex)" />
+              [ascension]="ascensionOf(slotIndex)" [investment]="store.draftInvestment(slotIndex)" />
             <span class="remove-slot" role="button" [attr.aria-label]="'Remove ' + store.heroName(slot.hid)"
               (click)="$event.stopPropagation(); store.clearSlot(slotIndex)">×</span>
           </button>
@@ -145,7 +145,7 @@
 @let slot = draft.forms[draft.cur].slots[editing.index];
 @if (slot.hid === null) {
 <app-add-hero-modal [heroes]="store.heroes()" [disabledIds]="disabledHeroIds()"
-  (heroSelected)="store.pickHero($event, editing.index)" (closed)="closeSlot()" />
+  (heroSelected)="pickHero($event, editing.index)" (closed)="closeSlot()" />
 } @else {
 <div class="overlay" role="presentation" (click)="closeSlot()">
   <section class="panel hero-modal slot-modal" role="dialog" aria-modal="true"
@@ -164,7 +164,7 @@
       }
     </div>
     <p class="rules">Investment short codes use SI, furniture, and engraving, for example 309e60.</p>
-    <app-hero-investment-editor [hero]="heroFor(slot.hid)" [investment]="slot.inv" [ascension]="slot.ascension"
+    <app-hero-investment-editor [hero]="heroFor(slot.hid)" [investment]="slot.inv" [ascension]="ascensionOf(editing.index)"
       (investmentChange)="store.updateDraftFormationField('investment', $event, editing.index)"
       (ascensionChange)="store.updateDraftAscension($event, editing.index)" />
     @if (modeFor(draft.mode).collectionsEnabled) {

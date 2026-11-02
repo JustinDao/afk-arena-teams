@@ -19,7 +19,6 @@ type InvestmentPart = 'si' | 'furn' | 'eng';
       <label class="rank-field">
         <span>Ascension</span>
         <select [disabled]="disabled()" [attr.aria-label]="'Ascension for ' + displayName()" (change)="updateAscension($event)">
-          <option value="" [selected]="ascension() === null">Not set</option>
           @for (rank of ascensionRanks; track rank) {
             <option [value]="rank" [selected]="ascension() === rank">{{ ascensionLabels[rank] }}</option>
           }

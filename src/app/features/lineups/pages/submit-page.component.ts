@@ -4,13 +4,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
+import { HeroIconService } from '../../../core/hero-icons/hero-icon.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
 import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { PetPickerComponent } from '../components/pet-picker/pet-picker.component';
-import { DraftFormation, Hero, ModeConfig } from '../models';
+import { defaultAscensionForInvestment } from '../investment';
+import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig } from '../models';
 import { LineupsStore } from '../lineups.store';
 
 @Component({
@@ -35,6 +37,7 @@ import { LineupsStore } from '../lineups.store';
 export class SubmitPageComponent implements OnDestroy {
   readonly store = inject(LineupsStore);
   readonly auth = inject(AuthService);
+  private readonly heroIcons = inject(HeroIconService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly disabledHeroIds = computed(() =>
@@ -67,6 +70,24 @@ export class SubmitPageComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.store.draft()) this.store.closeDraft();
+  }
+
+  pickHero(heroId: number, slotIndex: number): void {
+    this.store.pickHero(heroId, slotIndex);
+    const draft = this.store.draft();
+    if (draft?.forms[draft.cur].slots[slotIndex].hid !== heroId) return;
+    this.store.updateDraftAscension(this.defaultAscension(this.heroFor(heroId)), slotIndex);
+  }
+
+  ascensionOf(slotIndex: number): AscensionRank | null {
+    const draft = this.store.draft();
+    const slot = draft?.forms[draft.cur].slots[slotIndex];
+    if (!slot || slot.hid === null) return null;
+    return slot.ascension ?? this.defaultAscension(this.heroFor(slot.hid), this.store.draftInvestment(slotIndex));
+  }
+
+  private defaultAscension(hero: Hero, investment: ReturnType<LineupsStore['draftInvestment']> = null): AscensionRank {
+    return defaultAscensionForInvestment(investment) ?? this.heroIcons.lowestAscensionFor(displayHeroName(hero));
   }
 
   openSlot(index: number): void {
