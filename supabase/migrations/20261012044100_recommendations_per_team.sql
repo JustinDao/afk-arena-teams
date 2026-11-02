@@ -82,7 +82,7 @@ language sql stable security definer set search_path = public as $$
     select p.submission_id, count(distinct p.formation_id) as n from pool p group by p.submission_id
   ),
   gaps as (
-    select p.submission_id, p.formation_id, p.mode_id, p.weight / sqrt(tc.n) as weight, p.hero_id,
+    select p.submission_id, p.formation_id, p.mode_id, p.weight / sqrt(tc.n::numeric) as weight, p.hero_id,
            p.si, p.furniture, p.engraving, p.ascension,
            r.hero_id is null as is_missing,
            (r.hero_id is not null and (
@@ -115,7 +115,7 @@ language sql stable security definer set search_path = public as $$
   ),
   rows_for_popular as (
     select p.hero_id, true as is_missing, p.submission_id, p.mode_id, 99::bigint as gap,
-           p.weight / sqrt(tc.n) as pts, p.si, p.furniture, p.engraving, p.ascension
+           p.weight / sqrt(tc.n::numeric) as pts, p.si, p.furniture, p.engraving, p.ascension
     from pool p
     join team_counts tc on tc.submission_id = p.submission_id
     where not exists (select 1 from me)

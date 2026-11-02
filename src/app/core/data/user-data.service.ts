@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRosterEntry, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
+import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
@@ -86,6 +86,8 @@ interface PetRow {
 
 interface RecommendationRow {
   hero_id: number;
+  category: RecommendationCategory;
+  rank: number;
   kind: 'build' | 'invest';
   score: string | number;
   complete_count: number;
@@ -325,11 +327,13 @@ export class UserDataService {
     if (!supabase) return [];
     const { data, error } = await supabase.rpc('recommend_builds', {
       p_mode_slugs: modes.length ? modes : null,
-      p_limit: 12,
+      p_limit: 3,
     });
     if (error) throw new Error(`Could not load recommendations: ${error.message}`);
     return ((data ?? []) as RecommendationRow[]).map((row) => ({
       heroId: row.hero_id,
+      category: row.category,
+      rank: row.rank,
       kind: row.kind,
       score: Number(row.score),
       completeCount: row.complete_count,

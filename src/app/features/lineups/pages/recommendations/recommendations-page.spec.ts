@@ -14,7 +14,7 @@ describe('RecommendationsPageComponent', () => {
 
   function recommendation(heroId: number, kind: 'build' | 'invest', overrides: Partial<HeroRecommendation> = {}): HeroRecommendation {
     return {
-      heroId, kind, score: 1, completeCount: 2, nearCount: 1,
+      heroId, kind, category: 'standard-4f', rank: 1, score: 1, completeCount: 2, nearCount: 1,
       investment: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended',
       byMode: { 'twisted-realm': 2, 'cursed-realm': 1 }, submissionIds: [1], ...overrides,
     };
@@ -52,16 +52,23 @@ describe('RecommendationsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Sign in');
   });
 
-  it('loads saved modes, splits build and invest lists, and mentions the nightly refresh', async () => {
-    loadRecommendations.and.resolveTo([recommendation(heroes[0].id, 'build'), recommendation(heroes[1].id, 'invest')]);
+  it('loads saved modes, groups by category with the best step first, and mentions the nightly refresh', async () => {
+    loadRecommendations.and.resolveTo([
+      recommendation(heroes[1].id, 'invest', { rank: 2 }),
+      recommendation(heroes[0].id, 'build'),
+      recommendation(heroes[2].id, 'build', { category: 'awakened' }),
+    ]);
     const fixture = await setup({ id: 'u1' });
     const component = fixture.componentInstance;
 
     expect(loadRecommendations).toHaveBeenCalledWith(['twisted-realm']);
-    expect(component.toBuild().length).toBe(1);
-    expect(component.toInvest().length).toBe(1);
-    expect(component.toBuild()[0].reason).toBe('Completes 2 top lineups and gets you closer on 1 more');
-    expect(component.toBuild()[0].target).toBe('309e60 · Ascended');
+    const groups = component.groups();
+    expect(groups.map(({ label }) => label)).toEqual(['4F', 'Cele / Hypo', 'Awakened', 'Dragolite', 'Dragon Highborn']);
+    expect(groups[0].items.map(({ recommendation: { kind } }) => kind)).toEqual(['build', 'invest']);
+    expect(groups[2].items.length).toBe(1);
+    expect(groups[1].items.length).toBe(0);
+    expect(groups[0].items[0].reason).toBe('Completes 2 top teams and gets you closer on 1 more');
+    expect(groups[0].items[0].target).toBe('309e60 · Ascended');
     expect(fixture.nativeElement.textContent).toContain('refreshed nightly');
     expect(fixture.nativeElement.textContent).toContain('last refreshed');
   });
@@ -82,7 +89,8 @@ describe('RecommendationsPageComponent', () => {
   it('describes popularity-only results without claiming lineups are completed', async () => {
     loadRecommendations.and.resolveTo([recommendation(heroes[0].id, 'build', { completeCount: 0, nearCount: 0, investment: null, ascension: null, byMode: { 'twisted-realm': 4 } })]);
     const fixture = await setup({ id: 'u1' });
-    expect(fixture.componentInstance.toBuild()[0].reason).toBe('Used in 4 top lineups');
-    expect(fixture.componentInstance.toBuild()[0].target).toBe('');
+    const [first] = fixture.componentInstance.groups()[0].items;
+    expect(first.reason).toBe('Used in 4 top teams');
+    expect(first.target).toBe('');
   });
 });

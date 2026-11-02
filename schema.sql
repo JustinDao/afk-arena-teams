@@ -120,6 +120,7 @@ create table heroes (
   -- that point back at the base hero. "Own Lyca" and "own Awakened Lyca" are different facts.
   base_hero_id int references heroes(id),
   is_awakened  boolean not null default false,
+  rec_category text check (rec_category in ('standard-4f', 'cele-hypo', 'awakened', 'drago-lite', 'dragon-highborn')),  -- recommendation group; editable
   released_at  date
 );
 create index heroes_name_trgm on heroes using gin (name gin_trgm_ops);
@@ -1387,7 +1388,7 @@ insert into recommendation_settings (key, value, note) values
   ('result_weight',        0.35, 'Share that comes from the result: damage vs best, placement, or NC kill time vs fastest.'),
   ('weight_floor',         0.05, 'Minimum weight so lineups without votes or results still count a little.'),
   ('near_miss_decay',      0.40, 'Each extra missing hero or under-invested hero multiplies a lineup contribution by this.'),
-  ('max_gap',              3,    'Ignore lineups needing more than this many heroes built or upgraded.'),
+  ('gap_cap',              8,    'Teams needing more heroes than this count as if they needed this many.'),
   ('pool_size_per_target', 100,  'Top lineups kept per mode + target in the nightly pool.')
 on conflict (key) do nothing;
 
@@ -1506,9 +1507,21 @@ grant execute on function public.set_recommendation_modes(text[]) to authenticat
 -- p_mode_slugs null = use the profile's saved modes (null/empty = every enabled mode).
 -- Returns up to p_limit heroes to build ('build') and p_limit heroes to invest in ('invest').
 -- Users with an empty hero roster get the most popular pool heroes instead.
-create or replace function public.recommend_builds(p_mode_slugs text[] default null, p_limit int default 12)
+-- Defaults only fill heroes that have no category yet, so manual edits survive a re-run.
+update heroes set rec_category = case
+  when is_awakened then 'awakened'
+  when faction in ('Lightbearer', 'Mauler', 'Wilder', 'Graveborn') then 'standard-4f'
+  when faction in ('Celestial', 'Hypogean') then 'cele-hypo'
+  when faction = 'Draconis' and rarity = 'legendary' then 'dragon-highborn'
+  when faction = 'Draconis' then 'drago-lite'
+end
+where rec_category is null;
+
+create or replace function public.recommend_builds(p_mode_slugs text[] default null, p_limit int default 3)
 returns table (
   hero_id int,
+  category text,
+  rank int,
   kind text,
   score numeric,
   complete_count int,
@@ -1524,7 +1537,7 @@ language sql stable security definer set search_path = public as $$
   with params as (
     select coalesce(p_mode_slugs, (select recommendation_modes from profiles where id = auth.uid())) as slugs,
            public.rec_setting('near_miss_decay', 0.4) as decay,
-           public.rec_setting('max_gap', 3) as max_gap
+           public.rec_setting('gap_cap', 8) as gap_cap
   ),
   sel as (
     select m.id, m.slug
@@ -1538,7 +1551,7 @@ language sql stable security definer set search_path = public as $$
     select p.submission_id, count(distinct p.formation_id) as n from pool p group by p.submission_id
   ),
   gaps as (
-    select p.submission_id, p.formation_id, p.mode_id, p.weight / sqrt(tc.n) as weight, p.hero_id,
+    select p.submission_id, p.formation_id, p.mode_id, p.weight / sqrt(tc.n::numeric) as weight, p.hero_id,
            p.si, p.furniture, p.engraving, p.ascension,
            r.hero_id is null as is_missing,
            (r.hero_id is not null and (
@@ -1560,18 +1573,17 @@ language sql stable security definer set search_path = public as $$
   ),
   rows_for_roster as (
     select g.hero_id, g.is_missing, g.submission_id, g.mode_id, t.gap,
-           g.weight * power(params.decay, t.gap - 1) as pts,
+           g.weight * power(params.decay, least(t.gap, params.gap_cap) - 1) as pts,
            g.si, g.furniture, g.engraving, g.ascension
     from gaps g
     join teams t on t.formation_id = g.formation_id
     cross join params
     where (g.is_missing or g.is_under)
-      and t.gap <= params.max_gap
       and exists (select 1 from me)
   ),
   rows_for_popular as (
     select p.hero_id, true as is_missing, p.submission_id, p.mode_id, 99::bigint as gap,
-           p.weight / sqrt(tc.n) as pts, p.si, p.furniture, p.engraving, p.ascension
+           p.weight / sqrt(tc.n::numeric) as pts, p.si, p.furniture, p.engraving, p.ascension
     from pool p
     join team_counts tc on tc.submission_id = p.submission_id
     where not exists (select 1 from me)
@@ -1590,9 +1602,9 @@ language sql stable security definer set search_path = public as $$
     group by pm.hero_id
   ),
   agg as (
-    select a.hero_id,
+    select a.hero_id, h.rec_category,
            case when bool_or(a.is_missing) then 'build' else 'invest' end as kind,
-           round(sum(a.pts), 4) as score,
+           round(sum(a.pts), 6) as score,
            (count(*) filter (where a.gap = 1))::int as complete_count,
            (count(*) filter (where a.gap > 1 and a.gap < 99))::int as near_count,
            (array_agg(a.si order by a.pts desc) filter (where a.si is not null))[1] as rec_si,
@@ -1602,19 +1614,20 @@ language sql stable security definer set search_path = public as $$
            mj.by_mode,
            (array_agg(distinct a.submission_id))[1:5] as submission_ids
     from all_rows a
+    join heroes h on h.id = a.hero_id and h.rec_category is not null
     join mode_json mj on mj.hero_id = a.hero_id
-    group by a.hero_id, mj.by_mode
+    group by a.hero_id, h.rec_category, mj.by_mode
   ),
   limited as (
-    select agg.*, row_number() over (partition by agg.kind order by agg.score desc, agg.hero_id) as rn
+    select agg.*, (row_number() over (partition by agg.rec_category order by agg.score desc, agg.hero_id))::int as rn
     from agg
   )
-  select l.hero_id, l.kind, l.score, l.complete_count, l.near_count,
+  select l.hero_id, l.rec_category, l.rn, l.kind, l.score, l.complete_count, l.near_count,
          l.rec_si, l.rec_furniture, l.rec_engraving, l.rec_ascension, l.by_mode, l.submission_ids
   from limited l
   where auth.uid() is not null
-    and l.rn <= least(greatest(coalesce(p_limit, 12), 1), 50)
-  order by l.kind, l.score desc, l.hero_id
+    and l.rn <= least(greatest(coalesce(p_limit, 3), 1), 10)
+  order by l.rec_category, l.rn
 $$;
 revoke all on function public.recommend_builds(text[], int) from public, anon;
 grant execute on function public.recommend_builds(text[], int) to authenticated;

@@ -314,8 +314,20 @@ export const MODES: readonly ModeConfig[] = [
 
 export const UPCOMING_MODES = ['Arena of Heroes', "Legends' Challenger", 'Temporal Rift'] as const;
 
+export const RECOMMENDATION_CATEGORIES = [
+  { key: 'standard-4f', label: '4F' },
+  { key: 'cele-hypo', label: 'Cele / Hypo' },
+  { key: 'awakened', label: 'Awakened' },
+  { key: 'drago-lite', label: 'Dragolite' },
+  { key: 'dragon-highborn', label: 'Dragon Highborn' },
+] as const;
+
+export type RecommendationCategory = (typeof RECOMMENDATION_CATEGORIES)[number]['key'];
+
 export interface HeroRecommendation {
   readonly heroId: number;
+  readonly category: RecommendationCategory;
+  readonly rank: number;
   readonly kind: 'build' | 'invest';
   readonly score: number;
   readonly completeCount: number;

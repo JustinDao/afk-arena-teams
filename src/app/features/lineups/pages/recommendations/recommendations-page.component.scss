@@ -42,3 +42,12 @@
   color: var(--app-muted);
   font-size: 0.75rem;
 }
+
+.recommendation.best {
+  border-color: var(--app-primary);
+}
+
+.best-tag {
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}

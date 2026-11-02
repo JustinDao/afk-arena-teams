@@ -7,7 +7,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { UserDataService } from '../../../../core/data/user-data.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { formatInvestment } from '../../investment';
-import { ASCENSION_RANK_LABELS, displayHeroName, Hero, HeroRecommendation } from '../../models';
+import { ASCENSION_RANK_LABELS, displayHeroName, Hero, HeroRecommendation, RECOMMENDATION_CATEGORIES } from '../../models';
 import { LineupsStore } from '../../lineups.store';
 
 interface RecommendationView {
@@ -60,8 +60,13 @@ export class RecommendationsPageComponent {
       }];
     });
   });
-  readonly toBuild = computed(() => this.views().filter((view) => view.recommendation.kind === 'build'));
-  readonly toInvest = computed(() => this.views().filter((view) => view.recommendation.kind === 'invest'));
+  readonly groups = computed(() => RECOMMENDATION_CATEGORIES.map(({ key, label }) => ({
+    key,
+    label,
+    items: this.views()
+      .filter((view) => view.recommendation.category === key)
+      .sort((left, right) => left.recommendation.rank - right.recommendation.rank),
+  })));
   readonly hasRoster = computed(() => Object.keys(this.store.roster()).length > 0);
 
   constructor() {
@@ -129,7 +134,7 @@ export class RecommendationsPageComponent {
 
   private reasonFor(recommendation: HeroRecommendation, total: number): string {
     const { kind, completeCount, nearCount } = recommendation;
-    const plural = (count: number) => `${count} top lineup${count === 1 ? '' : 's'}`;
+    const plural = (count: number) => `${count} top team${count === 1 ? '' : 's'}`;
     if (completeCount === 0 && nearCount === 0) return `Used in ${plural(total)}`;
     const parts: string[] = [];
     if (completeCount > 0) parts.push(`${kind === 'build' ? 'Completes' : 'Fully unlocks'} ${plural(completeCount)}`);

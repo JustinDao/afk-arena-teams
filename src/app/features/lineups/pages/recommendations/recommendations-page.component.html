@@ -4,7 +4,8 @@
       <h2 id="recommendations-title">Recommended builds</h2>
     </div>
     <p class="rules">
-      Based on your hero roster and the current top lineups, ranked by upvotes first and results second.
+      The best next step for your roster in each hero category: building a new hero or investing more in one you own, whichever would improve your options the most.
+      Based on the current top lineups, ranked by upvotes first and results second.
       Recommendations are refreshed nightly@if (refreshedAt(); as refreshed) { (last refreshed {{ refreshed | date: 'medium' }}) }, so new lineups and votes can take a day to show up.
     </p>
 
@@ -25,52 +26,36 @@
         <p class="rules">Add heroes to your roster for personalised picks. Until then, these are the most-used heroes in the top lineups.</p>
       }
 
-      <h3>Heroes to build</h3>
-      @if (toBuild().length) {
-        <ol class="recommendation-list">
-          @for (view of toBuild(); track view.hero.id) {
-            <li class="recommendation">
-              <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
-              <div class="recommendation-body">
-                <strong>{{ view.name }}</strong>
-                <span>{{ view.reason }}</span>
-                @if (view.target) { <span class="muted">Build toward {{ view.target }}</span> }
-                <span class="row-wrap">
-                  @for (mode of view.modeCounts; track mode.slug) {
-                    <span class="mode-count" [attr.title]="mode.count + ' lineups'">{{ mode.short }} {{ mode.count }}</span>
-                  }
-                </span>
-              </div>
-              <button mat-button class="btn" (click)="viewLineups(view)">View lineups</button>
-            </li>
-          }
-        </ol>
-      } @else if (loading()) {
-        <p class="muted">Loading recommendations…</p>
-      } @else {
-        <p class="muted">No heroes to recommend yet for these modes.</p>
-      }
-
-      @if (toInvest().length) {
-        <h3>Heroes to invest in</h3>
-        <ol class="recommendation-list">
-          @for (view of toInvest(); track view.hero.id) {
-            <li class="recommendation">
-              <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
-              <div class="recommendation-body">
-                <strong>{{ view.name }}</strong>
-                <span>{{ view.reason }}</span>
-                @if (view.target) { <span class="muted">Invest toward {{ view.target }}</span> }
-                <span class="row-wrap">
-                  @for (mode of view.modeCounts; track mode.slug) {
-                    <span class="mode-count" [attr.title]="mode.count + ' lineups'">{{ mode.short }} {{ mode.count }}</span>
-                  }
-                </span>
-              </div>
-              <button mat-button class="btn" (click)="viewLineups(view)">View lineups</button>
-            </li>
-          }
-        </ol>
+      @for (group of groups(); track group.key) {
+        <h3>{{ group.label }}</h3>
+        @if (group.items.length) {
+          <ol class="recommendation-list">
+            @for (view of group.items; track view.hero.id; let first = $first) {
+              <li class="recommendation" [class.best]="first">
+                <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
+                <div class="recommendation-body">
+                  <span class="row-wrap">
+                    <strong>{{ view.name }}</strong>
+                    <span class="mode-count">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                    @if (first) { <span class="mode-count best-tag">Best next step</span> }
+                  </span>
+                  <span>{{ view.reason }}</span>
+                  @if (view.target) { <span class="muted">{{ view.recommendation.kind === 'build' ? 'Build toward' : 'Invest toward' }} {{ view.target }}</span> }
+                  <span class="row-wrap">
+                    @for (mode of view.modeCounts; track mode.slug) {
+                      <span class="mode-count" [attr.title]="mode.count + ' teams'">{{ mode.short }} {{ mode.count }}</span>
+                    }
+                  </span>
+                </div>
+                <button mat-button class="btn" (click)="viewLineups(view)">View lineups</button>
+              </li>
+            }
+          </ol>
+        } @else if (loading()) {
+          <p class="muted">Loading recommendations…</p>
+        } @else {
+          <p class="muted">Nothing to recommend here for these modes. You may already have everything the top lineups use.</p>
+        }
       }
     }
   </section>
