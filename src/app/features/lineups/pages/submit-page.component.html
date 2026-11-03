@@ -79,20 +79,24 @@
         }
       </div>
       <section class="extras">
-        <div class="field">
+        <div class="field pet-slot-field">
           <h3>Pet <span class="muted">(optional)</span></h3>
-          <button mat-button type="button" class="btn" (click)="store.updateDraftPet(null)">Remove pet</button>
-          <app-pet-picker searchId="submit-pet-search" searchLabel="Search pets" [pets]="store.pets()"
-            [selectedIds]="selectedPetIds()" (petSelected)="store.updateDraftPet($event)" />
+          @if (draft.forms[draft.cur].petId === null) {
+          <button mat-button type="button" class="formation-slot empty-slot pet-slot" aria-label="Add pet"
+            (click)="petModalOpen.set(true)">Add Pet</button>
+          } @else {
+          @let selectedPet = petFor(draft.forms[draft.cur].petId!);
+          <button mat-button type="button" class="formation-slot pet-slot"
+            [attr.aria-label]="'Edit ' + selectedPet.name + ', level ' + (draft.forms[draft.cur].petLevel ?? 'not set')"
+            (click)="petModalOpen.set(true)">
+            <app-hero-icon [name]="selectedPet.name" [imageUrl]="selectedPet.iconUrl ?? null" size="large" />
+            @if (draft.forms[draft.cur].petLevel !== null) {
+            <span class="pet-level-tag">Lv. {{ draft.forms[draft.cur].petLevel }}</span>
+            }
+            <span class="remove-slot" aria-hidden="true">×</span>
+          </button>
+          }
         </div>
-        @if (draft.forms[draft.cur].petId !== null) {
-        <label class="field">Pet level
-          <input type="number" min="1" [attr.max]="store.petMaxFor(draft.forms[draft.cur].petId)" step="1"
-            [value]="draft.forms[draft.cur].petLevel ?? ''"
-            [placeholder]="'1–' + store.petMaxFor(draft.forms[draft.cur].petId)"
-            (change)="store.updateDraftPetLevel(nullableNumberValue($event))">
-        </label>
-        }
       </section>
 
       <section class="result-fields">
@@ -138,6 +142,19 @@
     </form>
   </section>
 </main>
+}
+
+@if (petModalOpen()) {
+  @if (store.draft(); as draft) {
+    <app-add-pet-modal
+      [pets]="store.pets()"
+      [petRoster]="store.petRoster()"
+      [currentPetId]="draft.forms[draft.cur].petId"
+      [currentLevel]="draft.forms[draft.cur].petLevel"
+      (selectionChange)="updateDraftPet($event)"
+      (closed)="petModalOpen.set(false)"
+    />
+  }
 }
 
 @if (editingSlot(); as editing) {

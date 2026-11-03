@@ -4,6 +4,24 @@
   padding: 0;
 }
 
+.formation-slot.pet-slot {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pet-slot .pet-level-tag {
+  position: absolute;
+  bottom: -7px;
+  padding: 0 4px;
+  border: 1px solid var(--app-line);
+  border-radius: 6px;
+  background: var(--app-panel);
+  color: var(--app-ink);
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
 .formation-board.front-right {
   flex-direction: row-reverse;
   justify-content: center;

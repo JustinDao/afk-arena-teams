@@ -8,11 +8,11 @@ import { HeroIconService } from '../../../core/hero-icons/hero-icon.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
 import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
+import { AddPetModalComponent, DraftPetSelection } from '../components/add-pet-modal/add-pet-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
-import { PetPickerComponent } from '../components/pet-picker/pet-picker.component';
 import { defaultAscensionForInvestment } from '../investment';
-import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig } from '../models';
+import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
 import { LineupsStore } from '../lineups.store';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
 
@@ -21,12 +21,12 @@ import { LineupViewPreferencesService } from '../lineup-view-preferences.service
   standalone: true,
   imports: [
     AddHeroModalComponent,
+    AddPetModalComponent,
     CdkTrapFocus,
     CollectionBuildEditorComponent,
     HeroIconComponent,
     HeroInvestmentEditorComponent,
     MatButtonModule,
-    PetPickerComponent,
     ReactiveFormsModule,
     RouterLink,
   ],
@@ -45,13 +45,8 @@ export class SubmitPageComponent implements OnDestroy {
   readonly disabledHeroIds = computed(() =>
     this.store.heroes().filter((hero) => this.store.heroAlreadySelected(hero.id)).map(({ id }) => id),
   );
-  readonly selectedPetIds = computed(() => {
-    const draft = this.store.draft();
-    const petId = draft?.forms[draft.cur]?.petId;
-    return petId === null || petId === undefined ? [] : [petId];
-  });
-
   readonly editingSlot = signal<{ readonly index: number } | null>(null);
+  readonly petModalOpen = signal(false);
 
   readonly submissionForm = new FormGroup({
     target: new FormControl('', { nonNullable: true }),
@@ -100,6 +95,12 @@ export class SubmitPageComponent implements OnDestroy {
     this.editingSlot.set(null);
   }
 
+  updateDraftPet(selection: DraftPetSelection): void {
+    this.store.updateDraftPet(selection.petId);
+    if (selection.petId !== null) this.store.updateDraftPetLevel(selection.level);
+    this.petModalOpen.set(false);
+  }
+
   changeDraftMode(slug: string): void {
     this.store.changeDraftMode(slug);
     this.resetSubmissionForm();
@@ -121,18 +122,10 @@ export class SubmitPageComponent implements OnDestroy {
     return formation.slots.filter((slot) => slot.hid !== null).length;
   }
 
-  nullableNumberValue(event: Event): number | null {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.value.trim() === '') return null;
-    const value = Number(input.value);
-    return Number.isInteger(value) ? value : null;
-  }
-
-  petIdValue(event: Event): number | null {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement) || select.value === '') return null;
-    const petId = Number(select.value);
-    return Number.isInteger(petId) && this.store.pets().some((pet) => pet.id === petId) ? petId : null;
+  petFor(id: number): Pet {
+    const pet = this.store.pets().find((entry) => entry.id === id);
+    if (!pet) throw new Error(`Unknown pet id: ${id}`);
+    return pet;
   }
 
   teamCounts(variable: { readonly min: number; readonly max: number }): readonly number[] {

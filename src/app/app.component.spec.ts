@@ -33,6 +33,43 @@ describe('SubmitPageComponent', () => {
     if (originalOrientation !== 'front-right') preferences.toggleOrientation();
   });
 
+  it('opens the pet slot modal and saves the selected pet and level', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.pet-slot').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-add-pet-modal')).not.toBeNull();
+
+    const firstPet = TestBed.inject(LineupsStore).pets()[0];
+    const petOption = Array.from(fixture.nativeElement.querySelectorAll('app-unit-picker-option button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes(firstPet.name)) as HTMLButtonElement;
+    expect(petOption).toBeDefined();
+    petOption.click();
+    fixture.detectChanges();
+
+    const levelInput = fixture.nativeElement.querySelector('.pet-modal input[type="number"]') as HTMLInputElement;
+    levelInput.value = String(firstPet.kind === 'basic' ? 18 : 36);
+    levelInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.pet-modal button.primary').click();
+    fixture.detectChanges();
+
+    const draftPet = TestBed.inject(LineupsStore).draft()?.forms[0];
+    expect(draftPet?.petId).toBe(firstPet.id);
+    expect(draftPet?.petLevel).toBe(firstPet.kind === 'basic' ? 18 : 36);
+    expect(fixture.nativeElement.querySelector('app-add-pet-modal')).toBeNull();
+    fixture.destroy();
+  });
+
   it('does not show a mercenary control when creating a Twisted Realm team', async () => {
     await TestBed.configureTestingModule({
       imports: [SubmitPageComponent],
