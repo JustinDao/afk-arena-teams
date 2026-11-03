@@ -48,18 +48,15 @@
                   <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
                   @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
                   @if (hero.collection; as collection) {
-                    <span class="collection-tag" [attr.title]="collection.name">
-                      @if (collectionIcon(collection.catalogId, collection.nodes); as iconUrl) {
+                    <span class="collection-tag" [attr.title]="collectionSummary(collection)">
+                      @if (collectionIcon(collection); as iconUrl) {
                         <img class="collection-icon" [src]="iconUrl" [alt]="collection.name + ' icon'">
                       }
-                      @for (node of collection.nodes; track node.slotIndex) {
+                      @for (node of collectionStats(collection); track $index) {
                         @if (node.stat !== 'skill_level') {
-                          <img
-                            class="collection-node-icon"
-                            [src]="collectionNodeIcon(node.stat, node.tier)"
-                            [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                            [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                          >
+                          <img class="collection-node-icon" [src]="collectionNodeIcon(node.stat, node.tier)"
+                            [alt]="(collection.recommendation ? 'Acceptable ' : '') + node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                            [title]="(collection.recommendation ? 'Acceptable ' : '') + node.tier + ' ' + node.stat.replaceAll('_', ' ')">
                         }
                       }
                     </span>

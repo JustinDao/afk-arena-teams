@@ -8,6 +8,59 @@ import { LineupCardHarness } from './lineup-card.harness';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
 
 describe('LineupCardComponent', () => {
+  it('renders flexible collection recommendations without an exact Mythic count', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LineupCardComponent],
+      providers: [provideRouter([])],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LineupCardComponent);
+    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'twisted-realm')!;
+    const submission = {
+      ...sample,
+      forms: sample.forms.map((formation) => ({
+        ...formation,
+        heroes: formation.heroes.map((hero, index) => index === 0
+          ? {
+              ...hero,
+              collection: {
+                catalogId: 14,
+                name: "Stormwrath's Lull",
+                nodes: [],
+                recommendation: { level: 1, attackStats: ['erosion', 'mp'], defenseStats: [] },
+              },
+            }
+          : hero),
+      })),
+    };
+    const row: EvaluatedSubmission = {
+      submission,
+      active: false,
+      forms: submission.forms.map(() => ({ statuses: [], missing: 0, missingPet: false, underPetLevel: false })),
+      missingCount: 0,
+      bestSlotMissing: 0,
+      missingHeroes: [],
+      lowInvestmentHeroes: [],
+      missingPetNames: [],
+      underLevelPetNames: [],
+      heroLevelMismatch: null,
+      gap: 0,
+    };
+    fixture.componentRef.setInput('row', row);
+    fixture.componentRef.setInput('scope', 'all');
+    fixture.componentRef.setInput('voted', false);
+    fixture.componentRef.setInput('voteCount', sample.up);
+    fixture.detectChanges();
+
+    const collectionIcon = fixture.nativeElement.querySelector('.collection-icon') as HTMLImageElement;
+    expect(collectionIcon.src).toContain('/14_lvl1_cl.webp');
+    expect(collectionIcon.src).not.toContain('_ms');
+    const recommendation = fixture.nativeElement.querySelector('.collection-tag') as HTMLElement;
+    expect(recommendation.title).toContain('Level 1');
+    expect(recommendation.title).toContain('EROSION or MP');
+    expect(recommendation.querySelectorAll('.collection-node-icon').length).toBe(2);
+    fixture.destroy();
+  });
+
   it('uses the saved front-right formation orientation', async () => {
     await TestBed.configureTestingModule({
       imports: [LineupCardComponent],

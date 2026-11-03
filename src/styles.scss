@@ -98,6 +98,10 @@ body {
   font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+body:has(.overlay) {
+  overflow: hidden;
+}
+
 button,
 input,
 select,

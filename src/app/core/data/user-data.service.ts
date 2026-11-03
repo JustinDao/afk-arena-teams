@@ -1,8 +1,13 @@
 import { Injectable } from '@angular/core';
-import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionRecommendation, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRecommendation, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
+import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionRecommendation, CollectionRecommendationSpec, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRecommendation, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
-import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../../features/lineups/collection-catalog';
+import {
+  ATTACK_COLLECTION_NODE_STATS,
+  COLLECTION_CATALOG,
+  COLLECTION_NODE_STATS,
+  DEFENSE_COLLECTION_NODE_STATS,
+} from '../../features/lineups/collection-catalog';
 import { supabase, supabaseConfigured } from '../supabase/supabase-client';
 
 interface ModeRow {
@@ -63,6 +68,7 @@ interface DatabaseSubmissionRow {
       catalog_id: number | null;
       collection_class: CollectionCatalogItem['class'] | null;
       nodes: Record<string, unknown>[];
+      recommendation: Record<string, unknown> | null;
     }[];
   }[];
 }
@@ -214,13 +220,21 @@ export class UserDataService {
 
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
-    const { data, error } = await supabase.from('submissions')
-      .select('id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))')
+    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation)';
+    const selectLegacy = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes)';
+    let response = await supabase.from('submissions')
+      .select(selectWithRecommendations)
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
-    if (error) throw new Error(`Could not load lineups: ${error.message}`);
+    if (response.error && this.isMissingCollectionRecommendationColumn(response.error)) {
+      response = await supabase.from('submissions')
+        .select(selectLegacy)
+        .order('upvotes', { ascending: false })
+        .order('created_at', { ascending: false });
+    }
+    if (response.error) throw new Error(`Could not load lineups: ${response.error.message}`);
     const authors = await this.loadSubmissionAuthors();
-    return ((data ?? []) as unknown as DatabaseSubmissionRow[]).map((row) => {
+    return ((response.data ?? []) as unknown as DatabaseSubmissionRow[]).map((row) => {
       if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
       return {
         id: row.id,
@@ -247,6 +261,8 @@ export class UserDataService {
               .map((hero) => {
                 const collection = formation.formation_collections.find((item) => item.hero_id === hero.hero_id);
                 const inv = { si: hero.si, furn: hero.furniture, eng: hero.engraving };
+                const recommendation = this.mapCollectionRecommendation(collection?.recommendation);
+                const recommendationCatalogId = this.collectionRecommendationCatalogId(collection?.recommendation);
                 return {
                   pos: hero.position,
                   hid: hero.hero_id,
@@ -258,9 +274,10 @@ export class UserDataService {
                   merc: hero.is_merc,
                   collection: collection ? {
                     name: collection.collection_name,
-                      catalogId: collection.catalog_id ?? undefined,
+                      catalogId: collection.catalog_id ?? recommendationCatalogId,
                       class: collection.collection_class ?? undefined,
-                      nodes: this.mapCollectionNodes(collection.nodes),
+                      nodes: recommendation ? [] : this.mapCollectionNodes(collection.nodes),
+                      ...(recommendation ? { recommendation } : {}),
                     } : null,
                 };
               }),
@@ -271,9 +288,46 @@ export class UserDataService {
 
   async submitLineup(payload: Record<string, unknown>): Promise<number> {
     if (!supabase) throw new Error('Configure Supabase to submit lineups.');
-    const { data, error } = await supabase.rpc('submit_lineup_with_ascension', { p_payload: payload });
-    if (error) throw new Error(`Could not submit lineup: ${error.message}`);
+    const hasRecommendations = this.hasCollectionRecommendations(payload);
+    const { data, error } = await supabase.rpc('submit_lineup_with_collection_recommendations', { p_payload: payload });
+    if (error) {
+      if (this.isMissingCollectionRecommendationRpc(error)) {
+        if (hasRecommendations) {
+          throw new Error('Flexible collection recommendations require the Supabase collection recommendation migration. Apply the new migration before submitting this lineup.');
+        }
+        const legacyResponse = await supabase.rpc('submit_lineup_with_ascension', { p_payload: payload });
+        if (legacyResponse.error) throw new Error(`Could not submit lineup: ${legacyResponse.error.message}`);
+        return Number(legacyResponse.data);
+      }
+      throw new Error(`Could not submit lineup: ${error.message}`);
+    }
     return Number(data);
+  }
+
+  private hasCollectionRecommendations(payload: Record<string, unknown>): boolean {
+    const formations = payload['formations'];
+    if (!Array.isArray(formations)) return false;
+    return formations.some((formation) => {
+      if (!formation || typeof formation !== 'object') return false;
+      const heroes = (formation as Record<string, unknown>)['heroes'];
+      if (!Array.isArray(heroes)) return false;
+      return heroes.some((hero) => {
+        if (!hero || typeof hero !== 'object') return false;
+        const collection = (hero as Record<string, unknown>)['collection'];
+        return !!collection && typeof collection === 'object'
+          && Object.hasOwn(collection, 'recommendation');
+      });
+    });
+  }
+
+  private isMissingCollectionRecommendationColumn(error: { readonly code?: string; readonly message: string }): boolean {
+    return ['42703', 'PGRST200', 'PGRST204'].includes(error.code ?? '')
+      && error.message.toLocaleLowerCase().includes('recommendation');
+  }
+
+  private isMissingCollectionRecommendationRpc(error: { readonly code?: string; readonly message: string }): boolean {
+    return ['42883', 'PGRST202'].includes(error.code ?? '')
+      && error.message.includes('submit_lineup_with_collection_recommendations');
   }
 
   async toggleVote(submissionId: number): Promise<boolean> {
@@ -566,6 +620,36 @@ export class UserDataService {
       mapped.push({ slotIndex, stat, tier });
     }
     return mapped;
+  }
+
+  private mapCollectionRecommendation(value: unknown): CollectionRecommendationSpec | undefined {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('A lineup contains an invalid collection recommendation.');
+    }
+    const recommendation = value as Record<string, unknown>;
+    const level = Number(recommendation['level']);
+    const attackStats = recommendation['attackStats'];
+    const defenseStats = recommendation['defenseStats'];
+    const isValidStatList = (stats: unknown, allowed: readonly CollectionNodeStat[]): stats is string[] =>
+      Array.isArray(stats) && stats.length <= 5 && stats.every((stat) =>
+        typeof stat === 'string' && allowed.includes(stat),
+      );
+    if (
+      !Number.isInteger(level) || level < 1 || level > 3 ||
+      !isValidStatList(attackStats, ATTACK_COLLECTION_NODE_STATS) ||
+      !isValidStatList(defenseStats, DEFENSE_COLLECTION_NODE_STATS) ||
+      (!attackStats.length && !defenseStats.length)
+    ) throw new Error('A lineup contains an invalid collection recommendation.');
+    return { level, attackStats, defenseStats };
+  }
+
+  private collectionRecommendationCatalogId(value: unknown): number | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const candidate = (value as Record<string, unknown>)['catalogId'];
+    return typeof candidate === 'number' && Number.isInteger(candidate) && candidate > 0
+      ? candidate
+      : undefined;
   }
 
   private mapMode(

@@ -10,6 +10,7 @@ import { AuthService, DUPLICATE_SIGNUP_MESSAGE } from './core/auth/auth.service'
 import { User } from '@supabase/supabase-js';
 import { APP_ROUTES } from './app.routes';
 import { LineupViewPreferencesService } from './features/lineups/lineup-view-preferences.service';
+import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from './features/lineups/collection-catalog';
 
 describe('SubmitPageComponent', () => {
   it('uses the preferred front-right orientation in the formation editor', async () => {
@@ -67,6 +68,65 @@ describe('SubmitPageComponent', () => {
     expect(draftPet?.petId).toBe(firstPet.id);
     expect(draftPet?.petLevel).toBe(firstPet.kind === 'basic' ? 18 : 36);
     expect(fixture.nativeElement.querySelector('app-add-pet-modal')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('previews a flexible collection recommendation before any database migration', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: (name: string) => name === 'Begris' ? 'Warrior' : null } },
+        {
+          provide: UserDataService,
+          useValue: {
+            configured: false,
+            loadCollectionCatalog: async () => ({ catalog: COLLECTION_CATALOG, nodeStats: COLLECTION_NODE_STATS }),
+          },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const store = TestBed.inject(LineupsStore);
+    const hero = store.heroes().find(({ name }) => name === 'Begris')!;
+    fixture.componentInstance.pickHero(hero.id, 0);
+    fixture.componentInstance.openSlot(0);
+    expect(fixture.componentInstance.classOfSlot(0)).toBe('Warrior');
+    const availableCollections = fixture.componentInstance.catalogForSlot(0);
+    expect(availableCollections.length).toBeGreaterThan(0);
+    expect(availableCollections.every(({ class: heroClass }) => heroClass === 'Warrior')).toBeTrue();
+    store.startDraftCollectionSnapshot(0, fixture.componentInstance.classOfSlot(0));
+    store.setDraftCollectionRecommendationMode(0, true);
+    fixture.detectChanges();
+    const collection = fixture.componentInstance.catalogForSlot(0)[0];
+    expect(collection).toBeDefined();
+    const levelSelect = fixture.nativeElement.querySelector('.level-field select') as HTMLSelectElement;
+    expect(levelSelect.value).toBe('1');
+    expect(levelSelect.querySelector('option[value=""]')).toBeNull();
+    const attackOptions = Array.from(fixture.nativeElement.querySelectorAll('.recommended-stat-groups fieldset:first-child input[type="checkbox"]')) as HTMLInputElement[];
+    for (const option of attackOptions.slice(0, 5)) {
+      option.click();
+      option.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+    expect(store.draft()?.forms[0].slots[0].collectionSnapshot?.recommendation?.attackStats.length).toBe(5);
+    expect(attackOptions[5].disabled).toBeTrue();
+    store.updateDraftCollectionRecommendation(0, collection!.id, {
+      level: 1,
+      attackStats: ['erosion', 'mp'],
+      defenseStats: [],
+    });
+    fixture.detectChanges();
+
+    const previewIcon = fixture.nativeElement.querySelector('.preview-collection-icon') as HTMLImageElement;
+    expect(previewIcon).not.toBeNull();
+    expect(previewIcon.src).toContain(`/${collection!.id}_lvl1_cl.webp`);
+    expect(previewIcon.src).not.toContain('_ms');
+    expect(fixture.nativeElement.textContent).toContain('EROSION or MP');
+    expect(fixture.nativeElement.textContent).toContain('as many as possible');
     fixture.destroy();
   });
 

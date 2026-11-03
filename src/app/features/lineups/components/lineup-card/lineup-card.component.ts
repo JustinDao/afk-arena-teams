@@ -2,12 +2,12 @@ import { countLabel, pluralNoun } from '../../plural';
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus, PetKind } from '../../models';
+import { CollectionNode, CollectionRecommendationSpec, CollectionSnapshot, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus, PetKind } from '../../models';
 import { formatInvestment, formatKillTime, heroName, resultLine } from '../../lineup-display';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../../core/hero-icons/hero-icon.service';
 import { PetBadgeComponent } from '../pet-badge/pet-badge.component';
-import { collectionIconUrlForNodes, collectionNodeIconUrl } from '../../collection-catalog';
+import { collectionIconUrlForSnapshot, collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog';
 import { rosterFilterColor } from '../../roster-filter-colors';
 import { PETS } from '../../lineup-data';
 import { LineupViewPreferencesService } from '../../lineup-view-preferences.service';
@@ -68,14 +68,31 @@ export class LineupCardComponent {
     return days === 0 ? 'just now' : `${days}d ago`;
   }
 
-  collectionSummary(nodes: readonly CollectionNode[]): string {
-    return nodes.map((node) => `${node.tier[0].toUpperCase()} ${node.stat.replaceAll('_', ' ').toUpperCase()}`).join(', ');
+  collectionSummary(collection: CollectionSnapshot): string {
+    if (collection.recommendation) {
+      const attack = collection.recommendation.attackStats.length
+        ? `Attack: ${collection.recommendation.attackStats.map(collectionNodeLabel).join(' or ')}`
+        : '';
+      const defense = collection.recommendation.defenseStats.length
+        ? `Defense: ${collection.recommendation.defenseStats.map(collectionNodeLabel).join(' or ')}`
+        : '';
+      return `${collection.name}; Level ${collection.recommendation.level}; ${[attack, defense].filter(Boolean).join('; ')}, as many as possible`;
+    }
+    return collection.name;
   }
 
-  collectionIcon(catalogId: number | undefined, nodes: readonly CollectionNode[]): string | null {
+  collectionIcon(collection: CollectionSnapshot): string | null {
+    const catalogId = collection.catalogId;
     return catalogId === undefined
       ? null
-      : collectionIconUrlForNodes(catalogId, nodes);
+      : collectionIconUrlForSnapshot(catalogId, collection);
+  }
+
+  collectionStats(collection: CollectionSnapshot): readonly { readonly stat: string; readonly tier: CollectionNode['tier'] }[] {
+    return collection.recommendation
+      ? [...collection.recommendation.attackStats, ...collection.recommendation.defenseStats]
+        .map((stat) => ({ stat, tier: 'mythic' }))
+      : collection.nodes.map(({ stat, tier }) => ({ stat, tier }));
   }
 
   collectionNodeIcon(stat: string, tier: CollectionNode['tier']): string {

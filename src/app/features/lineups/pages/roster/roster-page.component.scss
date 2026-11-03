@@ -111,6 +111,13 @@
   text-align: center;
 }
 
+.collection-assignment-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .roster-filters {
   display: grid;
   gap: var(--app-space-2);

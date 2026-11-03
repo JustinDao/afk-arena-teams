@@ -7,6 +7,7 @@ import {
   CollectionInventoryItem,
   CollectionCatalogItem,
   CollectionNode,
+  CollectionRecommendationSpec,
   CollectionSnapshot,
   CollectionNodeStat,
   DraftFormation,
@@ -32,7 +33,11 @@ import {
 import { HEROES, HERO_BY_ID, PETS, SAMPLE_SUBMISSIONS } from './lineup-data';
 import { COLLECTION_CATALOG } from './collection-catalog';
 import { countLabel } from './plural';
-import { COLLECTION_NODE_STATS } from './collection-catalog';
+import {
+  ATTACK_COLLECTION_NODE_STATS,
+  COLLECTION_NODE_STATS,
+  DEFENSE_COLLECTION_NODE_STATS,
+} from './collection-catalog';
 import {
   formatInvestment as formatInvestmentCode,
   parseInvestment,
@@ -596,10 +601,15 @@ export class LineupsStore {
     });
   }
 
-  updateDraftCollectionSnapshot(slotIndex: number, catalogId: number, nodes: readonly CollectionNode[]): void {
+  updateDraftCollectionSnapshot(
+    slotIndex: number,
+    catalogId: number,
+    nodes: readonly CollectionNode[],
+    heroClass?: string | null,
+  ): void {
     const catalogItem = this.collectionCatalogSignal().find(({ id }) => id === catalogId);
-    if (!catalogItem) {
-      this.showToast('Choose a collection from the catalog.');
+    if (!catalogItem || (heroClass && catalogItem.class.toLowerCase() !== heroClass.toLowerCase())) {
+      this.showToast('Choose a collection that matches this hero’s class.');
       return;
     }
     this.updateDraft((draft) => {
@@ -610,6 +620,54 @@ export class LineupsStore {
         name: catalogItem.name,
         class: catalogItem.class,
         nodes: [...nodes],
+      };
+    });
+  }
+
+  setDraftCollectionRecommendationMode(slotIndex: number, enabled: boolean): void {
+    const draft = this.draftSignal();
+    const snapshot = draft?.forms[draft.cur].slots[slotIndex].collectionSnapshot;
+    if (!snapshot) return;
+    this.updateDraft((current) => {
+      const slot = current.forms[current.cur].slots[slotIndex];
+      slot.collectionSnapshot = enabled
+        ? {
+            ...snapshot,
+            nodes: [],
+            recommendation: snapshot.recommendation ?? { level: 1, attackStats: [], defenseStats: [] },
+          }
+        : {
+            ...snapshot,
+            nodes: [],
+            recommendation: undefined,
+          };
+    });
+  }
+
+  updateDraftCollectionRecommendation(
+    slotIndex: number,
+    catalogId: number,
+    recommendation: CollectionRecommendationSpec,
+    heroClass?: string | null,
+  ): void {
+    const catalogItem = this.collectionCatalogSignal().find(({ id }) => id === catalogId);
+    if (!catalogItem || (heroClass && catalogItem.class.toLowerCase() !== heroClass.toLowerCase())) {
+      this.showToast('Choose a collection that matches this hero’s class.');
+      return;
+    }
+    this.updateDraft((draft) => {
+      const slot = draft.forms[draft.cur].slots[slotIndex];
+      slot.collectionId = '';
+      slot.collectionSnapshot = {
+        catalogId: catalogItem.id,
+        name: catalogItem.name,
+        class: catalogItem.class,
+        nodes: [],
+        recommendation: {
+          level: recommendation.level,
+          attackStats: [...new Set(recommendation.attackStats)],
+          defenseStats: [...new Set(recommendation.defenseStats)],
+        },
       };
     });
   }
@@ -856,11 +914,18 @@ export class LineupsStore {
               collection_id: slot.collectionSnapshot ? null : slot.collectionId || null,
               collection: slot.collectionSnapshot ? {
                 catalog_id: slot.collectionSnapshot.catalogId,
-                nodes: slot.collectionSnapshot.nodes.map((node) => ({
+                nodes: (slot.collectionSnapshot.recommendation ? [] : slot.collectionSnapshot.nodes).map((node) => ({
                   slot_index: node.slotIndex,
                   stat_type: node.stat,
                   tier: node.tier,
                 })),
+                ...(slot.collectionSnapshot.recommendation ? {
+                  recommendation: {
+                    level: slot.collectionSnapshot.recommendation.level,
+                    attack_stats: slot.collectionSnapshot.recommendation.attackStats,
+                    defense_stats: slot.collectionSnapshot.recommendation.defenseStats,
+                  },
+                } : {}),
               } : null,
             })),
           })),
@@ -1144,6 +1209,25 @@ export class LineupsStore {
       if (new Set(heroIds).size !== heroIds.length) errors.push('A hero can only appear once in each team.');
       if (draft.mode === 'nightmare-corridor' && parseDuration(form.time) === null) {
         errors.push(`Enter a valid kill time for ${form.label.toLocaleLowerCase()}.`);
+      }
+      for (const slot of form.slots) {
+        const recommendation = slot.collectionSnapshot?.recommendation;
+        if (!recommendation) continue;
+        if (!Number.isInteger(recommendation.level) || recommendation.level < 1 || recommendation.level > 3) {
+          errors.push('Collection recommendation levels must be between 1 and 3.');
+        }
+        if (recommendation.attackStats.length > 5 || recommendation.defenseStats.length > 5) {
+          errors.push('Choose no more than five acceptable stats for each collection node type.');
+        }
+        if (
+          recommendation.attackStats.some((stat) => !ATTACK_COLLECTION_NODE_STATS.includes(stat)) ||
+          recommendation.defenseStats.some((stat) => !DEFENSE_COLLECTION_NODE_STATS.includes(stat))
+        ) {
+          errors.push('Collection recommendation stats must match their Attack or Defense node group.');
+        }
+        if (!recommendation.attackStats.length && !recommendation.defenseStats.length) {
+          errors.push('Choose at least one acceptable Mythic stat for each collection recommendation.');
+        }
       }
     }
     if (mode.uniqueAcross) {

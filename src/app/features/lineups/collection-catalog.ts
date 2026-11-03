@@ -1,4 +1,4 @@
-import { CollectionCatalogItem, CollectionNode, CollectionNodeStat, CollectionNodeTier } from './models';
+import { CollectionCatalogItem, CollectionNode, CollectionNodeStat, CollectionNodeTier, CollectionSnapshot } from './models';
 
 const CDN_BASE = 'https://raw.githubusercontent.com/afk-mine/cdn/main';
 
@@ -32,6 +32,16 @@ export const COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [
   'skill_level', 'ty',
 ];
 
+export const ATTACK_COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [
+  'atk', 'cda', 'crit', 'erosion', 'err', 'full_atk',
+  'full_erosion', 'is', 'll', 'mp', 'pp', 'prf',
+];
+
+export const DEFENSE_COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [
+  'armor', 'buffer', 'cbr', 'cdr', 'def', 'diss', 'dmg_resist',
+  'full_buffer', 'full_def', 'full_hp', 'heal', 'hp', 'ty',
+];
+
 export const COLLECTION_NODE_TIERS: readonly CollectionNodeTier[] = ['elite', 'legendary', 'mythic'];
 
 export function collectionIconUrl(collectionId: number, level = 1, mythicStats = 0): string {
@@ -44,6 +54,12 @@ export function collectionIconUrlForNodes(collectionId: number, nodes: readonly 
   const levelNodes = nodes.filter(({ stat }) => stat === 'skill_level').length;
   const mythicStats = nodes.filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic').length;
   return collectionIconUrl(collectionId, levelNodes + 1, mythicStats);
+}
+
+export function collectionIconUrlForSnapshot(collectionId: number, snapshot: CollectionSnapshot): string {
+  return snapshot.recommendation
+    ? collectionIconUrl(collectionId, snapshot.recommendation.level)
+    : collectionIconUrlForNodes(collectionId, snapshot.nodes);
 }
 
 export function defaultCollectionName(catalogName: string, nodes: readonly CollectionNode[]): string {

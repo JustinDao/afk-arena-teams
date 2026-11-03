@@ -178,6 +178,19 @@ describe('LineupsStore', () => {
     expect(store.teamCount()).toBeNull();
   });
 
+  it('limits custom collection drafts and changes to the assigned hero class', () => {
+    store.openDraft();
+    store.startDraftCollectionSnapshot(0, 'Tank');
+    const tankCollection = store.collectionCatalog().find(({ class: collectionClass }) => collectionClass === 'Tank')!;
+    const warriorCollection = store.collectionCatalog().find(({ class: collectionClass }) => collectionClass === 'Warrior')!;
+    expect(store.draft()?.forms[0].slots[0].collectionSnapshot?.catalogId).toBe(tankCollection.id);
+
+    store.updateDraftCollectionSnapshot(0, warriorCollection.id, [], 'Tank');
+    expect(store.draft()?.forms[0].slots[0].collectionSnapshot?.catalogId).toBe(tankCollection.id);
+    store.updateDraftCollectionSnapshot(0, tankCollection.id, [], 'Tank');
+    expect(store.draft()?.forms[0].slots[0].collectionSnapshot?.catalogId).toBe(tankCollection.id);
+  });
+
   it('includes a pet on every team in each Cursed Realm example', () => {
     const cursedExamples = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'cursed-realm');
     expect(cursedExamples.length).toBeGreaterThan(0);

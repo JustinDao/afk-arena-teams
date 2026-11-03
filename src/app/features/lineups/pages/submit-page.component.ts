@@ -10,6 +10,7 @@ import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component'
 import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
 import { AddPetModalComponent, DraftPetSelection } from '../components/add-pet-modal/add-pet-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
+import { CollectionRecommendationEditorComponent } from '../components/collection-recommendation-editor/collection-recommendation-editor.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { defaultAscensionForInvestment } from '../investment';
 import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
@@ -24,6 +25,7 @@ import { LineupViewPreferencesService } from '../lineup-view-preferences.service
     AddPetModalComponent,
     CdkTrapFocus,
     CollectionBuildEditorComponent,
+    CollectionRecommendationEditorComponent,
     HeroIconComponent,
     HeroInvestmentEditorComponent,
     MatButtonModule,
@@ -155,11 +157,13 @@ export class SubmitPageComponent implements OnDestroy {
   classOfSlot(slotIndex: number): string | null {
     const draft = this.store.draft();
     const hid = draft?.forms[draft.cur].slots[slotIndex].hid;
-    return hid === null || hid === undefined ? null : this.heroFor(hid).class ?? null;
+    if (hid === null || hid === undefined) return null;
+    const hero = this.heroFor(hid);
+    return hero.class ?? this.heroIcons.classFor(displayHeroName(hero));
   }
 
   private sameClass(itemClass: string | null | undefined, heroClass: string | null): boolean {
-    return !heroClass || !itemClass || itemClass.toLowerCase() === heroClass.toLowerCase();
+    return !!heroClass && itemClass?.toLowerCase() === heroClass.toLowerCase();
   }
 
   collectionsForSlot(slotIndex: number) {

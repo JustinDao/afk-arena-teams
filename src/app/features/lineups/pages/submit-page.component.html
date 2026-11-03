@@ -187,16 +187,26 @@
     @if (modeFor(draft.mode).collectionsEnabled) {
     <section class="collection-assignment" [attr.aria-label]="'Collection for ' + store.heroName(slot.hid)">
       <h4>Collection</h4>
-      <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + store.heroName(slot.hid)">
-        <button mat-button type="button" [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot"
-          (click)="store.clearDraftCollection(editing.index)">None</button>
-        @if (auth.user() && collectionsForSlot(editing.index).length) {
-        <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionId"
-          (click)="useRosterCollection(editing.index)">From roster</button>
+      <div class="collection-assignment-controls">
+        <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + store.heroName(slot.hid)">
+          <button mat-button type="button" [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot"
+            (click)="store.clearDraftCollection(editing.index)">None</button>
+          @if (auth.user() && collectionsForSlot(editing.index).length) {
+          <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionId"
+            (click)="useRosterCollection(editing.index)">From roster</button>
+          }
+          <button mat-button type="button" [disabled]="!catalogForSlot(editing.index).length"
+            [attr.aria-pressed]="!!slot.collectionSnapshot" (click)="startCustomCollection(editing.index)">New
+            build</button>
+        </div>
+        @if (slot.collectionSnapshot) {
+        <div class="seg" role="group" aria-label="Collection assignment type">
+          <button mat-button type="button" [attr.aria-pressed]="!slot.collectionSnapshot.recommendation"
+            (click)="store.setDraftCollectionRecommendationMode(editing.index, false)">Exact build</button>
+          <button mat-button type="button" [attr.aria-pressed]="!!slot.collectionSnapshot.recommendation"
+            (click)="store.setDraftCollectionRecommendationMode(editing.index, true)">Flexible recommendation</button>
+        </div>
         }
-        <button mat-button type="button" [disabled]="!catalogForSlot(editing.index).length"
-          [attr.aria-pressed]="!!slot.collectionSnapshot" (click)="startCustomCollection(editing.index)">New
-          build</button>
       </div>
       @if (slot.collectionId) {
       <label class="field">
@@ -211,11 +221,21 @@
       }
       @if (slot.collectionSnapshot; as snapshot) {
       @if (store.collectionCatalog().length) {
+      @if (snapshot.recommendation; as recommendation) {
+      <app-collection-recommendation-editor
+        [catalog]="catalogForSlot(editing.index)"
+        [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
+        [nodeStats]="store.collectionNodeStats()"
+        [recommendation]="recommendation"
+        (selectedCatalogIdChange)="store.updateDraftCollectionRecommendation(editing.index, $event, recommendation, classOfSlot(editing.index))"
+        (recommendationChange)="store.updateDraftCollectionRecommendation(editing.index, snapshot.catalogId ?? catalogForSlot(editing.index)[0].id, $event, classOfSlot(editing.index))" />
+      } @else {
       <app-collection-build-editor [catalog]="catalogForSlot(editing.index)"
         [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
         [nodeStats]="store.collectionNodeStats()" [nodes]="snapshot.nodes"
-        (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(editing.index, $event, snapshot.nodes)"
-        (nodesChange)="store.updateDraftCollectionSnapshot(editing.index, snapshot.catalogId ?? store.collectionCatalog()[0].id, $event)" />
+        (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(editing.index, $event, snapshot.nodes, classOfSlot(editing.index))"
+        (nodesChange)="store.updateDraftCollectionSnapshot(editing.index, snapshot.catalogId ?? catalogForSlot(editing.index)[0].id, $event, classOfSlot(editing.index))" />
+      }
       } @else if (store.collectionCatalogLoading()) {
       <p class="rules" role="status">Loading collection catalog…</p>
       } @else {

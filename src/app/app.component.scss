@@ -196,11 +196,17 @@ footer {
   z-index: 50;
   inset: 0;
   display: flex;
-  overflow: auto;
+  overflow: hidden;
   align-items: flex-start;
   justify-content: center;
   padding: max(var(--app-space-3), env(safe-area-inset-top, 0px)) var(--app-space-3) max(var(--app-space-3), env(safe-area-inset-bottom, 0px));
   background: rgb(0 0 0 / 65%);
+}
+
+.overlay > .panel {
+  max-height: calc(100dvh - max(var(--app-space-3), env(safe-area-inset-top, 0px)) - max(var(--app-space-3), env(safe-area-inset-bottom, 0px)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .panel {

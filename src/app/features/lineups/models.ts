@@ -93,6 +93,12 @@ export interface CollectionNode {
   readonly tier: CollectionNodeTier;
 }
 
+export interface CollectionRecommendationSpec {
+  readonly level: number;
+  readonly attackStats: readonly CollectionNodeStat[];
+  readonly defenseStats: readonly CollectionNodeStat[];
+}
+
 export interface CollectionInventoryItem {
   readonly id: string;
   readonly catalogId?: number;
@@ -106,6 +112,7 @@ export interface CollectionSnapshot {
   readonly name: string;
   readonly class?: CollectionCatalogItem['class'];
   readonly nodes: readonly CollectionNode[];
+  readonly recommendation?: CollectionRecommendationSpec;
 }
 
 export interface Formation {
