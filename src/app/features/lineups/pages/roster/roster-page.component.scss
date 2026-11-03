@@ -4,6 +4,23 @@
   padding: 0;
 }
 
+.formation-board.front-right {
+  flex-direction: row-reverse;
+  justify-content: center;
+  align-items: center;
+}
+
+.formation-board.front-right .formation-row {
+  flex-direction: column;
+}
+
+.formation-board.front-right .formation-row.back {
+  padding-top: 0;
+  padding-right: var(--app-space-2);
+  border-top: 0;
+  border-right: 1px dashed var(--app-line);
+}
+
 .roster-page .panel {
   width: 100%;
   border: 0;

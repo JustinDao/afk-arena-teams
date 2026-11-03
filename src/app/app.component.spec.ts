@@ -9,8 +9,30 @@ import { provideRouter } from '@angular/router';
 import { AuthService, DUPLICATE_SIGNUP_MESSAGE } from './core/auth/auth.service';
 import { User } from '@supabase/supabase-js';
 import { APP_ROUTES } from './app.routes';
+import { LineupViewPreferencesService } from './features/lineups/lineup-view-preferences.service';
 
 describe('SubmitPageComponent', () => {
+  it('uses the preferred front-right orientation in the formation editor', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+    const preferences = TestBed.inject(LineupViewPreferencesService);
+    const originalOrientation = preferences.orientation();
+    if (preferences.orientation() !== 'front-right') preferences.toggleOrientation();
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.formation-board.front-right')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.formation-board.front-right .formation-row.back .formation-slot').length).toBe(3);
+    fixture.destroy();
+    if (originalOrientation !== 'front-right') preferences.toggleOrientation();
+  });
+
   it('does not show a mercenary control when creating a Twisted Realm team', async () => {
     await TestBed.configureTestingModule({
       imports: [SubmitPageComponent],

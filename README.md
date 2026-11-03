@@ -15,6 +15,8 @@ Open the local URL printed by Angular CLI (usually `http://localhost:4200`). Cre
 
 Each active mode, roster tab, and lineup submission has a named URL: `/twisted-realm`, `/treasure-scramble`, `/cursed-realm`, `/nightmare-corridor`, `/roster/heroes`, `/roster/pets`, `/roster/collections`, and `/submit`. `/roster` redirects to `/roster/heroes`, and the short aliases `/tr`, `/ts`, `/cr`, and `/nc` redirect to their named routes. Pages are lazy-loaded routed components under `src/app/features/lineups/pages/`; `AppComponent` is the shell for the header, mode navigation, and account dialog. The root URL redirects to `/nightmare-corridor`. When deploying, configure the host to serve `index.html` for these paths so direct links and refreshes work.
 
+Use the **Lineup** orientation control in the header to choose between front heroes at the top or front heroes on the right. This preference applies to lineup cards and the submit formation editor and is saved in the current browser.
+
 Without Supabase configuration the app uses sample lineups. Guest rosters and votes are saved in this browser; guest submissions are temporary. Configure Supabase to enable accounts, private hero/pet/collection inventories, shared lineups, and community votes.
 
 ## Supabase setup

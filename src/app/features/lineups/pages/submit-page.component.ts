@@ -14,6 +14,7 @@ import { PetPickerComponent } from '../components/pet-picker/pet-picker.componen
 import { defaultAscensionForInvestment } from '../investment';
 import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig } from '../models';
 import { LineupsStore } from '../lineups.store';
+import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
 
 @Component({
   selector: 'app-submit-page',
@@ -36,6 +37,7 @@ import { LineupsStore } from '../lineups.store';
 })
 export class SubmitPageComponent implements OnDestroy {
   readonly store = inject(LineupsStore);
+  readonly lineupView = inject(LineupViewPreferencesService);
   readonly auth = inject(AuthService);
   private readonly heroIcons = inject(HeroIconService);
   private readonly router = inject(Router);

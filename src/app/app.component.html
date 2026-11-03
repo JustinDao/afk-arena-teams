@@ -17,6 +17,9 @@
     <button mat-button class="btn theme-button" (click)="toggleTheme()" [attr.aria-label]="'Theme: ' + theme() + '. Change theme'">
       {{ theme() === 'system' ? 'System theme' : theme() === 'dark' ? 'Dark theme' : 'Light theme' }}
     </button>
+    <button mat-button class="btn theme-button" title="Switch between front-on-top and front-on-right formations" (click)="toggleLineupOrientation()" [attr.aria-label]="'Lineup orientation: ' + lineupOrientationLabel() + '. Change orientation'">
+      Lineup: {{ lineupOrientationLabel() }}
+    </button>
   </div>
 </header>
 

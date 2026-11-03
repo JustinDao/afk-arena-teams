@@ -10,6 +10,7 @@ import { PetBadgeComponent } from '../pet-badge/pet-badge.component';
 import { collectionIconUrlForNodes, collectionNodeIconUrl } from '../../collection-catalog';
 import { rosterFilterColor } from '../../roster-filter-colors';
 import { PETS } from '../../lineup-data';
+import { LineupViewPreferencesService } from '../../lineup-view-preferences.service';
 
 @Component({
   selector: 'app-lineup-card',
@@ -22,6 +23,7 @@ import { PETS } from '../../lineup-data';
 export class LineupCardComponent {
   readonly countLabel = countLabel;
   private readonly heroIcons = inject(HeroIconService);
+  readonly lineupView = inject(LineupViewPreferencesService);
   readonly row = input.required<EvaluatedSubmission>();
   readonly scope = input.required<'all' | 'slot'>();
   readonly voted = input.required<boolean>();

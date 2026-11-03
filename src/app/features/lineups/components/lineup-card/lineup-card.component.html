@@ -33,40 +33,42 @@
             {{ isRunable(formIndex) ? ' (you can run this)' : '' }}
           </p>
         }
-        @for (rowSize of layout; track $index; let rowIndex = $index) {
-          <div class="hero-row" [class.back]="rowIndex > 0">
-            @for (hero of formation.heroes.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track hero.hid; let heroIndex = $index) {
-              <div
-                class="hero"
-                [class.ok]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'ok'"
-                [class.under]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under'"
-                [class.missing]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing'"
-                [style.--hero-faction-color]="heroFactionColor(hero, hero.hid)"
-                [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : (hero.name ?? heroName(hero.hid))"
-              >
-                <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
-                @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
-                @if (hero.collection; as collection) {
-                  <span class="collection-tag" [attr.title]="collection.name">
-                    @if (collectionIcon(collection.catalogId, collection.nodes); as iconUrl) {
-                      <img class="collection-icon" [src]="iconUrl" [alt]="collection.name + ' icon'">
-                    }
-                    @for (node of collection.nodes; track node.slotIndex) {
-                      @if (node.stat !== 'skill_level') {
-                        <img
-                          class="collection-node-icon"
-                          [src]="collectionNodeIcon(node.stat, node.tier)"
-                          [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                          [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
-                        >
+        <div class="hero-formation" [class.front-right]="lineupView.orientation() === 'front-right'">
+          @for (rowSize of layout; track $index; let rowIndex = $index) {
+            <div class="hero-row" [class.back]="rowIndex > 0">
+              @for (hero of formation.heroes.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track hero.hid; let heroIndex = $index) {
+                <div
+                  class="hero"
+                  [class.ok]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'ok'"
+                  [class.under]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under'"
+                  [class.missing]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing'"
+                  [style.--hero-faction-color]="heroFactionColor(hero, hero.hid)"
+                  [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : (hero.name ?? heroName(hero.hid))"
+                >
+                  <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
+                  @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
+                  @if (hero.collection; as collection) {
+                    <span class="collection-tag" [attr.title]="collection.name">
+                      @if (collectionIcon(collection.catalogId, collection.nodes); as iconUrl) {
+                        <img class="collection-icon" [src]="iconUrl" [alt]="collection.name + ' icon'">
                       }
-                    }
-                  </span>
-                }
-              </div>
-            }
-          </div>
-        }
+                      @for (node of collection.nodes; track node.slotIndex) {
+                        @if (node.stat !== 'skill_level') {
+                          <img
+                            class="collection-node-icon"
+                            [src]="collectionNodeIcon(node.stat, node.tier)"
+                            [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                            [title]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                          >
+                        }
+                      }
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
         @if (formation.beast) {
           <div class="beast">
             <app-pet-badge

@@ -53,7 +53,7 @@
           ? ' and collection' : '' }}.</p>
       </div>
 
-      <div class="formation-board">
+      <div class="formation-board" [class.front-right]="lineupView.orientation() === 'front-right'">
         @for (rowIndex of [0, 1]; track rowIndex) {
         <div class="formation-row" [class.back]="rowIndex > 0">
           @for (slot of draft.forms[draft.cur].slots.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track

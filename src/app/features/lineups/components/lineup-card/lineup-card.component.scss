@@ -60,6 +60,8 @@ h3 {
 }
 
 .board {
+  --formation-hero-icon-size: 64px;
+  --formation-collection-icon-size: 56px;
   display: flex;
   min-width: 0;
   height: 100%;
@@ -84,16 +86,57 @@ h3 {
   font-weight: 600;
 }
 
+.hero-formation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--app-space-2);
+}
+
+.hero-formation.front-right {
+  flex-direction: row-reverse;
+}
+
 .hero-row {
   display: flex;
   justify-content: center;
   gap: var(--app-space-3);
 }
 
+.hero-formation.front-right .hero-row {
+  flex-direction: column;
+}
+
 .hero-row.back {
   width: 100%;
   padding-top: var(--app-space-2);
   border-top: 1px dashed var(--app-line);
+}
+
+.hero-formation.front-right .hero-row.back {
+  width: auto;
+  padding-top: 0;
+  padding-right: var(--app-space-2);
+  border-top: 0;
+  border-right: 1px dashed var(--app-line);
+}
+
+.hero-formation.front-right .hero {
+  display: grid;
+  grid-template-columns: var(--formation-hero-icon-size) var(--formation-collection-icon-size);
+  align-items: start;
+  justify-items: center;
+  gap: 3px;
+}
+
+.hero-formation.front-right .hero app-hero-icon {
+  transform: translateY(-4px);
+}
+
+.hero-formation.front-right .collection-tag {
+  width: var(--formation-collection-icon-size);
+  margin-top: 0;
+  gap: 2px;
 }
 
 .hero {
@@ -136,9 +179,12 @@ h3 {
 }
 
 .collection-tag .collection-icon {
+  width: var(--formation-collection-icon-size);
+  height: var(--formation-collection-icon-size);
   flex: 0 0 100%;
   display: block;
   margin-inline: auto;
+  object-fit: contain;
 }
 
 .collection-tag .collection-node-icon {

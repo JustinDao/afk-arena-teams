@@ -10,6 +10,7 @@ import { MODE_PATHS } from './app.routes';
 import { AuthService } from './core/auth/auth.service'
 import { HeroIconService } from './core/hero-icons/hero-icon.service'
 import { LineupsStore } from './features/lineups/lineups.store'
+import { LineupViewPreferencesService } from './features/lineups/lineup-view-preferences.service';
 import { UPCOMING_MODES } from './features/lineups/models'
 
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -26,6 +27,7 @@ type ThemeMode = 'system' | 'light' | 'dark';
 })
 export class AppComponent {
   readonly store = inject(LineupsStore);
+  readonly lineupView = inject(LineupViewPreferencesService);
   readonly auth = inject(AuthService);
   private readonly heroIcons = inject(HeroIconService);
   private readonly destroyRef = inject(DestroyRef);
@@ -164,6 +166,14 @@ export class AppComponent {
     } catch (error) {
       console.warn('Could not save the selected theme.', error);
     }
+  }
+
+  toggleLineupOrientation(): void {
+    this.lineupView.toggleOrientation();
+  }
+
+  lineupOrientationLabel(): string {
+    return this.lineupView.orientation() === 'front-right' ? 'Front right' : 'Front top';
   }
 
   onBackdropClick(event: MouseEvent): void {
