@@ -1,5 +1,6 @@
 import { countLabel, pluralNoun } from '../../plural';
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { CollectionNode, EvaluatedSubmission, FORMATION_LAYOUT, HeroStatus, PetKind } from '../../models';
 import { formatInvestment, formatKillTime, heroName, resultLine } from '../../lineup-display';
@@ -13,7 +14,7 @@ import { PETS } from '../../lineup-data';
 @Component({
   selector: 'app-lineup-card',
   standalone: true,
-  imports: [HeroIconComponent, MatButtonModule, PetBadgeComponent],
+  imports: [HeroIconComponent, RouterLink, MatButtonModule, PetBadgeComponent],
   templateUrl: './lineup-card.component.html',
   styleUrl: './lineup-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +27,9 @@ export class LineupCardComponent {
   readonly voted = input.required<boolean>();
   readonly voteCount = input.required<number>();
   readonly vote = output<number>();
+  readonly share = output<number>();
+  readonly detail = input(false);
+  readonly hideActions = input(false);
   readonly layout = FORMATION_LAYOUT;
 
   heroStatus(formIndex: number, heroIndex: number): HeroStatus | '' {

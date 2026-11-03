@@ -4,13 +4,21 @@
       <h3>{{ row().submission.target }}</h3>
       <span class="result">{{ resultLabel(row().submission) }}</span>
     </div>
-    <button
-      mat-button
-      class="vote"
-      [attr.aria-pressed]="voted()"
-      [attr.aria-label]="'Upvote, ' + voteCount() + ' votes'"
-      (click)="vote.emit(row().submission.id)"
-    ><span aria-hidden="true">▲</span>{{ voteCount() }}</button>
+    @if (!hideActions()) {
+      <div class="card-actions">
+        @if (!detail()) {
+          <a mat-button class="share" [routerLink]="['/lineup', row().submission.id]" aria-label="Open lineup page">Open</a>
+        }
+        <button mat-button class="share" type="button" aria-label="Share lineup link" (click)="share.emit(row().submission.id)">Share</button>
+        <button
+          mat-button
+          class="vote"
+          [attr.aria-pressed]="voted()"
+          [attr.aria-label]="'Upvote, ' + voteCount() + ' votes'"
+          (click)="vote.emit(row().submission.id)"
+        ><span aria-hidden="true">▲</span>{{ voteCount() }}</button>
+      </div>
+    }
   </div>
 
   <div class="boards">

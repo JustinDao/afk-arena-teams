@@ -205,6 +205,13 @@ export class UserDataService {
     if (error) throw new Error(`Could not save your hero level: ${error.message}`);
   }
 
+  private async loadSubmissionAuthors(): Promise<ReadonlyMap<number, string>> {
+    if (!supabase) return new Map();
+    const { data, error } = await supabase.rpc('submission_authors');
+    if (error) throw new Error(`Could not load lineup authors: ${error.message}`);
+    return new Map(((data ?? []) as { submission_id: number; display_name: string }[]).map((row) => [row.submission_id, row.display_name]));
+  }
+
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
     const { data, error } = await supabase.from('submissions')
@@ -212,6 +219,7 @@ export class UserDataService {
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw new Error(`Could not load lineups: ${error.message}`);
+    const authors = await this.loadSubmissionAuthors();
     return ((data ?? []) as unknown as DatabaseSubmissionRow[]).map((row) => {
       if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
       return {
@@ -222,7 +230,7 @@ export class UserDataService {
         days: Math.max(0, Math.floor((Date.now() - Date.parse(row.created_at)) / 86_400_000)),
         result: row.result,
         notes: row.notes ?? '',
-        by: 'community',
+        by: authors.get(row.id) ?? 'community member',
         heroLevel: row.hero_level,
         forms: row.formations
           .sort((a, b) => a.slot_order - b.slot_order)

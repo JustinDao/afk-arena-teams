@@ -195,3 +195,10 @@ h3 {
     gap: var(--app-space-1);
   }
 }
+
+.card-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--app-space-1);
+}

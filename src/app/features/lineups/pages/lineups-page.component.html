@@ -87,6 +87,7 @@
           [voted]="store.votes().has(row.submission.id)"
           [voteCount]="store.voteCount(row.submission)"
           (vote)="store.toggleVote($event)"
+          (share)="store.shareLineup($event)"
         />
       }
     } @else {

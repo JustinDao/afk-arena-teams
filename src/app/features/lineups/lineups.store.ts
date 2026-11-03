@@ -895,6 +895,27 @@ export class LineupsStore {
     this.showToast(this.data.configured ? 'Lineup added.' : 'Lineup added. This prototype keeps it in memory only.');
   }
 
+  evaluatedSubmission(id: number): EvaluatedSubmission | null {
+    const submission = this.submissionsSignal().find((entry) => entry.id === id);
+    if (!submission) return null;
+    return this.evaluateSubmission(submission, {}, {}, null, false, false, this.votesSignal(), 'all');
+  }
+
+  async shareLineup(id: number): Promise<void> {
+    const url = `${location.origin}/lineup/${id}`;
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: 'AFK Arena Team Lineups', url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      this.showToast('Lineup link copied.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      this.showToast('Could not share the link. Copy it from the address bar.');
+    }
+  }
+
   showToast(message: string): void {
     this.toastSignal.set(message);
     if (this.toastTimeout) clearTimeout(this.toastTimeout);

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { provideRouter } from '@angular/router';
 import { LineupCardComponent } from '../components/lineup-card/lineup-card.component';
 import { EvaluatedSubmission } from '../models';
 import { SAMPLE_SUBMISSIONS } from '../lineup-data';
@@ -7,7 +8,10 @@ import { LineupCardHarness } from './lineup-card.harness';
 
 describe('LineupCardComponent', () => {
   it('exposes the lineup and sends vote actions through its output', async () => {
-    await TestBed.configureTestingModule({ imports: [LineupCardComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [LineupCardComponent],
+      providers: [provideRouter([])],
+    }).compileComponents();
     const fixture = TestBed.createComponent(LineupCardComponent);
     const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'twisted-realm')!;
     const submission = {
@@ -40,6 +44,8 @@ describe('LineupCardComponent', () => {
 
     let votedId: number | undefined;
     fixture.componentInstance.vote.subscribe((id) => { votedId = id; });
+    let sharedId: number | undefined;
+    fixture.componentInstance.share.subscribe((id) => { sharedId = id; });
     const loader = TestbedHarnessEnvironment.loader(fixture);
     const card = await loader.getHarness(LineupCardHarness);
 
@@ -49,5 +55,8 @@ describe('LineupCardComponent', () => {
     expect(fixture.nativeElement.querySelector('app-pet-badge')).not.toBeNull();
     await card.clickVote();
     expect(votedId).toBe(submission.id);
+    fixture.nativeElement.querySelector('button[aria-label="Share lineup link"]').click();
+    expect(sharedId).toBe(submission.id);
+    expect(fixture.nativeElement.querySelector('a[aria-label="Open lineup page"]')).not.toBeNull();
   });
 });
