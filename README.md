@@ -69,14 +69,16 @@ The `search_submissions` RPC can rank public lineups by missing heroes, under-in
 - Formation positions render as two front-row and three back-row heroes.
 - Heroes cannot repeat within one Cursed Realm or Treasure Scramble lineup. The same hero may still be used in both modes.
 - A lineup has one mode-specific result: damage for Twisted Realm and Cursed Realm, a kill time for each Nightmare Corridor boss team, or a Treasure Scramble placement (rank 1–100 or top percentage).
+- Results are optional when submitting; any result values provided must still be valid.
 - Twisted Realm submissions require the account's shared Resonating Crystal hero level.
 - Nightmare Corridor and Cursed Realm allow at most one mercenary per lineup. Twisted Realm does not track a mercenary flag, and Treasure Scramble does not allow mercenaries.
+- All modes allow omitted or partially filled teams, but each lineup must include at least one hero.
 - Nightmare Corridor cycle filters use a dropdown of the boss names listed on the [AFK Arena Wiki](https://afk-arena.fandom.com/wiki/Nightmare_Corridor); the selected target is still the cycle anchor (6th boss).
 - Treasure Scramble starts with seven teams per lineup (adjustable from two to seven when submitting) and records placement as either rank 1–100 or a top percentage.
 - Collection inventory is private to each account and can be assigned to a hero separately in each submitted lineup. Existing lineup assignments are snapshots, so changes to inventory do not rewrite old submissions.
 - A new collection assignment can be an exact build or a flexible recommendation. Recommendations default to Level 1, specify acceptable Mythic stats separately for Attack and Defense nodes (up to five stat choices per group), and aim for as many eligible Mythic nodes as possible; their icons omit the exact Mythic count. Saving recommendations requires the flexible-collection-recommendations migration.
 - Collection inventory uses the 20 named AFK Arena collections from the [CDN collection catalog](https://github.com/afk-mine/cdn/blob/main/collection.json), including each collection's class. Each build has three optional Attack nodes, three optional Defense nodes, and two optional Flex nodes; every node has a stat type and Elite/Legendary/Mythic tier, but no per-node level. Only Flex nodes may be the Level stat, and Level nodes are always Mythic. The CDN's collection stat icons include: armor, atk, buffer, cbr, cda, cdr, crit, def, diss, dmg_resist, erosion, err, full_atk, full_buffer, full_def, full_erosion, full_hp, heal, hp, is, ll, mp, pp, prf, skill_level, and ty. The roster and lineup views display the corresponding [collection](https://github.com/afk-mine/cdn/tree/main/collection_icon) and [stat](https://github.com/afk-mine/cdn/tree/main/collection_stats_icon) icons.
-- Collection assignments are enabled for Twisted Realm and Nightmare Corridor, and disabled for Cursed Realm and Treasure Scramble.
+- Collection assignments are enabled for Twisted Realm, Nightmare Corridor, Cursed Realm, and Treasure Scramble.
 
 ## Roster levels and pets
 

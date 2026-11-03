@@ -860,12 +860,13 @@ export class LineupsStore {
     const result: Record<string, number | boolean | string> = {};
     for (const field of mode.fields) {
       const raw = value[field.k as keyof SubmissionFormValue];
+      if (typeof raw === 'string' && !raw.trim()) continue;
       if (field.t === 'bool') result[field.k] = Boolean(raw);
       else if (field.t === 'damage') result[field.k] = parseDamage(String(raw))!;
       else if (field.t === 'dur') result[field.k] = parseDuration(String(raw))!;
       else result[field.k] = Number(raw);
     }
-    if (draft.mode === 'treasure-scramble') {
+    if (draft.mode === 'treasure-scramble' && value.placementValue.trim()) {
       result['placementType'] = value.placementType;
       result['placement'] = Number(value.placementValue);
     }
@@ -877,16 +878,16 @@ export class LineupsStore {
       petId: form.petId,
       petLevel: form.petLevel,
       timeSeconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
-      heroes: form.slots.map((slot, pos) => ({
+      heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
         pos,
-        hid: slot.hid!,
+        hid: slot.hid,
         merc: slot.merc,
         inv: parseInvestment(slot.inv),
         ascension: slot.ascension,
         collection: slot.collectionSnapshot ?? (slot.collectionId
           ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
           : null),
-      })),
+      }]),
     }));
     if (this.data.configured) {
       const modeForSubmission = this.getMode(draft.mode);
@@ -903,7 +904,7 @@ export class LineupsStore {
             pet_id: form.petId,
             pet_level: form.petLevel,
             time_seconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
-            heroes: form.slots.map((slot, position) => ({
+            heroes: form.slots.flatMap((slot, position) => slot.hid === null ? [] : [{
               position,
               hero_id: slot.hid,
               is_merc: slot.merc,
@@ -927,7 +928,7 @@ export class LineupsStore {
                   },
                 } : {}),
               } : null,
-            })),
+            }]),
           })),
         });
         this.submissionsSignal.set(await this.data.loadSubmissions());
@@ -1036,13 +1037,18 @@ export class LineupsStore {
   resultLine(submission: Submission): string {
     const result = submission.result;
     if (submission.mode === 'nightmare-corridor') {
+      const reportedTimes = submission.forms.filter(({ timeSeconds }) => timeSeconds !== null).length;
+      if (reportedTimes === 0) return 'Kill times not reported';
+      if (reportedTimes < submission.forms.length) return `${reportedTimes} of ${submission.forms.length} kill times reported`;
       return countLabel(submission.forms.length, 'boss kill time');
     }
     if (submission.mode === 'treasure-scramble') {
+      if (result['placement'] === undefined) return 'Result not reported';
       return result['placementType'] === 'rank'
         ? `Rank ${result['placement']}`
         : `Top ${result['placement']}%`;
     }
+    if (result['damage'] === undefined) return 'Damage not reported';
     return `${this.formatDamage(Number(result['damage']))} damage${submission.mode === 'cursed-realm' ? ' in total' : ''}`;
   }
 
@@ -1191,7 +1197,12 @@ export class LineupsStore {
     if (draft.mode === 'twisted-realm' && this.heroLevelSignal() === null) {
       errors.push('Set your Resonating Crystal level in your roster before submitting a Twisted Realm lineup.');
     }
-    if (draft.forms.some((form) => form.slots.some((slot) => slot.hid === null))) {
+    const formHeroCounts = draft.forms.map((form) => form.slots.filter(({ hid }) => hid !== null).length);
+    if (mode.allowPartialFormations) {
+      if (formHeroCounts.every((count) => count === 0)) {
+        errors.push('Add at least one hero to the lineup.');
+      }
+    } else if (formHeroCounts.some((count) => count < 5)) {
       errors.push('Fill every hero slot in each team.');
     }
     if (mode.mercMax !== undefined) {
@@ -1207,7 +1218,7 @@ export class LineupsStore {
       }
       const heroIds = form.slots.flatMap(({ hid }) => hid === null ? [] : [hid]);
       if (new Set(heroIds).size !== heroIds.length) errors.push('A hero can only appear once in each team.');
-      if (draft.mode === 'nightmare-corridor' && parseDuration(form.time) === null) {
+      if (draft.mode === 'nightmare-corridor' && form.time.trim() && parseDuration(form.time) === null) {
         errors.push(`Enter a valid kill time for ${form.label.toLocaleLowerCase()}.`);
       }
       for (const slot of form.slots) {
@@ -1236,6 +1247,7 @@ export class LineupsStore {
     }
     for (const field of mode.fields) {
       const raw = value[field.k as keyof SubmissionFormValue];
+      if (typeof raw === 'string' && !raw.trim()) continue;
       if (field.t === 'bool') continue;
       if (field.t === 'damage' && (parseDamage(String(raw)) ?? 0) <= 0) errors.push(`Enter a positive value for ${field.l.toLocaleLowerCase()}.`);
       else if (field.t === 'dur' && parseDuration(String(raw)) === null) errors.push(`Enter a valid ${field.l.toLocaleLowerCase()}.`);
@@ -1248,12 +1260,18 @@ export class LineupsStore {
       }
     }
     if (draft.mode === 'treasure-scramble') {
-      const placement = Number(value.placementValue);
-      if (!Number.isFinite(placement) || placement <= 0 || placement > 100
-        || (value.placementType === 'rank' && !Number.isInteger(placement))) {
-        errors.push(value.placementType === 'rank'
-          ? 'Enter a whole-number placement rank from 1 to 100.'
-          : 'Enter a top percentage greater than 0 and at most 100.');
+      if (value.placementType && !value.placementValue.trim()) {
+        errors.push('Enter a placement value when selecting a Treasure Scramble placement type.');
+      } else if (value.placementValue.trim() && !value.placementType) {
+        errors.push('Select a placement type when providing a Treasure Scramble result.');
+      } else if (value.placementValue.trim()) {
+        const placement = Number(value.placementValue);
+        if (!Number.isFinite(placement) || placement <= 0 || placement > 100
+          || (value.placementType === 'rank' && !Number.isInteger(placement))) {
+          errors.push(value.placementType === 'rank'
+            ? 'Enter a whole-number placement rank from 1 to 100.'
+            : 'Enter a top percentage greater than 0 and at most 100.');
+        }
       }
     }
     return errors;

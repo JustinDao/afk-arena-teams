@@ -22,13 +22,18 @@ export function formatInvestment(investment: Investment | null): string {
 export function resultLine(submission: Submission): string {
   const result = submission.result;
   if (submission.mode === 'nightmare-corridor') {
+    const reportedTimes = submission.forms.filter(({ timeSeconds }) => timeSeconds !== null).length;
+    if (reportedTimes === 0) return 'Kill times not reported';
+    if (reportedTimes < submission.forms.length) return `${reportedTimes} of ${submission.forms.length} kill times reported`;
     return `${countLabel(submission.forms.length, 'boss kill time')}`;
   }
   if (submission.mode === 'treasure-scramble') {
+    if (result['placement'] === undefined) return 'Result not reported';
     return result['placementType'] === 'rank'
       ? `Rank ${result['placement']}`
       : `Top ${result['placement']}%`;
   }
+  if (result['damage'] === undefined) return 'Damage not reported';
   return `${formatDamage(Number(result['damage']))} damage${submission.mode === 'cursed-realm' ? ' in total' : ''}`;
 }
 

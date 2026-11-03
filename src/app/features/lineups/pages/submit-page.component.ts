@@ -54,7 +54,7 @@ export class SubmitPageComponent implements OnDestroy {
     target: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
     damage: new FormControl('', { nonNullable: true }),
-    placementType: new FormControl<'rank' | 'percent'>('rank', { nonNullable: true }),
+    placementType: new FormControl<'' | 'rank' | 'percent'>('', { nonNullable: true }),
     placementValue: new FormControl('', { nonNullable: true }),
   });
 
@@ -197,7 +197,7 @@ export class SubmitPageComponent implements OnDestroy {
       target: draft.target,
       notes: draft.notes,
       damage: '',
-      placementType: 'rank',
+      placementType: '',
       placementValue: '',
     });
   }

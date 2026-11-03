@@ -40,7 +40,9 @@ export class LineupCardComponent {
 
   isRunable(formIndex: number): boolean {
     const row = this.row();
-    return row.active && row.forms[formIndex]?.missing === 0;
+    return row.active
+      && row.submission.forms[formIndex]?.heroes.length === 5
+      && row.forms[formIndex]?.missing === 0;
   }
 
   missingSummary(): string {

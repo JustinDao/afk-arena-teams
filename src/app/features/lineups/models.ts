@@ -166,6 +166,7 @@ export interface ModeConfig {
   readonly mercMax?: number;
   readonly uniqueAcross?: boolean;
   readonly collectionsEnabled?: boolean;
+  readonly allowPartialFormations?: boolean;
   readonly fields: readonly ResultField[];
 }
 
@@ -233,7 +234,7 @@ export interface SubmissionFormValue {
   readonly target: string;
   readonly notes: string;
   readonly damage: string;
-  readonly placementType: 'rank' | 'percent';
+  readonly placementType: '' | 'rank' | 'percent';
   readonly placementValue: string;
 }
 
@@ -256,6 +257,7 @@ export const MODES: readonly ModeConfig[] = [
     rules: 'One team per run. Heroes are level-matched to the account Resonating Crystal level; gear and ascension still count. The boss rotates every couple of days.',
     formations: [{ key: 'team', label: 'Team' }],
     collectionsEnabled: true,
+    allowPartialFormations: true,
     fields: [{ k: 'damage', l: 'Damage dealt', t: 'damage', ph: 'e.g. 1.84B' }],
   },
   {
@@ -288,6 +290,7 @@ export const MODES: readonly ModeConfig[] = [
     mercMax: 1,
     uniqueAcross: true,
     collectionsEnabled: true,
+    allowPartialFormations: true,
     fields: [],
   },
   {
@@ -308,7 +311,8 @@ export const MODES: readonly ModeConfig[] = [
     ],
     mercMax: 1,
     uniqueAcross: true,
-    collectionsEnabled: false,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
     fields: [{ k: 'damage', l: 'Total damage across all six fights', t: 'damage', ph: 'e.g. 5.6B' }],
   },
   {
@@ -322,7 +326,8 @@ export const MODES: readonly ModeConfig[] = [
     variable: { min: 2, max: 7, default: 7 },
     uniqueAcross: true,
     mercMax: 0,
-    collectionsEnabled: false,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
     fields: [],
   },
 ];

@@ -151,12 +151,62 @@ describe('LineupsStore', () => {
     store.openDraft();
     store.changeDraftMode('treasure-scramble');
     expect(store.draft()?.forms.length).toBe(7);
+    expect(MODES.find(({ slug }) => slug === 'treasure-scramble')?.collectionsEnabled).toBeTrue();
 
     store.pickHero(0);
     store.selectFormation(1);
     expect(store.heroAlreadySelected(0)).toBeTrue();
     store.pickHero(0);
     expect(store.draft()?.forms[1].slots.every(({ hid }) => hid === null)).toBeTrue();
+  });
+
+  it('allows collection assignments in Cursed Realm', () => {
+    expect(MODES.find(({ slug }) => slug === 'cursed-realm')?.collectionsEnabled).toBeTrue();
+  });
+
+  it('allows omitted and partially filled rounds in every mode, but requires at least one hero', async () => {
+    for (const mode of ['twisted-realm', 'nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
+      store.openDraft();
+      store.changeDraftMode(mode);
+      const target = mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane';
+      store.updateDraftTarget(target);
+      if (mode === 'twisted-realm') store.setHeroLevel(600);
+      store.selectFormation(0);
+      store.pickHero(store.heroes()[0].id);
+      if ((store.draft()?.forms.length ?? 0) > 1) {
+        store.selectFormation(1);
+        store.pickHero(store.heroes()[1].id);
+        store.pickHero(store.heroes()[2].id);
+      }
+
+      await store.submitDraft({
+        target,
+        notes: '',
+        damage: '',
+        placementType: '',
+        placementValue: '',
+      });
+
+      expect(store.draft()).toBeNull();
+      const submission = store.submissions()[0];
+      expect(submission.forms[0].heroes).toHaveSize(1);
+      if (submission.forms.length > 1) {
+        expect(submission.forms[1].heroes).toHaveSize(2);
+        expect(submission.forms[2].heroes).toHaveSize(0);
+      }
+    }
+
+    store.openDraft();
+    store.changeDraftMode('twisted-realm');
+    store.setHeroLevel(600);
+    await store.submitDraft({
+      target: 'Kane',
+      notes: '',
+      damage: '',
+      placementType: '',
+      placementValue: '',
+    });
+    expect(store.draftErrors()).toContain('Add at least one hero to the lineup.');
   });
 
   it('lets Treasure Scramble drafts use two to seven teams and filters lineups by team count', () => {
@@ -245,6 +295,36 @@ describe('LineupsStore', () => {
     expect(treasureExamples.map(resultLine)).toEqual(['Top 1%', 'Rank 37']);
   });
 
+  it('allows submissions without reporting results in any mode', async () => {
+    for (const mode of ['twisted-realm', 'nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
+      store.openDraft();
+      store.changeDraftMode(mode);
+      store.updateDraftTarget(mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane');
+      if (mode === 'twisted-realm') store.setHeroLevel(600);
+      fillDraft(store);
+      if (mode === 'nightmare-corridor') {
+        for (let index = 0; index < (store.draft()?.forms.length ?? 0); index++) {
+          store.selectFormation(index);
+          store.updateDraftTime('');
+        }
+      }
+
+      await store.submitDraft({
+        target: mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane',
+        notes: '',
+        damage: '',
+        placementType: '',
+        placementValue: '',
+      });
+
+      expect(store.draft()).toBeNull();
+      const submission = store.submissions()[0];
+      expect(submission.result).toEqual({});
+      expect(submission.forms.every(({ timeSeconds }) => timeSeconds === null)).toBeTrue();
+      expect(resultLine(submission)).toMatch(/not reported/);
+    }
+  });
+
   it('keeps custom collection builds as submission snapshots without adding them to roster inventory', async () => {
     store.openDraft();
     store.changeDraftMode('twisted-realm');
@@ -300,11 +380,32 @@ describe('LineupsStore', () => {
       target: 'Fire',
       notes: '',
       damage: '',
-      placementType: 'rank',
+      placementType: '',
+      placementValue: '',
+    });
+    expect(store.draft()).toBeNull();
+
+    store.openDraft();
+    store.changeDraftMode('treasure-scramble');
+    fillDraft(store);
+    await store.submitDraft({
+      target: 'Fire',
+      notes: '',
+      damage: '',
+      placementType: '',
       placementValue: '101',
     });
     expect(store.draft()?.forms[0].slots[0].merc).toBeFalse();
-    expect(store.draftErrors()).toContain('Enter a whole-number placement rank from 1 to 100.');
+    expect(store.draftErrors()).toContain('Select a placement type when providing a Treasure Scramble result.');
+
+    await store.submitDraft({
+      target: 'Fire',
+      notes: '',
+      damage: '',
+      placementType: 'rank',
+      placementValue: '',
+    });
+    expect(store.draftErrors()).toContain('Enter a placement value when selecting a Treasure Scramble placement type.');
   });
 });
 

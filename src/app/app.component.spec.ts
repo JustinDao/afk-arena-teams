@@ -71,6 +71,33 @@ describe('SubmitPageComponent', () => {
     fixture.destroy();
   });
 
+  it('lets Treasure Scramble placement type return to the blank placeholder', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    const store = TestBed.inject(LineupsStore);
+    store.changeDraftMode('treasure-scramble');
+    fixture.detectChanges();
+
+    const placementType = fixture.nativeElement.querySelector('[formControlName="placementType"]') as HTMLSelectElement;
+    expect((placementType.querySelector('option[value=""]') as HTMLOptionElement | null)?.disabled).toBeFalse();
+    placementType.value = 'rank';
+    placementType.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    placementType.value = '';
+    placementType.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.submissionForm.controls.placementType.value).toBe('');
+    fixture.destroy();
+  });
+
   it('previews a flexible collection recommendation before any database migration', async () => {
     await TestBed.configureTestingModule({
       imports: [SubmitPageComponent],

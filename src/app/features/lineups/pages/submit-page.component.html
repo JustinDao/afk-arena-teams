@@ -32,7 +32,9 @@
         @for (formation of draft.forms; track formation.key; let formIndex = $index) {
         <button mat-button type="button" [attr.aria-pressed]="formIndex === draft.cur"
           (click)="store.selectFormation(formIndex)">
-          {{ formation.label }} <small>{{ filledSlots(formation) }}/5</small>
+          {{ formation.label }}
+          <small>{{ modeFor(draft.mode).allowPartialFormations && !filledSlots(formation)
+            ? 'Omitted' : filledSlots(formation) + '/5' }}</small>
         </button>
         }
         @if (modeFor(draft.mode).variable; as variable) {
@@ -50,7 +52,8 @@
 
       <div>
         <p class="muted">Click a position to add a hero or edit its investment{{ modeFor(draft.mode).collectionsEnabled
-          ? ' and collection' : '' }}.</p>
+          ? ' and collection' : '' }}.{{ modeFor(draft.mode).allowPartialFormations
+          ? ' Rounds may be omitted or partially filled.' : '' }}</p>
       </div>
 
       <div class="formation-board" [class.front-right]="lineupView.orientation() === 'front-right'">
@@ -100,21 +103,22 @@
       </section>
 
       <section class="result-fields">
-        <h3>Result</h3>
+        <h3>Result <span class="muted">(optional)</span></h3>
         @if (draft.mode === 'nightmare-corridor') {
-        <label class="field">Kill time for {{ draft.forms[draft.cur].label }} (m:ss)
+        <label class="field">Kill time for {{ draft.forms[draft.cur].label }} (m:ss, optional)
           <input [value]="draft.forms[draft.cur].time" placeholder="2:22"
             (change)="store.updateDraftTime(inputValue($event))">
         </label>
         } @else if (draft.mode === 'treasure-scramble') {
         <label class="field">Placement type
           <select formControlName="placementType">
+            <option value="">Select…</option>
             <option value="rank">Rank (1–100)</option>
             <option value="percent">Top percentage</option>
           </select>
         </label>
-        <label class="field">{{ submissionForm.controls.placementType.value === 'rank' ? 'Rank' : 'Top percentage (%)'
-          }}
+        <label class="field">{{ submissionForm.controls.placementType.value === 'rank' ? 'Rank' :
+          submissionForm.controls.placementType.value === 'percent' ? 'Top percentage (%)' : 'Placement' }}
           <input formControlName="placementValue" type="number"
             [min]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01" max="100"
             [step]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01">

@@ -27,6 +27,8 @@
         @if (row().submission.forms.length > 1) {
           <p class="board-label">
             {{ formation.label }}
+            @if (formation.heroes.length === 0) { · Team omitted }
+            @else if (formation.heroes.length < 5) { · {{ formation.heroes.length }}/5 heroes }
             @if (row().submission.mode === 'nightmare-corridor' && formation.timeSeconds !== null) {
               · {{ killTimeLabel(formation.timeSeconds) }}
             }

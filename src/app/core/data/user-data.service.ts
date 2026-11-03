@@ -704,6 +704,7 @@ export class UserDataService {
       ...(typeof config['merc_max_per_submission'] === 'number' ? { mercMax: config['merc_max_per_submission'] } : {}),
       ...(typeof config['unique_heroes_across_formations'] === 'boolean' ? { uniqueAcross: config['unique_heroes_across_formations'] } : {}),
       ...(typeof config['collections_enabled'] === 'boolean' ? { collectionsEnabled: config['collections_enabled'] } : {}),
+      ...(typeof config['allow_partial_formations'] === 'boolean' ? { allowPartialFormations: config['allow_partial_formations'] } : {}),
       fields: fields.map((field) => ({
         k: String(field['key']),
         l: String(field['label'] ?? field['key']),
