@@ -70,7 +70,7 @@ The `search_submissions` RPC can rank public lineups by missing heroes, under-in
 - Heroes cannot repeat within one Cursed Realm or Treasure Scramble lineup. The same hero may still be used in both modes.
 - A lineup has one mode-specific result: damage for Twisted Realm and Cursed Realm, a kill time for each Nightmare Corridor boss team, or a Treasure Scramble placement (rank 1–100 or top percentage).
 - Results are optional when submitting; any result values provided must still be valid.
-- Twisted Realm submissions require the account's shared Resonating Crystal hero level.
+- Twisted Realm submissions record a lineup-specific Resonating Crystal level. The account's saved level is used as a default when available, but is not required.
 - Nightmare Corridor and Cursed Realm allow at most one mercenary per lineup. Twisted Realm does not track a mercenary flag, and Treasure Scramble does not allow mercenaries.
 - All modes allow omitted or partially filled teams, but each lineup must include at least one hero.
 - Nightmare Corridor cycle filters use a dropdown of the boss names listed on the [AFK Arena Wiki](https://afk-arena.fandom.com/wiki/Nightmare_Corridor); the selected target is still the cycle anchor (6th boss).

@@ -403,7 +403,7 @@ export class LineupsStore {
   }
 
   setHeroLevel(value: number | null): void {
-    const level = value !== null && Number.isInteger(value) && value >= 1 && value <= 1000 ? value : null;
+    const level = value !== null && Number.isInteger(value) && value >= 1 && value <= 32767 ? value : null;
     this.heroLevelSignal.set(level);
     if (!this.data.configured) this.writeStorage(STORAGE_KEYS.heroLevel, level);
     if (this.activeUser) void this.persistHeroLevel();
@@ -866,6 +866,9 @@ export class LineupsStore {
       else if (field.t === 'dur') result[field.k] = parseDuration(String(raw))!;
       else result[field.k] = Number(raw);
     }
+    const heroLevel = draft.mode === 'twisted-realm'
+      ? Number(value.rcLevel)
+      : this.heroLevelSignal();
     if (draft.mode === 'treasure-scramble' && value.placementValue.trim()) {
       result['placementType'] = value.placementType;
       result['placement'] = Number(value.placementValue);
@@ -895,7 +898,7 @@ export class LineupsStore {
         await this.data.submitLineup({
           mode_slug: draft.mode,
           target_slug: modeForSubmission.targetSlugs?.[value.target],
-          hero_level: this.heroLevelSignal(),
+          hero_level: heroLevel,
           result,
           notes: value.notes.trim(),
           formations: draft.forms.map((form) => ({
@@ -952,7 +955,7 @@ export class LineupsStore {
       forms,
       notes: value.notes.trim(),
       by: 'you',
-      heroLevel: this.heroLevelSignal(),
+      heroLevel,
     };
     this.submissionsSignal.update((submissions) => [newSubmission, ...submissions]);
     this.modeSignal.set(draft.mode);
@@ -1194,8 +1197,11 @@ export class LineupsStore {
   private validateDraft(draft: LineupDraft, value: SubmissionFormValue, mode: ModeConfig): string[] {
     const errors: string[] = [];
     if (!value.target) errors.push(`Pick a ${mode.targetLabel.toLocaleLowerCase()}.`);
-    if (draft.mode === 'twisted-realm' && this.heroLevelSignal() === null) {
-      errors.push('Set your Resonating Crystal level in your roster before submitting a Twisted Realm lineup.');
+    if (draft.mode === 'twisted-realm') {
+      const rcLevel = Number(value.rcLevel);
+      if (!value.rcLevel?.trim() || !Number.isInteger(rcLevel) || rcLevel < 1 || rcLevel > 32767) {
+        errors.push('Enter a whole-number Resonating Crystal level from 1 to 32767 for this lineup.');
+      }
     }
     const formHeroCounts = draft.forms.map((form) => form.slots.filter(({ hid }) => hid !== null).length);
     if (mode.allowPartialFormations) {

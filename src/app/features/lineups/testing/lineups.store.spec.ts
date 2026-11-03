@@ -170,7 +170,6 @@ describe('LineupsStore', () => {
       store.changeDraftMode(mode);
       const target = mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane';
       store.updateDraftTarget(target);
-      if (mode === 'twisted-realm') store.setHeroLevel(600);
       store.selectFormation(0);
       store.pickHero(store.heroes()[0].id);
       if ((store.draft()?.forms.length ?? 0) > 1) {
@@ -183,6 +182,7 @@ describe('LineupsStore', () => {
         target,
         notes: '',
         damage: '',
+        rcLevel: mode === 'twisted-realm' ? '600' : '',
         placementType: '',
         placementValue: '',
       });
@@ -198,11 +198,11 @@ describe('LineupsStore', () => {
 
     store.openDraft();
     store.changeDraftMode('twisted-realm');
-    store.setHeroLevel(600);
     await store.submitDraft({
       target: 'Kane',
       notes: '',
       damage: '',
+      rcLevel: '550',
       placementType: '',
       placementValue: '',
     });
@@ -300,7 +300,6 @@ describe('LineupsStore', () => {
       store.openDraft();
       store.changeDraftMode(mode);
       store.updateDraftTarget(mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane');
-      if (mode === 'twisted-realm') store.setHeroLevel(600);
       fillDraft(store);
       if (mode === 'nightmare-corridor') {
         for (let index = 0; index < (store.draft()?.forms.length ?? 0); index++) {
@@ -313,6 +312,7 @@ describe('LineupsStore', () => {
         target: mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane',
         notes: '',
         damage: '',
+        rcLevel: mode === 'twisted-realm' ? '600' : '',
         placementType: '',
         placementValue: '',
       });
@@ -328,7 +328,6 @@ describe('LineupsStore', () => {
   it('keeps custom collection builds as submission snapshots without adding them to roster inventory', async () => {
     store.openDraft();
     store.changeDraftMode('twisted-realm');
-    store.setHeroLevel(600);
     store.updateDraftTarget('Kane');
     store.heroes().slice(0, 5).forEach(({ id }) => store.pickHero(id));
     store.startDraftCollectionSnapshot(0);
@@ -338,11 +337,14 @@ describe('LineupsStore', () => {
       target: 'Kane',
       notes: '',
       damage: '100M',
+      rcLevel: '5000',
       placementType: 'rank',
       placementValue: '',
     });
 
     const submission = store.submissions()[0];
+    expect(submission.heroLevel).toBe(5000);
+    expect(store.heroLevel()).toBeNull();
     expect(submission.forms[0].heroes[0].collection).toEqual({
       catalogId: 1,
       name: 'Temporal Cover',

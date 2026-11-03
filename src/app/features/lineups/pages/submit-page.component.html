@@ -16,7 +16,10 @@
     <form [formGroup]="submissionForm" (ngSubmit)="submitLineup()">
       @if (draft.mode === 'twisted-realm') {
       <p class="rules">TR hero level is your Resonating Crystal level. Current roster level: {{ store.heroLevel() ??
-        'not set' }}.</p>
+        'not set' }}. The value is prefilled when available and saved with the lineup.</p>
+      <label class="field">Resonating Crystal level
+        <input formControlName="rcLevel" type="number" min="1" max="32767" step="1" placeholder="e.g. 600" required>
+      </label>
       }
       <label class="field">{{ modeFor(draft.mode).targetLabel }}
         <select formControlName="target">

@@ -98,6 +98,27 @@ describe('SubmitPageComponent', () => {
     fixture.destroy();
   });
 
+  it('prefills the Twisted Realm submission RC level from the roster', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+    const store = TestBed.inject(LineupsStore);
+    store.setHeroLevel(600);
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.changeDraftMode('twisted-realm');
+    fixture.detectChanges();
+
+    const rcLevel = fixture.nativeElement.querySelector('[formControlName="rcLevel"]') as HTMLInputElement;
+    expect(rcLevel.value).toBe('600');
+    fixture.destroy();
+  });
+
   it('previews a flexible collection recommendation before any database migration', async () => {
     await TestBed.configureTestingModule({
       imports: [SubmitPageComponent],

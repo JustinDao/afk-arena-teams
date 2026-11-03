@@ -234,6 +234,7 @@ export interface SubmissionFormValue {
   readonly target: string;
   readonly notes: string;
   readonly damage: string;
+  readonly rcLevel?: string;
   readonly placementType: '' | 'rank' | 'percent';
   readonly placementValue: string;
 }
