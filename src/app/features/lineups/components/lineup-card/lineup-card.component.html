@@ -45,7 +45,7 @@
                   [class.under]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under'"
                   [class.missing]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing'"
                   [style.--hero-faction-color]="heroFactionColor(hero, hero.hid)"
-                  [attr.title]="heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'under' ? 'Your investment is below ' + investmentLabel(hero.inv) : heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2) === 'missing' ? 'Not in your roster' : (hero.name ?? heroName(hero.hid))"
+                  [attr.title]="heroSummary(hero, heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2))"
                 >
                   <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
                   @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }

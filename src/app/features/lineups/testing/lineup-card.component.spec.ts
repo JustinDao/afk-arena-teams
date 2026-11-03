@@ -22,6 +22,8 @@ describe('LineupCardComponent', () => {
         heroes: formation.heroes.map((hero, index) => index === 0
           ? {
               ...hero,
+              inv: { si: 30, furn: 9, eng: 60 },
+              ascension: 'ascended_1' as const,
               collection: {
                 catalogId: 14,
                 name: "Stormwrath's Lull",
@@ -29,6 +31,18 @@ describe('LineupCardComponent', () => {
                 recommendation: { level: 1, attackStats: ['erosion', 'mp'], defenseStats: [] },
               },
             }
+          : index === 1
+            ? {
+                ...hero,
+                collection: {
+                  catalogId: 1,
+                  name: 'Temporal Cover',
+                  nodes: [
+                    { slotIndex: 0, stat: 'skill_level', tier: 'mythic' as const },
+                    { slotIndex: 4, stat: 'skill_level', tier: 'mythic' as const },
+                  ],
+                },
+              }
           : hero),
       })),
     };
@@ -57,6 +71,10 @@ describe('LineupCardComponent', () => {
     const recommendation = fixture.nativeElement.querySelector('.collection-tag') as HTMLElement;
     expect(recommendation.title).toContain('Level 1');
     expect(recommendation.title).toContain('EROSION or MP');
+    expect((fixture.nativeElement.querySelector('.hero') as HTMLElement).title).toContain('309e60');
+    expect((fixture.nativeElement.querySelector('.hero') as HTMLElement).title).toContain('A1*');
+    const exactCollection = fixture.nativeElement.querySelectorAll('.collection-tag')[1] as HTMLElement;
+    expect(exactCollection.title).toContain('Level 3');
     expect(recommendation.querySelectorAll('.collection-node-icon').length).toBe(2);
     fixture.destroy();
   });
