@@ -220,8 +220,8 @@ export class UserDataService {
 
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
-    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation)';
-    const selectLegacy = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes)';
+    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
+    const selectLegacy = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))';
     let response = await supabase.from('submissions')
       .select(selectWithRecommendations)
       .order('upvotes', { ascending: false })
