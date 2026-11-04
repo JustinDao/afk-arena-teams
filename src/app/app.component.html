@@ -10,6 +10,7 @@
       <button mat-button class="btn" (click)="openAccount()">Sign in</button>
     }
     <a mat-button class="btn" routerLink="/roster/heroes">My roster</a>
+    <a mat-button class="btn" routerLink="/import-helper">Import helper</a>
     @if (auth.user()) {
       <a mat-button class="btn" routerLink="/recommendations/heroes">Recommendations</a>
     }

@@ -35,6 +35,10 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/lineups/pages/lineup-detail-page.component').then((m) => m.LineupDetailPageComponent),
   },
   {
+    path: 'import-helper',
+    loadComponent: () => import('./features/lineups/pages/import-helper-page.component').then((m) => m.ImportHelperPageComponent),
+  },
+  {
     path: 'submit',
     loadComponent: () => import('./features/lineups/pages/submit-page.component').then((m) => m.SubmitPageComponent),
   },

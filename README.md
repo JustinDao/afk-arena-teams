@@ -17,6 +17,8 @@ Each active mode, roster tab, and lineup submission has a named URL: `/twisted-r
 
 Use the **Lineup** orientation control in the header to choose between front heroes at the top or front heroes on the right. This preference applies to lineup cards and the submit formation editor and is saved in the current browser.
 
+The local `/import-helper` route is a browser-side guide import assistant. Upload an image and analyze it once to generate candidate teams from the full image. It uses full-image Tesseract.js OCR and best-effort visual matching against hero, pet, and collection catalog icons; icon matches can be inaccurate, so review and correct all teams and fields before export. For Nightmare Corridor, collection icons are matched from fixed crops beneath each team's five hero slots instead of by scanning the entire image. The uploaded image is never sent to Supabase or an AI service. OCR worker/language files and catalog icon references may be downloaded from their providers. Set team labels, target slug, pet level, collection nodes, hero investment and seed slugs, then copy/download seed-compatible JSON. Nightmare Corridor guides also show experimental left-column substitute and pet suggestions; the top-most substitute-row pet is used as the preferred pet for that round's main team, and substitute teams stay out of the export unless added as a team. Timing details remain out of scope.
+
 Without Supabase configuration the app uses sample lineups. Guest rosters and votes are saved in this browser; guest submissions are temporary. Configure Supabase to enable accounts, private hero/pet/collection inventories, shared lineups, and community votes.
 
 ## Supabase setup
