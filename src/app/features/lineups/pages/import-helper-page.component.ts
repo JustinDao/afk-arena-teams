@@ -68,6 +68,12 @@ interface NodeStatMatch {
   readonly distance: Float32Array;
 }
 
+interface PetMatch {
+  readonly name: string;
+  readonly distance: Float32Array;
+  readonly views: readonly Float32Array[];
+}
+
 interface RecognizedLine {
   readonly text: string;
   readonly box: CropBox;
@@ -93,7 +99,10 @@ interface VisualImageHit {
 type CropPurpose = 'hero' | 'pet' | 'collection' | 'collection-node' | 'investment';
 
 const FEATURE_SIZE = 8;
-const FEATURE_LENGTH = FEATURE_SIZE * FEATURE_SIZE * 3;
+const PET_FEATURE_SIZE = 16;
+const PET_REFERENCE_VIEWS = [0, 0.128] as const;
+const PET_REFERENCE_SIZE = 93 / 125;
+const PET_ALIGNMENT_OFFSETS = [-0.05, 0, 0.05] as const;
 const NIGHTMARE_HERO_COLUMN_CENTERS = [0.39, 0.447, 0.533, 0.6, 0.652] as const;
 const NIGHTMARE_HERO_COLUMN_Y_OFFSETS = [0.02335, 0.01335, 0.02585, 0.02585, 0.01335] as const;
 const NIGHTMARE_HERO_COLUMN_SCALES = [0.065, 0.045, 0.055, 0.055, 0.065] as const;
@@ -443,7 +452,7 @@ export class ImportHelperPageComponent implements OnDestroy {
   private nextHeroId = 0;
   private nextTeamId = 2;
   private templateFeatures: Promise<readonly HeroMatch[]> | null = null;
-  private petFeatures: Promise<readonly { readonly name: string; readonly distance: Float32Array }[]> | null = null;
+  private petFeatures: Promise<readonly PetMatch[]> | null = null;
 
   ngOnDestroy(): void {
     if (this.imageObjectUrl) URL.revokeObjectURL(this.imageObjectUrl);
@@ -819,10 +828,8 @@ export class ImportHelperPageComponent implements OnDestroy {
           return { box, heroName: '', suggestions };
         });
         const petBox = this.nightmareSmallIconBox(NIGHTMARE_SUBSTITUTE_PET_CENTER_X, centerY, width, height);
-        const petFeature = this.imageFeature(image, petBox, 0.1);
-        const petSuggestions = petTemplates
-          .map((template) => ({ name: template.name, distance: this.featureDistance(petFeature, template.distance) }))
-          .sort((a, b) => a.distance - b.distance)
+        const petFeatures = this.petImageFeatures(image, petBox);
+        const petSuggestions = this.rankPetMatches(petFeatures, petTemplates)
           .slice(0, 5)
           .map((entry) => entry.name);
         sets.push({
@@ -862,20 +869,61 @@ export class ImportHelperPageComponent implements OnDestroy {
     );
   }
 
-  private async loadPetFeatures(): Promise<readonly { readonly name: string; readonly distance: Float32Array }[]> {
+  private async loadPetFeatures(): Promise<readonly PetMatch[]> {
     return this.petFeatures ??= (async () => {
-      const templates = await Promise.all(this.pets().map(async (pet) => {
+      const templates = await Promise.all(this.pets().map(async (pet): Promise<PetMatch | null> => {
         try {
           const icon = await this.loadCrossOriginImage(pet.iconUrl ?? this.icons.iconUrl(pet.id));
-          return { name: pet.name, distance: this.imageFeature(icon) };
+          return {
+            name: pet.name,
+            distance: this.imageFeature(icon),
+            views: PET_REFERENCE_VIEWS.map((y) => this.imageFeatureAtSize(
+              icon,
+              { x: 0, y, width: 1, height: PET_REFERENCE_SIZE },
+              0,
+              PET_FEATURE_SIZE,
+            )),
+          };
         } catch {
           return null;
         }
       }));
-      const usable = templates.filter((entry): entry is { name: string; distance: Float32Array } => entry !== null);
+      const usable = templates.filter((entry): entry is PetMatch => entry !== null);
       if (!usable.length) throw new Error('No pet reference icons could be loaded.');
       return usable;
     })();
+  }
+
+  private rankPetMatches(features: readonly Float32Array[], templates: readonly PetMatch[]): readonly { name: string; distance: number }[] {
+    return templates
+      .map((template) => ({
+        name: template.name,
+        distance: features.reduce((total, feature) => total
+          + template.views.reduce((viewTotal, view) => viewTotal + this.featureDistance(feature, view), 0), 0)
+          / (features.length * template.views.length),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  }
+
+  private petImageFeatures(image: HTMLImageElement, box: CropBox): readonly Float32Array[] {
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    const boxWidth = box.width * width;
+    const boxHeight = box.height * height;
+    const cropSize = Math.min(boxWidth, boxHeight) * 0.78;
+    const centerX = box.x * width + boxWidth / 2 + boxWidth * 0.07;
+    const centerY = box.y * height + boxHeight / 2;
+    // Average a bounded crop neighborhood to tolerate small selection/alignment differences.
+    return PET_ALIGNMENT_OFFSETS.flatMap((offsetY) => PET_ALIGNMENT_OFFSETS.map((offsetX) => {
+      const sampleCenterX = centerX + boxWidth * offsetX;
+      const sampleCenterY = centerY + boxHeight * offsetY;
+      return this.imageFeatureAtSize(image, {
+        x: (sampleCenterX - cropSize / 2) / width,
+        y: (sampleCenterY - cropSize / 2) / height,
+        width: cropSize / width,
+        height: cropSize / height,
+      }, 0, PET_FEATURE_SIZE);
+    }));
   }
 
   private async scanCollections(
@@ -1210,19 +1258,9 @@ export class ImportHelperPageComponent implements OnDestroy {
     }
     this.status.set('Comparing pet crop against available pet icons…');
     try {
-      const feature = this.imageFeature(image, box);
-      const templates = await Promise.all(pets.map(async (pet) => {
-        try {
-          const icon = await this.loadCrossOriginImage(pet.iconUrl ?? this.icons.iconUrl(pet.id));
-          return { name: pet.name, distance: this.imageFeature(icon) };
-        } catch {
-          return null;
-        }
-      }));
-      const suggestions = templates
-        .filter((template): template is { name: string; distance: Float32Array } => template !== null)
-        .map((template) => ({ name: template.name, distance: this.featureDistance(feature, template.distance) }))
-        .sort((a, b) => a.distance - b.distance)
+      const features = this.petImageFeatures(image, box);
+      const templates = await this.loadPetFeatures();
+      const suggestions = this.rankPetMatches(features, templates)
         .slice(0, 5)
         .map(({ name }) => name);
       this.teams.update((teams) => teams.map((team, teamIndex) => teamIndex === this.selectedTeam()
@@ -1385,9 +1423,18 @@ export class ImportHelperPageComponent implements OnDestroy {
   }
 
   private imageFeature(image: HTMLImageElement, box?: CropBox, inset = 0.08): Float32Array {
+    return this.imageFeatureAtSize(image, box, inset, FEATURE_SIZE);
+  }
+
+  private imageFeatureAtSize(
+    image: HTMLImageElement,
+    box: CropBox | undefined,
+    inset: number,
+    size: number,
+  ): Float32Array {
     const canvas = document.createElement('canvas');
-    canvas.width = FEATURE_SIZE;
-    canvas.height = FEATURE_SIZE;
+    canvas.width = size;
+    canvas.height = size;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error('Canvas is unavailable.');
     if (box) {
@@ -1397,13 +1444,13 @@ export class ImportHelperPageComponent implements OnDestroy {
       const sourceHeight = box.height * image.naturalHeight;
       const insetX = sourceWidth * inset;
       const insetY = sourceHeight * inset;
-      context.drawImage(image, sourceX + insetX, sourceY + insetY, sourceWidth - insetX * 2, sourceHeight - insetY * 2, 0, 0, FEATURE_SIZE, FEATURE_SIZE);
+      context.drawImage(image, sourceX + insetX, sourceY + insetY, sourceWidth - insetX * 2, sourceHeight - insetY * 2, 0, 0, size, size);
     } else {
-      context.drawImage(image, 0, 0, FEATURE_SIZE, FEATURE_SIZE);
+      context.drawImage(image, 0, 0, size, size);
     }
-    const data = context.getImageData(0, 0, FEATURE_SIZE, FEATURE_SIZE).data;
-    const feature = new Float32Array(FEATURE_LENGTH);
-    for (let index = 0; index < FEATURE_LENGTH / 3; index++) {
+    const data = context.getImageData(0, 0, size, size).data;
+    const feature = new Float32Array(size * size * 3);
+    for (let index = 0; index < size * size; index++) {
       feature[index * 3] = data[index * 4] / 255;
       feature[index * 3 + 1] = data[index * 4 + 1] / 255;
       feature[index * 3 + 2] = data[index * 4 + 2] / 255;
@@ -1413,11 +1460,11 @@ export class ImportHelperPageComponent implements OnDestroy {
 
   private featureDistance(first: Float32Array, second: Float32Array): number {
     let total = 0;
-    for (let index = 0; index < FEATURE_LENGTH; index++) {
+    for (let index = 0; index < first.length; index++) {
       const difference = first[index] - second[index];
       total += difference * difference;
     }
-    return total / FEATURE_LENGTH;
+    return total / first.length;
   }
 
   updateSubstituteHero(slotIndex: number, heroName: string): void {
