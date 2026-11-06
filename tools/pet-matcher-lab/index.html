@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>AFK Arena Pet Matcher Lab</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LOCAL DATASET & MATCHER WORKBENCH</p>
+        <h1>Pet Matcher Lab</h1>
+      </div>
+      <span class="local-badge">Runs in this browser</span>
+    </header>
+
+    <main>
+      <p class="intro">
+        Train and evaluate a first-pass pet classifier from labeled guide crops, compare it with simple
+        matching baselines, and export a reusable model. Images and labels stay on this device.
+      </p>
+
+      <section class="panel setup-panel" aria-labelledby="setup-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">SETUP</p>
+            <h2 id="setup-title">Square pet references</h2>
+          </div>
+          <span id="reference-status" class="status">Loading square CDN icons…</span>
+        </div>
+        <p class="muted">
+          Square framed pet icons are loaded from the AFK Mine CDN by default. You can override them
+          with local icons named by pet ID, such as <code>6030.webp</code>.
+        </p>
+        <label class="file-button">
+          Override with local icons
+          <input id="reference-input" type="file" accept="image/*" webkitdirectory multiple>
+        </label>
+      </section>
+
+      <section class="panel" aria-labelledby="detection-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">EXPERIMENT · FULL-IMAGE SEARCH</p>
+            <h2 id="detection-title">Find pet-icon candidates by coordinate</h2>
+          </div>
+          <span id="detection-status" class="status">Load references and a guide image</span>
+        </div>
+        <p class="muted">
+          A coarse multi-scale scan ranks pet templates at each image window, scores how distinct the
+          best match is from alternatives, and suppresses overlapping detections. Confidence is an
+          experimental ranking score, not a calibrated probability. Review the overlay before treating
+          any hit as valid.
+        </p>
+        <div class="toolbar">
+          <label class="file-button">
+            Choose image to scan
+            <input id="detection-input" type="file" accept="image/*">
+          </label>
+          <label class="field compact">
+            Minimum confidence
+            <input id="detection-threshold" type="number" min="0" max="100" step="5" value="80">
+          </label>
+          <button id="scan-image" class="primary" type="button" disabled>Scan for pets</button>
+        </div>
+        <p id="detection-summary" class="hint" aria-live="polite">Scans at several icon sizes. The default is intentionally strict; scores are experimental, not calibrated.</p>
+        <div class="detection-workspace">
+          <div class="detection-image-area">
+            <canvas id="detection-canvas" aria-label="Pet detection overlay" hidden></canvas>
+            <div id="detection-empty" class="empty-state small">Choose the app-export image or guide screenshot to inspect detected pet boxes.</div>
+          </div>
+          <div id="detection-results" class="detection-results">
+            <p class="empty-state small">Accepted detections and best rejected candidates will appear here.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="guide-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">01 · LABEL EXAMPLES</p>
+            <h2 id="guide-title">Add guide crops</h2>
+          </div>
+          <span id="guide-status" class="status">No guide selected</span>
+        </div>
+        <div class="guide-controls">
+          <label class="file-button">
+            Add guide images
+            <input id="guide-input" type="file" accept="image/*" multiple>
+          </label>
+          <label class="field compact">
+            Guide split
+            <select id="guide-split">
+              <option value="test">Test / holdout</option>
+              <option value="train">Train</option>
+              <option value="validation">Validation</option>
+            </select>
+          </label>
+          <label class="field compact guide-picker">
+            Active guide
+            <select id="guide-picker" disabled>
+              <option value="">Choose a guide</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">
+          Assign all crops from a guide to the same split. This helps keep near-identical crops out of
+          both training and evaluation data.
+        </p>
+        <div class="workspace">
+          <div class="image-area">
+            <div id="image-empty" class="empty-state">
+              Add a guide image, then drag around one pet to create a crop.
+            </div>
+            <canvas id="guide-canvas" aria-label="Guide image crop selector" hidden></canvas>
+          </div>
+          <aside class="crop-sidebar">
+            <h3>Selected crop</h3>
+            <div class="crop-preview-wrap">
+              <canvas id="crop-canvas" width="192" height="192" aria-label="Selected pet crop"></canvas>
+            </div>
+            <label class="field">
+              Correct pet
+              <select id="pet-label" disabled>
+                <option value="">Select a pet</option>
+              </select>
+            </label>
+            <label class="field">
+              Optional note
+              <input id="sample-note" type="text" maxlength="160" placeholder="Crop quality, layout, etc.">
+            </label>
+            <button id="save-sample" class="primary" type="button" disabled>Save labeled crop</button>
+            <p id="crop-status" class="hint" aria-live="polite">Draw a crop on the guide image first.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="dataset-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">02 · DATASET</p>
+            <h2 id="dataset-title">Review labeled examples</h2>
+          </div>
+          <span id="dataset-count" class="status">0 examples</span>
+        </div>
+        <div class="toolbar">
+          <label class="file-button secondary">
+            Import dataset JSON
+            <input id="import-input" type="file" accept="application/json,.json">
+          </label>
+          <button id="export-dataset" class="secondary" type="button" disabled>Export dataset JSON</button>
+          <button id="clear-dataset" class="text-button" type="button" disabled>Clear local dataset</button>
+        </div>
+        <div id="dataset-list" class="dataset-list">
+          <p class="empty-state small">Saved examples appear here. They are stored in this browser until exported or cleared.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="benchmark-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">03 · EVALUATE</p>
+            <h2 id="benchmark-title">Compare matcher strategies</h2>
+          </div>
+          <span id="benchmark-status" class="status">Ready when references and examples are loaded</span>
+        </div>
+        <p class="muted">
+          Evaluation ranks the full pet catalog for each example in the selected split. The app-style
+          option mirrors the current 16×16 RGB feature, two reference crops, and nearby crop sampling.
+          The local classifier is a trained linear softmax model over 16×16 RGB crop features. It is
+          not a deep neural network, but it produces a portable model file for further experiments.
+        </p>
+        <div class="toolbar benchmark-controls">
+          <label class="field compact">
+            Evaluate
+            <select id="evaluation-split">
+              <option value="test">Test / holdout</option>
+              <option value="validation">Validation</option>
+              <option value="train">Train</option>
+            </select>
+          </label>
+          <button id="run-benchmark" class="primary" type="button">Run local evaluation</button>
+          <label class="field compact">
+            Training epochs
+            <input id="training-epochs" type="number" min="1" max="5000" step="50" value="400">
+          </label>
+          <button id="train-model" class="primary" type="button">Train local classifier</button>
+          <button id="export-model" class="secondary" type="button" disabled>Export trained model</button>
+          <button id="export-results" class="secondary" type="button" disabled>Export results CSV</button>
+        </div>
+        <p id="model-status" class="hint" aria-live="polite">Assign labeled examples to Train before fitting a classifier. Keep Test / holdout guides out of training.</p>
+        <div id="benchmark-results" class="results">
+          <p class="empty-state small">Evaluation results will include top-1, top-3, mean reciprocal rank, and per-example rankings.</p>
+        </div>
+      </section>
+    </main>
+    <footer>Pet names and game art belong to their respective owners. This fan-made utility is not affiliated with Lilith Games.</footer>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

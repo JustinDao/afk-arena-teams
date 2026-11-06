@@ -31,6 +31,7 @@ import {
   SubmissionFormValue,
 } from './models';
 import { HEROES, HERO_BY_ID, PETS, SAMPLE_SUBMISSIONS } from './lineup-data';
+import { petIconUrl } from './pet-icon-url';
 import { COLLECTION_CATALOG } from './collection-catalog';
 import { countLabel } from './plural';
 import {
@@ -1020,7 +1021,7 @@ export class LineupsStore {
 
   petIconUrl(petId: number | null): string | null {
     if (petId === null) return null;
-    return this.petsSignal().find((entry) => entry.id === petId)?.iconUrl ?? null;
+    return this.petsSignal().some((entry) => entry.id === petId) ? petIconUrl(petId) : null;
   }
 
   hue(name: string): number {

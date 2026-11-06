@@ -1,5 +1,6 @@
 import { displayHeroName, Hero, Formation, Investment, Pet, Submission } from './models';
 import { defaultAscensionForInvestment, parseInvestment } from './investment';
+import { petIconUrl } from './pet-icon-url';
 
 const heroNames = (
   'Rowan,Raine,Lyca,Lorsan,Ezizh,Liberta,Palmer,Odysseus,Orthros,Talimar,Tavriel,Gorok,Lavatune,Elthara,Dracula,Hybris,Lysander,Leviathan,Serenmira,Melion,Sion,Laios,Marcille,Velufira,Aurelia,Knox,Lan,Jerome,Misfortis,Awakened Envydiel,Kaelon,Gorren,Haelia,Alvida,Misha,Severin,Awakened Gavus,Albedo,Yennefer,Shuna,Atheus,Veithael,Rimuru,Saitama,Cha Hae-in,Sung Jinwoo,Randle,Brutus,Elijah & Lailah,Skylan,Terrible Tornado,Daemia,Begris,Lucilla,Selene,Adrian & Elyse,Judy Punch,Harvey,Thoran,Skriath,Pippa,Fawkes,Estrilda,Eluard,Safiya,Eironn,Kyno,Trix,Saurus,Mishka,Lucretia,Daimon,Silas,Belinda,Shemira,Thane,Baden,Scarlet,Mehira,Lucius,Rosaline,Arthur,Gwyneth,Ferael,Tasi,Nara,Alna,Hodgkin,Oden,Mortas,Framton,Merlin,Haelus,Desira,Treznor,Mezoth,Astarv,Joan,Rosa,Anasta,Talene'
@@ -24,7 +25,7 @@ export const HEROES: readonly Hero[] = [...heroesByDisplayName.values()]
 export const HERO_BY_NAME: ReadonlyMap<string, Hero> = new Map(HEROES.map((hero) => [displayHeroName(hero), hero]));
 export const HERO_BY_ID: ReadonlyMap<number, Hero> = new Map(HEROES.map((hero) => [hero.id, hero]));
 
-export const PETS: readonly Pet[] = [
+const PET_CATALOG: readonly Pet[] = [
   { id: 6001, name: 'Dreary Ball', kind: 'basic' },
   { id: 6002, name: 'Tufty Ears', kind: 'basic' },
   { id: 6003, name: 'Grassy Orb', kind: 'basic' },
@@ -57,6 +58,11 @@ export const PETS: readonly Pet[] = [
   { id: 6030, name: 'Blazefang', kind: 'awakened' },
 ];
 
+export const PETS: readonly Pet[] = PET_CATALOG.map((pet) => ({
+  ...pet,
+  iconUrl: petIconUrl(pet.id),
+}));
+
 function formation(key: string, label: string, spec: string, petName = '', timeSeconds: number | null = null): Formation {
   const heroes = spec.split(';').map((entry, pos) => {
     const [name, investment, mercenary] = entry.split('|');
@@ -67,7 +73,16 @@ function formation(key: string, label: string, spec: string, petName = '', timeS
   });
   const pet = PETS.find(({ name }) => name === petName);
   if (petName && !pet) throw new Error(`Sample data references unknown pet "${petName}".`);
-  return { key, label, beast: petName, petId: pet?.id ?? null, petLevel: pet ? 18 : null, timeSeconds, heroes };
+  return {
+    key,
+    label,
+    beast: petName,
+    petId: pet?.id ?? null,
+    petIconUrl: pet ? petIconUrl(pet.id) : null,
+    petLevel: pet ? 18 : null,
+    timeSeconds,
+    heroes,
+  };
 }
 
 let nextId = 0;

@@ -100,8 +100,6 @@ type CropPurpose = 'hero' | 'pet' | 'collection' | 'collection-node' | 'investme
 
 const FEATURE_SIZE = 8;
 const PET_FEATURE_SIZE = 16;
-const PET_REFERENCE_VIEWS = [0, 0.128] as const;
-const PET_REFERENCE_SIZE = 93 / 125;
 const PET_ALIGNMENT_OFFSETS = [-0.05, 0, 0.05] as const;
 const NIGHTMARE_HERO_COLUMN_CENTERS = [0.39, 0.447, 0.533, 0.6, 0.652] as const;
 const NIGHTMARE_HERO_COLUMN_Y_OFFSETS = [0.02335, 0.01335, 0.02585, 0.02585, 0.01335] as const;
@@ -877,12 +875,7 @@ export class ImportHelperPageComponent implements OnDestroy {
           return {
             name: pet.name,
             distance: this.imageFeature(icon),
-            views: PET_REFERENCE_VIEWS.map((y) => this.imageFeatureAtSize(
-              icon,
-              { x: 0, y, width: 1, height: PET_REFERENCE_SIZE },
-              0,
-              PET_FEATURE_SIZE,
-            )),
+            views: [this.imageFeatureAtSize(icon, undefined, 0, PET_FEATURE_SIZE)],
           };
         } catch {
           return null;
