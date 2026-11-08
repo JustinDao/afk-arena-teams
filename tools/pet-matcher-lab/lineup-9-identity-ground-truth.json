@@ -1,0 +1,1331 @@
+{
+  "lineup_id": 9,
+  "seed_key": "nc-guide-2026-10-infernal-overlord",
+  "image": {
+    "id": 1,
+    "file_name": "afk-nightmare-corridor-infernal-overlord-9.png",
+    "width": 2040,
+    "height": 2082
+  },
+  "identity_counts": {
+    "hero": 30,
+    "collection": 30,
+    "pet": 6
+  },
+  "annotations": [
+    {
+      "annotation_id": 1,
+      "image_id": 1,
+      "bbox": [
+        105,
+        206,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 52,
+      "catalog_slug": "rowan",
+      "catalog_name": "Rowan",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/52_a1_si30.webp",
+      "state_source": "screenshot_visual_override",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 2,
+      "image_id": 1,
+      "bbox": [
+        105,
+        399,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 200,
+      "catalog_slug": "misha",
+      "catalog_name": "Misha",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/200_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 3,
+      "image_id": 1,
+      "bbox": [
+        105,
+        592,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 246,
+      "catalog_slug": "highborn-severin",
+      "catalog_name": "Severin (Highborn)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/246_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 4,
+      "image_id": 1,
+      "bbox": [
+        390,
+        301,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 234,
+      "catalog_slug": "highborn-elthara",
+      "catalog_name": "Elthara (Highborn)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/234_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 5,
+      "image_id": 1,
+      "bbox": [
+        390,
+        495,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 220,
+      "catalog_slug": "alvida",
+      "catalog_name": "Alvida",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/220_a1_si40_f9_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 6,
+      "image_id": 1,
+      "bbox": [
+        232,
+        206,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 15,
+      "catalog_slug": "nbh",
+      "catalog_name": "Bounty Hunter's Decree",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/15_lvl3_ms1_cl.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 2,
+      "assigned_hero_slug": "rowan"
+    },
+    {
+      "annotation_id": 7,
+      "image_id": 1,
+      "bbox": [
+        232,
+        399,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 9,
+      "catalog_slug": "merchant",
+      "catalog_name": "Trader's Vault",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/9_lvl3_ms2_cl.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 3,
+      "assigned_hero_slug": "misha"
+    },
+    {
+      "annotation_id": 8,
+      "image_id": 1,
+      "bbox": [
+        232,
+        592,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 13,
+      "catalog_slug": "swordmaster",
+      "catalog_name": "Shadowflow Blade",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms2_cl.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 4,
+      "assigned_hero_slug": "highborn-severin"
+    },
+    {
+      "annotation_id": 9,
+      "image_id": 1,
+      "bbox": [
+        517,
+        301,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl1_ms2_cl.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 0,
+      "assigned_hero_slug": "highborn-elthara"
+    },
+    {
+      "annotation_id": 10,
+      "image_id": 1,
+      "bbox": [
+        517,
+        495,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 3,
+      "catalog_slug": "timeg",
+      "catalog_name": "Timeline Watch",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/3_lvl1_ms1_cl.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": 1,
+      "assigned_hero_slug": "alvida"
+    },
+    {
+      "annotation_id": 11,
+      "image_id": 1,
+      "bbox": [
+        283,
+        778,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6029,
+      "catalog_slug": "twinlum-spirit",
+      "catalog_name": "Twinlum Spirit",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6029.webp",
+      "formation_key": "molten-crystalline-worm-queen",
+      "formation_label": "Molten Crystalline Worm Queen",
+      "formation_position": null
+    },
+    {
+      "annotation_id": 12,
+      "image_id": 1,
+      "bbox": [
+        767,
+        206,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 226,
+      "catalog_slug": "highborn-kaelon",
+      "catalog_name": "Kaelon (Highborn)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/226_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 13,
+      "image_id": 1,
+      "bbox": [
+        767,
+        399,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 165,
+      "catalog_slug": "awakened-safiya",
+      "catalog_name": "Safiya (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/165_a1_si30_f9_e60.webp",
+      "state_source": "screenshot_visual_override",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 14,
+      "image_id": 1,
+      "bbox": [
+        767,
+        592,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 250,
+      "catalog_slug": "kyno",
+      "catalog_name": "Kyno",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/250_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 15,
+      "image_id": 1,
+      "bbox": [
+        1053,
+        301,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 245,
+      "catalog_slug": "misfortis",
+      "catalog_name": "Misfortis",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/245_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 16,
+      "image_id": 1,
+      "bbox": [
+        1053,
+        495,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 199,
+      "catalog_slug": "highborn-lan",
+      "catalog_name": "Lan (Highborn)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/199_a1_si40_f9.webp",
+      "state_source": "screenshot_visual_override",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 17,
+      "image_id": 1,
+      "bbox": [
+        894,
+        206,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 13,
+      "catalog_slug": "swordmaster",
+      "catalog_name": "Shadowflow Blade",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms1_cl.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 2,
+      "assigned_hero_slug": "highborn-kaelon"
+    },
+    {
+      "annotation_id": 18,
+      "image_id": 1,
+      "bbox": [
+        894,
+        399,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 15,
+      "catalog_slug": "nbh",
+      "catalog_name": "Bounty Hunter's Decree",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/15_lvl3_ms1_cl.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 3,
+      "assigned_hero_slug": "awakened-safiya"
+    },
+    {
+      "annotation_id": 19,
+      "image_id": 1,
+      "bbox": [
+        894,
+        592,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 17,
+      "catalog_slug": "sonia",
+      "catalog_name": "Sinner's Rose",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/17_lvl3_ms2_cl.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 4,
+      "assigned_hero_slug": "kyno"
+    },
+    {
+      "annotation_id": 20,
+      "image_id": 1,
+      "bbox": [
+        1180,
+        301,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 17,
+      "catalog_slug": "sonia",
+      "catalog_name": "Sinner's Rose",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/17_lvl3_ms1_cl.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 0,
+      "assigned_hero_slug": "misfortis"
+    },
+    {
+      "annotation_id": 21,
+      "image_id": 1,
+      "bbox": [
+        1180,
+        495,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 15,
+      "catalog_slug": "nbh",
+      "catalog_name": "Bounty Hunter's Decree",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/15_lvl3_ms2_cl.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": 1,
+      "assigned_hero_slug": "highborn-lan"
+    },
+    {
+      "annotation_id": 22,
+      "image_id": 1,
+      "bbox": [
+        945,
+        778,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6030,
+      "catalog_slug": "blazefang",
+      "catalog_name": "Blazefang",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6030.webp",
+      "formation_key": "cindercrow-specter",
+      "formation_label": "Cindercrow Specter",
+      "formation_position": null
+    },
+    {
+      "annotation_id": 23,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        206,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 235,
+      "catalog_slug": "tavriel",
+      "catalog_name": "Tavriel",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/235_a1_si20_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 24,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        399,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 256,
+      "catalog_slug": "kafka-hibino",
+      "catalog_name": "Kafka Hibino",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/256_a1_si30_f9_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 25,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        592,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 238,
+      "catalog_slug": "awakened-pippa",
+      "catalog_name": "Pippa (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/238_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 26,
+      "image_id": 1,
+      "bbox": [
+        1717,
+        301,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 211,
+      "catalog_slug": "sion",
+      "catalog_name": "Sion",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/211_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 27,
+      "image_id": 1,
+      "bbox": [
+        1717,
+        495,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 241,
+      "catalog_slug": "harvey",
+      "catalog_name": "Harvey",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/241_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 28,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        206,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 15,
+      "catalog_slug": "nbh",
+      "catalog_name": "Bounty Hunter's Decree",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/15_lvl3_ms1_cl.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 2,
+      "assigned_hero_slug": "tavriel"
+    },
+    {
+      "annotation_id": 29,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        399,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 3,
+      "catalog_slug": "timeg",
+      "catalog_name": "Timeline Watch",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/3_lvl1_ms1_cl.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 3,
+      "assigned_hero_slug": "kafka-hibino"
+    },
+    {
+      "annotation_id": 30,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        592,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl1_ms1_cl.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 4,
+      "assigned_hero_slug": "awakened-pippa"
+    },
+    {
+      "annotation_id": 31,
+      "image_id": 1,
+      "bbox": [
+        1844,
+        301,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 13,
+      "catalog_slug": "swordmaster",
+      "catalog_name": "Shadowflow Blade",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms1_cl.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 0,
+      "assigned_hero_slug": "sion"
+    },
+    {
+      "annotation_id": 32,
+      "image_id": 1,
+      "bbox": [
+        1844,
+        495,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 3,
+      "catalog_slug": "timeg",
+      "catalog_name": "Timeline Watch",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/3_lvl1_ms1_cl.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": 1,
+      "assigned_hero_slug": "harvey"
+    },
+    {
+      "annotation_id": 33,
+      "image_id": 1,
+      "bbox": [
+        1609,
+        778,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6028,
+      "catalog_slug": "count-snickerfang",
+      "catalog_name": "Count Snickerfang",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6028.webp",
+      "formation_key": "demonic-puppet",
+      "formation_label": "Demonic Puppet",
+      "formation_position": null
+    },
+    {
+      "annotation_id": 34,
+      "image_id": 1,
+      "bbox": [
+        105,
+        965,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 229,
+      "catalog_slug": "gorok",
+      "catalog_name": "Gorok",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/229_a1_si20_f3_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 35,
+      "image_id": 1,
+      "bbox": [
+        105,
+        1159,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 227,
+      "catalog_slug": "talimar",
+      "catalog_name": "Talimar",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/227_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 36,
+      "image_id": 1,
+      "bbox": [
+        105,
+        1351,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 253,
+      "catalog_slug": "highborn-thalassa",
+      "catalog_name": "Thalassa (Highborn)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/253_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 37,
+      "image_id": 1,
+      "bbox": [
+        390,
+        1061,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 214,
+      "catalog_slug": "awakened-envydiel",
+      "catalog_name": "Envydiel (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/214_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 38,
+      "image_id": 1,
+      "bbox": [
+        390,
+        1254,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 202,
+      "catalog_slug": "aurelia",
+      "catalog_name": "Aurelia",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/202_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 39,
+      "image_id": 1,
+      "bbox": [
+        232,
+        965,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 11,
+      "catalog_slug": "scimonster",
+      "catalog_name": "Infused Mind Core",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/11_lvl1_ms2_cl.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 2,
+      "assigned_hero_slug": "gorok"
+    },
+    {
+      "annotation_id": 40,
+      "image_id": 1,
+      "bbox": [
+        232,
+        1159,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 15,
+      "catalog_slug": "nbh",
+      "catalog_name": "Bounty Hunter's Decree",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/15_lvl3_ms1_cl.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 3,
+      "assigned_hero_slug": "talimar"
+    },
+    {
+      "annotation_id": 41,
+      "image_id": 1,
+      "bbox": [
+        232,
+        1351,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 10,
+      "catalog_slug": "puck",
+      "catalog_name": "Luminous Flight",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/10_lvl1_ms2_cl.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 4,
+      "assigned_hero_slug": "highborn-thalassa"
+    },
+    {
+      "annotation_id": 42,
+      "image_id": 1,
+      "bbox": [
+        517,
+        1061,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 13,
+      "catalog_slug": "swordmaster",
+      "catalog_name": "Shadowflow Blade",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms1_cl.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 0,
+      "assigned_hero_slug": "awakened-envydiel"
+    },
+    {
+      "annotation_id": 43,
+      "image_id": 1,
+      "bbox": [
+        517,
+        1254,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl1_ms1_cl.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": 1,
+      "assigned_hero_slug": "aurelia"
+    },
+    {
+      "annotation_id": 44,
+      "image_id": 1,
+      "bbox": [
+        283,
+        1537,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6021,
+      "catalog_slug": "aureus",
+      "catalog_name": "Aureus",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6021.webp",
+      "formation_key": "ashen-prophet",
+      "formation_label": "Ashen Prophet",
+      "formation_position": null
+    },
+    {
+      "annotation_id": 45,
+      "image_id": 1,
+      "bbox": [
+        767,
+        965,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 248,
+      "catalog_slug": "awakened-eluard",
+      "catalog_name": "Eluard (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/248_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 46,
+      "image_id": 1,
+      "bbox": [
+        767,
+        1159,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 221,
+      "catalog_slug": "awakened-estrilda",
+      "catalog_name": "Estrilda (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/221_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 47,
+      "image_id": 1,
+      "bbox": [
+        767,
+        1351,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 231,
+      "catalog_slug": "begris",
+      "catalog_name": "Begris",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/231_a1_si40_f9_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 48,
+      "image_id": 1,
+      "bbox": [
+        1053,
+        1061,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 215,
+      "catalog_slug": "lysander",
+      "catalog_name": "Lysander",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/215_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 49,
+      "image_id": 1,
+      "bbox": [
+        1053,
+        1254,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 163,
+      "catalog_slug": "daemia",
+      "catalog_name": "Daemia",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/163_a1_si30_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 50,
+      "image_id": 1,
+      "bbox": [
+        894,
+        965,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl3_ms1_cl.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 2,
+      "assigned_hero_slug": "awakened-eluard"
+    },
+    {
+      "annotation_id": 51,
+      "image_id": 1,
+      "bbox": [
+        894,
+        1159,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 3,
+      "catalog_slug": "timeg",
+      "catalog_name": "Timeline Watch",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/3_lvl1_ms1_cl.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 3,
+      "assigned_hero_slug": "awakened-estrilda"
+    },
+    {
+      "annotation_id": 52,
+      "image_id": 1,
+      "bbox": [
+        894,
+        1351,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 11,
+      "catalog_slug": "scimonster",
+      "catalog_name": "Infused Mind Core",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/11_lvl1_ms1_cl.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 4,
+      "assigned_hero_slug": "begris"
+    },
+    {
+      "annotation_id": 53,
+      "image_id": 1,
+      "bbox": [
+        1180,
+        1061,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 13,
+      "catalog_slug": "swordmaster",
+      "catalog_name": "Shadowflow Blade",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms1_cl.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 0,
+      "assigned_hero_slug": "lysander"
+    },
+    {
+      "annotation_id": 54,
+      "image_id": 1,
+      "bbox": [
+        1180,
+        1254,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl1_ms2_cl.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": 1,
+      "assigned_hero_slug": "daemia"
+    },
+    {
+      "annotation_id": 55,
+      "image_id": 1,
+      "bbox": [
+        945,
+        1537,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6027,
+      "catalog_slug": "nightfall-pegasus",
+      "catalog_name": "Nightfall Pegasus",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6027.webp",
+      "formation_key": "mirror-demon",
+      "formation_label": "Mirror Demon",
+      "formation_position": null
+    },
+    {
+      "annotation_id": 56,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        965,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 258,
+      "catalog_slug": "awakened-theowyn",
+      "catalog_name": "Theowyn (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/258_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 2
+    },
+    {
+      "annotation_id": 57,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        1159,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 242,
+      "catalog_slug": "dracula",
+      "catalog_name": "Dracula",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/242_a1_si30_f9_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 3
+    },
+    {
+      "annotation_id": 58,
+      "image_id": 1,
+      "bbox": [
+        1431,
+        1351,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 251,
+      "catalog_slug": "athena",
+      "catalog_name": "Athena",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/251_a1_si30_f9_e30.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 4
+    },
+    {
+      "annotation_id": 59,
+      "image_id": 1,
+      "bbox": [
+        1717,
+        1061,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 244,
+      "catalog_slug": "awakened-hybris",
+      "catalog_name": "Hybris (Awakened)",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/244_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 0
+    },
+    {
+      "annotation_id": 60,
+      "image_id": 1,
+      "bbox": [
+        1717,
+        1254,
+        111,
+        111
+      ],
+      "lineup_id": 9,
+      "identity_type": "hero",
+      "catalog_id": 175,
+      "catalog_slug": "lavatune",
+      "catalog_name": "Lavatune",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/175_a1_si40_f9_e60.webp",
+      "state_source": "seed_metadata",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 1
+    },
+    {
+      "annotation_id": 61,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        965,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 9,
+      "catalog_slug": "merchant",
+      "catalog_name": "Trader's Vault",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/9_lvl3_ms1_cl.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 2,
+      "assigned_hero_slug": "awakened-theowyn"
+    },
+    {
+      "annotation_id": 62,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        1159,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 14,
+      "catalog_slug": "thor",
+      "catalog_name": "Stormwrath's Lull",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/14_lvl1_ms2_cl.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 3,
+      "assigned_hero_slug": "dracula"
+    },
+    {
+      "annotation_id": 63,
+      "image_id": 1,
+      "bbox": [
+        1558,
+        1351,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 17,
+      "catalog_slug": "sonia",
+      "catalog_name": "Sinner's Rose",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/17_lvl3_ms2_cl.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 4,
+      "assigned_hero_slug": "athena"
+    },
+    {
+      "annotation_id": 64,
+      "image_id": 1,
+      "bbox": [
+        1844,
+        1061,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 2,
+      "catalog_slug": "lizard",
+      "catalog_name": "Shadow Dancer",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/2_lvl2_ms2_cl.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 0,
+      "assigned_hero_slug": "awakened-hybris"
+    },
+    {
+      "annotation_id": 65,
+      "image_id": 1,
+      "bbox": [
+        1844,
+        1254,
+        111,
+        114
+      ],
+      "lineup_id": 9,
+      "identity_type": "collection",
+      "catalog_id": 9,
+      "catalog_slug": "merchant",
+      "catalog_name": "Trader's Vault",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/9_lvl3_ms2_cl.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": 1,
+      "assigned_hero_slug": "lavatune"
+    },
+    {
+      "annotation_id": 66,
+      "image_id": 1,
+      "bbox": [
+        1609,
+        1537,
+        64,
+        64
+      ],
+      "lineup_id": 9,
+      "identity_type": "pet",
+      "catalog_id": 6025,
+      "catalog_slug": "trickery-chest",
+      "catalog_name": "Trickery Chest",
+      "asset_url": "https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/6025.webp",
+      "formation_key": "infernal-overlord",
+      "formation_label": "Infernal Overlord",
+      "formation_position": null
+    }
+  ]
+}

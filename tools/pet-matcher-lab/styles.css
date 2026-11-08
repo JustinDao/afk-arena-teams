@@ -188,6 +188,8 @@ footer { padding: 1.4rem; border-top: 1px solid var(--border); color: var(--mute
 #detection-canvas { display: block; max-width: 100%; max-height: 75vh; }
 #detection-canvas[hidden] { display: none; }
 .detection-results { max-height: 75vh; padding: .6rem; }
+.detection-group { display: grid; gap: .3rem; margin-bottom: .6rem; padding: .55rem; border: 1px solid var(--border); border-radius: 8px; background: #141a25; }
+.detection-group > strong { color: #d7dbe5; font-size: .78rem; }
 .detection-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .3rem .6rem; padding: .6rem; border-bottom: 1px solid var(--border); font-size: .79rem; }
 .detection-row:last-child { border-bottom: 0; }
 .detection-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -44,16 +44,15 @@
       <section class="panel" aria-labelledby="detection-title">
         <div class="section-heading">
           <div>
-            <p class="step">EXPERIMENT · FULL-IMAGE SEARCH</p>
-            <h2 id="detection-title">Find pet-icon candidates by coordinate</h2>
+            <p class="step">EXPERIMENT · PROPOSE → IDENTIFY → GROUP</p>
+            <h2 id="detection-title">Find icon-like regions, then rank pets</h2>
           </div>
           <span id="detection-status" class="status">Load references and a guide image</span>
         </div>
         <p class="muted">
-          A coarse multi-scale scan ranks pet templates at each image window, scores how distinct the
-          best match is from alternatives, and suppresses overlapping detections. Confidence is an
-          experimental ranking score, not a calibrated probability. Review the overlay before treating
-          any hit as valid.
+          Stage 1 compares native-resolution edge-orientation patterns against a border prototype built
+          from square pet icons. Stage 2 ranks proposed crops against the pet catalog; nearby proposals
+          are grouped spatially. Scores are experimental, not probabilities.
         </p>
         <div class="toolbar">
           <label class="file-button">
@@ -61,19 +60,19 @@
             <input id="detection-input" type="file" accept="image/*">
           </label>
           <label class="field compact">
-            Minimum confidence
-            <input id="detection-threshold" type="number" min="0" max="100" step="5" value="80">
+            Minimum proposal score
+            <input id="detection-threshold" type="number" min="0" max="100" step="5" value="20">
           </label>
-          <button id="scan-image" class="primary" type="button" disabled>Scan for pets</button>
+          <button id="scan-image" class="primary" type="button" disabled>Propose and rank</button>
         </div>
-        <p id="detection-summary" class="hint" aria-live="polite">Scans at several icon sizes. The default is intentionally strict; scores are experimental, not calibrated.</p>
+        <p id="detection-summary" class="hint" aria-live="polite">Looks for icon-like regions first, then ranks each against the pet catalog. Review candidates; scores are experimental.</p>
         <div class="detection-workspace">
           <div class="detection-image-area">
             <canvas id="detection-canvas" aria-label="Pet detection overlay" hidden></canvas>
-            <div id="detection-empty" class="empty-state small">Choose the app-export image or guide screenshot to inspect detected pet boxes.</div>
+            <div id="detection-empty" class="empty-state small">Choose the app-export image or guide screenshot to inspect proposed icon regions.</div>
           </div>
           <div id="detection-results" class="detection-results">
-            <p class="empty-state small">Accepted detections and best rejected candidates will appear here.</p>
+            <p class="empty-state small">Nearby proposal groups and their top pet matches will appear here.</p>
           </div>
         </div>
       </section>
@@ -169,7 +168,7 @@
         </div>
         <p class="muted">
           Evaluation ranks the full pet catalog for each example in the selected split. The app-style
-          option mirrors the current 16×16 RGB feature, two reference crops, and nearby crop sampling.
+          option mirrors square references, 16×16 RGB features, and nearby crop sampling.
           The local classifier is a trained linear softmax model over 16×16 RGB crop features. It is
           not a deep neural network, but it produces a portable model file for further experiments.
         </p>

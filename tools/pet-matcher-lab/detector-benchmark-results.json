@@ -1,0 +1,237 @@
+{
+  "experiment": "source-grouped leave-one-guide-out",
+  "limitations": [
+    "Only three visually labeled source groups and 10 images.",
+    "Pilot boxes are best-effort and have not undergone independent review.",
+    "The single class measures localization only, not hero, pet, or collection identity.",
+    "Collection node and investment badges are not annotated.",
+    "SAHI combines full-image inference with sliced inference."
+  ],
+  "dataset": {
+    "path": "/home/justindao/git/afk-arena-teams/afk-icon-pilot-coco.json",
+    "sha256": "778a78a2295a86177bfc1b6110fe7279a185219373ae2a481219a145c20b5bf1",
+    "images": 10,
+    "annotations": 168,
+    "source_groups": [
+      "f2p-weekly-nc-guide",
+      "lydydxhxpyyh1",
+      "nightmare-corridor-app-export"
+    ],
+    "source_group_counts": {
+      "f2p-weekly-nc-guide": {
+        "images": 3,
+        "annotations": 30
+      },
+      "lydydxhxpyyh1": {
+        "images": 6,
+        "annotations": 72
+      },
+      "nightmare-corridor-app-export": {
+        "images": 1,
+        "annotations": 66
+      }
+    }
+  },
+  "configuration": {
+    "python": "3.14.4",
+    "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+    "torch": "2.15.0+cpu",
+    "torchvision": "0.29.2+cpu",
+    "ultralytics": "8.4.207",
+    "sahi": "0.14.0",
+    "pycocotools": "2.0.11",
+    "model": "YOLO11n pretrained, fine-tuned independently per fold",
+    "pretrained_weights": "yolo11n.pt",
+    "pretrained_weights_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "seed": 2026,
+    "epochs": 10,
+    "image_size": 640,
+    "batch_size": 2,
+    "device": "cpu",
+    "confidence_threshold": 0.001,
+    "max_detections": 300,
+    "sahi_slice_size": 640,
+    "sahi_overlap": 0.2,
+    "sahi_perform_standard_pred": true,
+    "sahi_postprocess": "NMS at IoU 0.5",
+    "training_validation": "training images only; fixed epochs; evaluate last.pt on held-out group"
+  },
+  "run_dir": "/home/justindao/.cache/afk-icon-detector-benchmark/run-20261108T031214Z-1901092",
+  "resumed_run": true,
+  "folds": [
+    {
+      "source_group": "f2p-weekly-nc-guide",
+      "training_images": 7,
+      "training_annotations": 138,
+      "test_images": 3,
+      "test_annotations": 30,
+      "training_seconds": 74.794,
+      "yolo_inference_seconds": 3.0144235840000135,
+      "sahi_inference_seconds": 0.6817271970000149,
+      "yolo": {
+        "AP": 0.43608192486542885,
+        "AP50": 0.8789886825961435,
+        "AP75": 0.4233756646879596,
+        "AP_small": null,
+        "AP_medium": 0.43813105970090716,
+        "AP_large": null,
+        "AR1": 0.06333333333333332,
+        "AR10": 0.4666666666666666,
+        "AR100": 0.6366666666666667,
+        "AR_small": null,
+        "AR_medium": 0.6366666666666667,
+        "AR_large": null
+      },
+      "sahi": {
+        "AP": 0.410308518791036,
+        "AP50": 0.9179327610858387,
+        "AP75": 0.36065320817796065,
+        "AP_small": null,
+        "AP_medium": 0.410308518791036,
+        "AP_large": null,
+        "AR1": 0.06333333333333332,
+        "AR10": 0.4733333333333333,
+        "AR100": 0.51,
+        "AR_small": null,
+        "AR_medium": 0.51,
+        "AR_large": null
+      }
+    },
+    {
+      "source_group": "lydydxhxpyyh1",
+      "training_images": 4,
+      "training_annotations": 96,
+      "test_images": 6,
+      "test_annotations": 72,
+      "training_seconds": 34.7631,
+      "yolo_inference_seconds": 1.1246881100000223,
+      "sahi_inference_seconds": 8.670918164,
+      "yolo": {
+        "AP": 0.4579834530029419,
+        "AP50": 0.7879387383340969,
+        "AP75": 0.4449852768248713,
+        "AP_small": null,
+        "AP_medium": null,
+        "AP_large": 0.4596291231788569,
+        "AR1": 0.0625,
+        "AR10": 0.43194444444444446,
+        "AR100": 0.6402777777777777,
+        "AR_small": null,
+        "AR_medium": null,
+        "AR_large": 0.6402777777777777
+      },
+      "sahi": {
+        "AP": 0.4345845261937715,
+        "AP50": 0.751029212347606,
+        "AP75": 0.44035012381218575,
+        "AP_small": null,
+        "AP_medium": null,
+        "AP_large": 0.4733472104021125,
+        "AR1": 0.05277777777777777,
+        "AR10": 0.4625000000000001,
+        "AR100": 0.548611111111111,
+        "AR_small": null,
+        "AR_medium": null,
+        "AR_large": 0.548611111111111
+      }
+    },
+    {
+      "source_group": "nightmare-corridor-app-export",
+      "training_images": 9,
+      "training_annotations": 102,
+      "test_images": 1,
+      "test_annotations": 66,
+      "training_seconds": 52.4996,
+      "yolo_inference_seconds": 0.2546685959999877,
+      "sahi_inference_seconds": 2.0800774589999946,
+      "yolo": {
+        "AP": 0.6124621660095705,
+        "AP50": 0.897281075620281,
+        "AP75": 0.8709903091643033,
+        "AP_small": null,
+        "AP_medium": 0.0,
+        "AP_large": 0.6773427924590918,
+        "AR1": 0.010606060606060607,
+        "AR10": 0.10303030303030303,
+        "AR100": 0.65,
+        "AR_small": null,
+        "AR_medium": 0.0,
+        "AR_large": 0.715
+      },
+      "sahi": {
+        "AP": 0.29956773231680406,
+        "AP50": 0.5627756200966031,
+        "AP75": 0.32646795316496036,
+        "AP_small": null,
+        "AP_medium": 0.24961653308187962,
+        "AP_large": 0.3827638017026738,
+        "AR1": 0.006060606060606061,
+        "AR10": 0.08484848484848485,
+        "AR100": 0.40909090909090917,
+        "AR_small": null,
+        "AR_medium": 0.5333333333333333,
+        "AR_large": 0.39666666666666667
+      }
+    }
+  ],
+  "macro_average": {
+    "yolo": {
+      "AP": 0.5021758479593137,
+      "AP50": 0.8547361655168405,
+      "AP75": 0.5797837502257114,
+      "AP_small": null,
+      "AP_medium": 0.21906552985045358,
+      "AP_large": 0.5684859578189744,
+      "AR1": 0.045479797979797974,
+      "AR10": 0.3338804713804714,
+      "AR100": 0.6423148148148148,
+      "AR_small": null,
+      "AR_medium": 0.31833333333333336,
+      "AR_large": 0.6776388888888889
+    },
+    "sahi": {
+      "AP": 0.3814869257672039,
+      "AP50": 0.7439125311766825,
+      "AP75": 0.3758237617183689,
+      "AP_small": null,
+      "AP_medium": 0.3299625259364578,
+      "AP_large": 0.4280555060523932,
+      "AR1": 0.04072390572390572,
+      "AR10": 0.3402272727272727,
+      "AR100": 0.48923400673400674,
+      "AR_small": null,
+      "AR_medium": 0.5216666666666667,
+      "AR_large": 0.47263888888888883
+    }
+  },
+  "out_of_fold": {
+    "yolo": {
+      "AP": 0.5074878015244165,
+      "AP50": 0.8338058072436811,
+      "AP75": 0.621349956852594,
+      "AP_small": null,
+      "AP_medium": 0.3578303799222259,
+      "AP_large": 0.5580785350511309,
+      "AR1": 0.042261904761904764,
+      "AR10": 0.30892857142857144,
+      "AR100": 0.6434523809523809,
+      "AR_small": null,
+      "AR_medium": 0.5305555555555556,
+      "AR_large": 0.6742424242424242
+    },
+    "sahi": {
+      "AP": 0.28500649797129907,
+      "AP50": 0.5686647369793579,
+      "AP75": 0.27735066751011245,
+      "AP_small": null,
+      "AP_medium": 0.15372318539849814,
+      "AP_large": 0.43186832920016444,
+      "AR1": 0.036309523809523805,
+      "AR10": 0.31607142857142856,
+      "AR100": 0.48690476190476184,
+      "AR_small": null,
+      "AR_medium": 0.513888888888889,
+      "AR_large": 0.4795454545454546
+    }
+  }
+}

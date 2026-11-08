@@ -49,10 +49,17 @@ const guideContext = elements.guideCanvas.getContext('2d', { willReadFrequently:
 const cropContext = elements.cropCanvas.getContext('2d', { willReadFrequently: true });
 const detectionContext = elements.detectionCanvas.getContext('2d');
 
-const DETECTION_FEATURE_SIZE = 6;
-const DETECTION_MAX_IMAGE_SIZE = 760;
-const DETECTION_WINDOW_SIZES = [18, 24, 30, 38, 48, 60];
-const DETECTION_MAX_CANDIDATES = 60;
+const DETECTION_FEATURE_SIZE = 12;
+const DETECTION_WINDOW_FRACTIONS = [0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.055, 0.07];
+const DETECTION_MAX_CANDIDATES = 120;
+const DETECTION_PROPOSAL_POOL_SIZE = 2400;
+const BORDER_FEATURE_SIZE = 12;
+const BORDER_FEATURE_INDICES = Array.from({ length: BORDER_FEATURE_SIZE ** 2 }, (_, index) => index)
+  .filter((index) => {
+    const row = Math.floor(index / BORDER_FEATURE_SIZE);
+    const column = index % BORDER_FEATURE_SIZE;
+    return row < 2 || row >= BORDER_FEATURE_SIZE - 2 || column < 2 || column >= BORDER_FEATURE_SIZE - 2;
+  });
 const PET_ICON_CDN = 'https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon';
 
 function showToast(message) {
@@ -426,22 +433,6 @@ function squaredDistance(first, second) {
   return total / first.length;
 }
 
-function detectionFeature(data, imageWidth, imageHeight, x, y, windowSize) {
-  const feature = new Float32Array(DETECTION_FEATURE_SIZE * DETECTION_FEATURE_SIZE * 3);
-  let outputIndex = 0;
-  for (let row = 0; row < DETECTION_FEATURE_SIZE; row++) {
-    const sourceY = Math.min(imageHeight - 1, Math.floor(y + (row + 0.5) * windowSize / DETECTION_FEATURE_SIZE));
-    for (let column = 0; column < DETECTION_FEATURE_SIZE; column++) {
-      const sourceX = Math.min(imageWidth - 1, Math.floor(x + (column + 0.5) * windowSize / DETECTION_FEATURE_SIZE));
-      const sourceIndex = (sourceY * imageWidth + sourceX) * 4;
-      feature[outputIndex++] = data[sourceIndex] / 255;
-      feature[outputIndex++] = data[sourceIndex + 1] / 255;
-      feature[outputIndex++] = data[sourceIndex + 2] / 255;
-    }
-  }
-  return feature;
-}
-
 function intersectionOverUnion(first, second) {
   const left = Math.max(first.x, second.x);
   const top = Math.max(first.y, second.y);
@@ -463,92 +454,256 @@ function nonMaximumSuppression(candidates, overlapThreshold = 0.5) {
   return accepted;
 }
 
-function scanDetectionImage(image, templates, minimumConfidence, onProgress) {
-  const scale = Math.min(1, DETECTION_MAX_IMAGE_SIZE / Math.max(image.naturalWidth, image.naturalHeight));
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+function grayscaleFor(image, size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvas is unavailable for border features.');
+  context.drawImage(image, 0, 0, size, size);
+  const rgba = context.getImageData(0, 0, size, size).data;
+  const grayscale = new Float32Array(size * size);
+  for (let index = 0; index < grayscale.length; index++) {
+    grayscale[index] = (rgba[index * 4] * 0.299 + rgba[index * 4 + 1] * 0.587 + rgba[index * 4 + 2] * 0.114) / 255;
+  }
+  return grayscale;
+}
+
+function grayscaleForSource(image) {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Canvas is unavailable for pet detection.');
+  if (!context) throw new Error('Canvas is unavailable for source image edges.');
   context.drawImage(image, 0, 0, width, height);
-  const source = context.getImageData(0, 0, width, height).data;
+  const rgba = context.getImageData(0, 0, width, height).data;
+  const grayscale = new Float32Array(width * height);
+  for (let index = 0; index < grayscale.length; index++) {
+    grayscale[index] = (rgba[index * 4] * 0.299 + rgba[index * 4 + 1] * 0.587 + rgba[index * 4 + 2] * 0.114) / 255;
+  }
+  return grayscale;
+}
+
+function sobelVectors(grayscale, width, height) {
+  const horizontal = new Float32Array(width * height);
+  const vertical = new Float32Array(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const topLeft = grayscale[(y - 1) * width + x - 1];
+      const top = grayscale[(y - 1) * width + x];
+      const topRight = grayscale[(y - 1) * width + x + 1];
+      const left = grayscale[y * width + x - 1];
+      const right = grayscale[y * width + x + 1];
+      const bottomLeft = grayscale[(y + 1) * width + x - 1];
+      const bottom = grayscale[(y + 1) * width + x];
+      const bottomRight = grayscale[(y + 1) * width + x + 1];
+      const index = y * width + x;
+      horizontal[index] = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
+      vertical[index] = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
+    }
+  }
+  return { horizontal, vertical };
+}
+
+function normalizeBorderFeature(feature) {
+  let norm = 0;
+  for (const index of BORDER_FEATURE_INDICES) {
+    const offset = index * 4;
+    for (let bin = 0; bin < 4; bin++) norm += feature[offset + bin] * feature[offset + bin];
+  }
+  norm = Math.sqrt(norm);
+  if (norm) {
+    for (const index of BORDER_FEATURE_INDICES) {
+      const offset = index * 4;
+      for (let bin = 0; bin < 4; bin++) feature[offset + bin] /= norm;
+    }
+  }
+  return feature;
+}
+
+function gradientBin(horizontal, vertical) {
+  let angle = Math.atan2(vertical, horizontal);
+  if (angle < 0) angle += Math.PI;
+  if (angle >= Math.PI) angle -= Math.PI;
+  return Math.round(angle / (Math.PI / 4)) % 4;
+}
+
+function borderFeatureFromVectors(vectors, width, height, x, y, windowSize) {
+  const feature = new Float32Array(BORDER_FEATURE_SIZE ** 2 * 4);
+  for (const index of BORDER_FEATURE_INDICES) {
+    const row = Math.floor(index / BORDER_FEATURE_SIZE);
+    const column = index % BORDER_FEATURE_SIZE;
+    const sourceX = Math.max(1, Math.min(width - 2, Math.floor(x + (column + 0.5) * windowSize / BORDER_FEATURE_SIZE)));
+    const sourceY = Math.max(1, Math.min(height - 2, Math.floor(y + (row + 0.5) * windowSize / BORDER_FEATURE_SIZE)));
+    const sourceIndex = sourceY * width + sourceX;
+    const horizontal = vectors.horizontal[sourceIndex];
+    const vertical = vectors.vertical[sourceIndex];
+    const magnitude = Math.hypot(horizontal, vertical);
+    feature[index * 4 + gradientBin(horizontal, vertical)] = magnitude;
+  }
+  return feature;
+}
+
+function buildBorderPrototype(templates) {
+  const prototype = new Float32Array(BORDER_FEATURE_SIZE ** 2 * 4);
+  for (const pet of templates) {
+    const grayscale = grayscaleFor(app.references.get(pet.id).image, BORDER_FEATURE_SIZE);
+    const vectors = sobelVectors(grayscale, BORDER_FEATURE_SIZE, BORDER_FEATURE_SIZE);
+    const feature = normalizeBorderFeature(borderFeatureFromVectors(
+      vectors,
+      BORDER_FEATURE_SIZE,
+      BORDER_FEATURE_SIZE,
+      0,
+      0,
+      BORDER_FEATURE_SIZE,
+    ));
+    for (const index of BORDER_FEATURE_INDICES) {
+      const offset = index * 4;
+      for (let bin = 0; bin < 4; bin++) prototype[offset + bin] += feature[offset + bin];
+    }
+  }
+  return normalizeBorderFeature(prototype);
+}
+
+function borderSimilarityAt(vectors, imageWidth, imageHeight, x, y, windowSize, prototype) {
+  let dot = 0;
+  let norm = 0;
+  for (const index of BORDER_FEATURE_INDICES) {
+    const row = Math.floor(index / BORDER_FEATURE_SIZE);
+    const column = index % BORDER_FEATURE_SIZE;
+    const sourceX = Math.max(1, Math.min(imageWidth - 2, Math.floor(x + (column + 0.5) * windowSize / BORDER_FEATURE_SIZE)));
+    const sourceY = Math.max(1, Math.min(imageHeight - 2, Math.floor(y + (row + 0.5) * windowSize / BORDER_FEATURE_SIZE)));
+    const sourceIndex = sourceY * imageWidth + sourceX;
+    const horizontal = vectors.horizontal[sourceIndex];
+    const vertical = vectors.vertical[sourceIndex];
+    const magnitude = Math.hypot(horizontal, vertical);
+    dot += magnitude * prototype[index * 4 + gradientBin(horizontal, vertical)];
+    norm += magnitude * magnitude;
+  }
+  return norm ? dot / Math.sqrt(norm) : 0;
+}
+
+function sourceWindowSizes(imageWidth, imageHeight) {
+  const shortestSide = Math.min(imageWidth, imageHeight);
+  return [...new Set(DETECTION_WINDOW_FRACTIONS
+    .map((fraction) => Math.round(shortestSide * fraction))
+    .filter((size) => size >= 12 && size < shortestSide))];
+}
+
+function rankPetWindow(feature, templates) {
+  const ranking = templates.map((template) => ({
+    petId: template.petId,
+    name: template.name,
+    distance: squaredDistance(feature, template.feature),
+  })).sort((a, b) => a.distance - b.distance);
+  const best = ranking[0];
+  const second = ranking[1];
+  const margin = second ? Math.max(0, second.distance - best.distance) : 0;
+  const similarity = Math.max(0, 1 - Math.sqrt(best.distance) / 0.8);
+  return { ...best, margin, similarity: 100 * similarity };
+}
+
+function groupNearbyDetections(detections) {
+  const groups = [];
+  for (const detection of detections) {
+    const centerX = detection.x + detection.width / 2;
+    const centerY = detection.y + detection.height / 2;
+    const nearby = groups.find((group) => {
+      const distance = Math.hypot(centerX - group.centerX, centerY - group.centerY);
+      return distance <= Math.max(detection.width, detection.height, group.scale) * 2.5
+        && group.items.length < 12;
+    });
+    if (nearby) {
+      nearby.items.push(detection);
+      nearby.centerX = nearby.items.reduce((total, item) => total + item.x + item.width / 2, 0) / nearby.items.length;
+      nearby.centerY = nearby.items.reduce((total, item) => total + item.y + item.height / 2, 0) / nearby.items.length;
+      nearby.scale = Math.max(nearby.scale, detection.width, detection.height);
+    } else {
+      groups.push({
+        items: [detection],
+        centerX,
+        centerY,
+        scale: Math.max(detection.width, detection.height),
+      });
+    }
+  }
+  return groups.sort((a, b) => b.items.length - a.items.length);
+}
+
+function scanDetectionImage(image, templates, minimumProposalScore, onProgress) {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  const sourceVectors = sobelVectors(grayscaleForSource(image), width, height);
+  const borderPrototype = buildBorderPrototype(templates);
   const templateFeatures = templates.map((pet) => ({
     petId: pet.id,
     name: pet.name,
     feature: pixelsFor(app.references.get(pet.id).image, DETECTION_FEATURE_SIZE),
   }));
-  const rawCandidates = [];
+  const proposals = [];
+  const windowSizes = sourceWindowSizes(width, height);
   let totalWindows = 0;
-  for (const windowSize of DETECTION_WINDOW_SIZES) {
+  for (const windowSize of windowSizes) {
     if (windowSize >= width || windowSize >= height) continue;
     const step = Math.max(4, Math.round(windowSize * 0.25));
     totalWindows += (Math.floor((width - windowSize) / step) + 1)
       * (Math.floor((height - windowSize) / step) + 1);
   }
   let processedWindows = 0;
-  let bestConfidence = 0;
+  let bestProposalScore = 0;
   let bestCandidate = null;
 
-  for (const windowSize of DETECTION_WINDOW_SIZES) {
+  for (const windowSize of windowSizes) {
     if (windowSize >= width || windowSize >= height) continue;
     const step = Math.max(4, Math.round(windowSize * 0.25));
     for (let y = 0; y + windowSize <= height; y += step) {
       for (let x = 0; x + windowSize <= width; x += step) {
-        const feature = detectionFeature(source, width, height, x, y, windowSize);
-        let best = null;
-        let second = null;
-        for (const template of templateFeatures) {
-          const distance = squaredDistance(feature, template.feature);
-          if (!best || distance < best.distance) {
-            second = best;
-            best = { ...template, distance };
-          } else if (!second || distance < second.distance) {
-            second = { ...template, distance };
-          }
-        }
-
-        const margin = Math.max(0, (second?.distance ?? 0) - best.distance);
-        const similarity = Math.max(0, 1 - Math.sqrt(best.distance) / 0.8);
-        const distinctiveness = margin / (margin + 0.004);
-        const confidence = 100 * similarity * distinctiveness;
-        if (confidence > bestConfidence) {
-          bestConfidence = confidence;
-          bestCandidate = {
-            petId: best.petId,
-            name: best.name,
-            confidence,
-            similarity: 100 * similarity,
-            margin,
-            distance: best.distance,
-            x: x / scale,
-            y: y / scale,
-            width: windowSize / scale,
-            height: windowSize / scale,
-          };
-        }
-        if (confidence >= minimumConfidence) {
-          rawCandidates.push({
-            petId: best.petId,
-            name: best.name,
-            confidence,
-            similarity: 100 * similarity,
-            margin,
-            distance: best.distance,
-            x: x / scale,
-            y: y / scale,
-            width: windowSize / scale,
-            height: windowSize / scale,
-          });
+        const proposalScore = 100 * borderSimilarityAt(
+          sourceVectors,
+          width,
+          height,
+          x,
+          y,
+          windowSize,
+          borderPrototype,
+        );
+        proposals.push({
+          proposalScore,
+          x,
+          y,
+          width: windowSize,
+          height: windowSize,
+        });
+        if (proposalScore > bestProposalScore) {
+          bestProposalScore = proposalScore;
+          bestCandidate = proposals[proposals.length - 1];
         }
         processedWindows++;
         if (processedWindows % 5000 === 0) onProgress(processedWindows, totalWindows);
       }
     }
   }
-  const detections = nonMaximumSuppression(rawCandidates.sort((a, b) => b.confidence - a.confidence));
-  return { detections, bestCandidate, totalWindows, width, height, scale };
+  const topProposals = proposals
+    .sort((a, b) => b.proposalScore - a.proposalScore)
+    .slice(0, DETECTION_PROPOSAL_POOL_SIZE);
+  const boxes = nonMaximumSuppression(topProposals, 0.15)
+    .filter((proposal) => proposal.proposalScore >= minimumProposalScore);
+  const detections = boxes.map((proposal) => {
+    const feature = pixelsFor(image, DETECTION_FEATURE_SIZE, proposal);
+    const match = rankPetWindow(feature, templateFeatures);
+    return { ...proposal, ...match };
+  });
+  return {
+    detections,
+    groups: groupNearbyDetections(detections),
+    bestCandidate,
+    totalWindows,
+    width,
+    height,
+    proposedCount: topProposals.length,
+  };
 }
 
 function drawDetectionOverlay(image, detections) {
@@ -562,7 +717,7 @@ function drawDetectionOverlay(image, detections) {
     detectionContext.lineWidth = Math.max(3, canvas.width / 450);
     detectionContext.strokeStyle = '#62edb5';
     detectionContext.strokeRect(detection.x, detection.y, detection.width, detection.height);
-    const text = `${index + 1}. ${detection.name} ${Math.round(detection.confidence)}%`;
+    const text = `${index + 1}. ${detection.name} ${Math.round(detection.proposalScore)} / ${Math.round(detection.similarity)}%`;
     detectionContext.font = `700 ${baseFont}px system-ui, sans-serif`;
     const textWidth = detectionContext.measureText(text).width;
     const labelY = Math.max(baseFont + 4, detection.y);
@@ -573,28 +728,36 @@ function drawDetectionOverlay(image, detections) {
   }
 }
 
-function renderDetectionResults(detections, bestCandidate, minimumConfidence, totalWindows) {
+function renderDetectionResults(detections, groups, bestCandidate, minimumConfidence, totalWindows, proposedCount) {
   const acceptedCount = detections.length;
   const list = detections.slice(0, 30);
   elements.detectionSummary.innerHTML = `
     <span>${totalWindows.toLocaleString()} windows scanned</span>
-    <span class="accepted-count">${acceptedCount} accepted after overlap suppression</span>
-    <span>Threshold ${minimumConfidence}%</span>
-    ${bestCandidate ? `<span>Best candidate ${escapeHtml(bestCandidate.name)} · ${Math.round(bestCandidate.confidence)}%</span>` : ''}
+    <span>${proposedCount} border proposals · ${acceptedCount} pet-ranked</span>
+    <span>${groups.length} nearby groups · proposal threshold ${minimumConfidence}</span>
+    ${bestCandidate ? `<span>Strongest border score ${Math.round(bestCandidate.proposalScore)}</span>` : ''}
   `;
   if (!list.length) {
-    elements.detectionResults.innerHTML = `<p class="empty-state small">No candidate passed ${minimumConfidence}% confidence. Best candidate: ${bestCandidate ? `${escapeHtml(bestCandidate.name)} at ${Math.round(bestCandidate.confidence)}% (x ${Math.round(bestCandidate.x)}, y ${Math.round(bestCandidate.y)}).` : 'none'} Lower the threshold to inspect weaker hits.</p>`;
+    elements.detectionResults.innerHTML = `<p class="empty-state small">No proposal passed score ${minimumConfidence}. ${bestCandidate ? `Strongest border proposal scored ${Math.round(bestCandidate.proposalScore)} at x ${Math.round(bestCandidate.x)}, y ${Math.round(bestCandidate.y)}.` : 'No proposal found.'}</p>`;
     return;
   }
-  elements.detectionResults.innerHTML = list.map((detection, index) => `
-    <article class="detection-row">
-      <strong>${index + 1}. ${escapeHtml(detection.name)}</strong>
-      <span class="accepted-label">${Math.round(detection.confidence)}% · candidate</span>
-      <span>x ${Math.round(detection.x)}, y ${Math.round(detection.y)} · ${Math.round(detection.width)}×${Math.round(detection.height)} px</span>
-      <span>${Math.round(detection.similarity)}% appearance · ${detection.margin.toFixed(3)} lead</span>
-    </article>
-  `).join('') + (acceptedCount > list.length
-    ? `<p class="hint">Showing the strongest ${list.length} of ${acceptedCount} accepted detections.</p>`
+  const groupMarkup = groups.filter((group) => group.items.some((item) => list.includes(item))).map((group, groupIndex) => {
+    const members = group.items.filter((item) => list.includes(item));
+    if (!members.length) return '';
+    return `<section class="detection-group">
+      <strong>Nearby group ${groupIndex + 1} · ${group.items.length} proposals</strong>
+      ${members.map((detection) => `
+        <article class="detection-row">
+          <strong>${escapeHtml(detection.name)}</strong>
+          <span class="accepted-label">proposal ${Math.round(detection.proposalScore)} · appearance ${Math.round(detection.similarity)}%</span>
+          <span>x ${Math.round(detection.x)}, y ${Math.round(detection.y)} · ${Math.round(detection.width)}×${Math.round(detection.height)} px</span>
+          <span>match margin ${detection.margin.toFixed(3)}</span>
+        </article>
+      `).join('')}
+    </section>`;
+  }).join('');
+  elements.detectionResults.innerHTML = groupMarkup + (acceptedCount > list.length
+    ? `<p class="hint">Showing the strongest ${list.length} of ${acceptedCount} pet-ranked proposals.</p>`
     : '');
 }
 
@@ -609,23 +772,30 @@ async function runPetDetection() {
     showToast('Load at least two pet reference icons before scanning.');
     return;
   }
-  const minimumConfidence = Number(elements.detectionThreshold.value);
-  if (!Number.isFinite(minimumConfidence) || minimumConfidence < 0 || minimumConfidence > 100) {
-    showToast('Minimum confidence must be from 0 to 100.');
+  const minimumProposalScore = Number(elements.detectionThreshold.value);
+  if (!Number.isFinite(minimumProposalScore) || minimumProposalScore < 0 || minimumProposalScore > 100) {
+    showToast('Minimum proposal score must be from 0 to 100.');
     return;
   }
   elements.scanImage.disabled = true;
   elements.detectionStatus.textContent = 'Scanning…';
-  elements.detectionSummary.textContent = 'Checking multiple sizes and positions.';
+  elements.detectionSummary.textContent = 'Scanning native-resolution edge-orientation proposals.';
   try {
-    const result = scanDetectionImage(image, references, minimumConfidence, (done, total) => {
+    const result = scanDetectionImage(image, references, minimumProposalScore, (done, total) => {
       elements.detectionStatus.textContent = `Scanning ${Math.round(done / total * 100)}%…`;
     });
     app.detection.candidates = result.detections;
-    drawDetectionOverlay(image, result.detections);
-    renderDetectionResults(result.detections, result.bestCandidate, minimumConfidence, result.totalWindows);
-    elements.detectionStatus.textContent = `${result.detections.length} candidates passed threshold`;
-    elements.detectionSummary.insertAdjacentHTML('beforeend', `<span>Search scale ${Math.round(result.width)}×${Math.round(result.height)}</span>`);
+    drawDetectionOverlay(image, result.detections.slice(0, 30));
+    renderDetectionResults(
+      result.detections,
+      result.groups,
+      result.bestCandidate,
+      minimumProposalScore,
+      result.totalWindows,
+      result.proposedCount,
+    );
+    elements.detectionStatus.textContent = `${result.proposedCount} proposals ranked`;
+    elements.detectionSummary.insertAdjacentHTML('beforeend', `<span>Native resolution ${result.width}×${result.height}</span>`);
   } catch (error) {
     console.error(error);
     elements.detectionStatus.textContent = 'Scan failed';

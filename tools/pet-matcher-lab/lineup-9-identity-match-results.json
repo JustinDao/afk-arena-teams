@@ -1,0 +1,1353 @@
+{
+  "experiment": "closed-set CDN pixel-template identity baseline on known lineup 9 crops",
+  "method": "Resize each ground-truth crop and each CDN reference to 96x96; rank same-type identities by minimum RGB mean-squared error over references. Also rank using the central 80x80 region.",
+  "candidate_sets": "Only distinct identities present in lineup 9; type is supplied by the known lineup layout. This is not open-set recognition.",
+  "summary": {
+    "hero": {
+      "examples": 30,
+      "candidate_identities": 30,
+      "full_top1": 30,
+      "full_top3": 30,
+      "center_top1": 30,
+      "center_top3": 30
+    },
+    "collection": {
+      "examples": 30,
+      "candidate_identities": 9,
+      "full_top1": 30,
+      "full_top3": 30,
+      "center_top1": 30,
+      "center_top3": 30
+    },
+    "pet": {
+      "examples": 6,
+      "candidate_identities": 6,
+      "full_top1": 6,
+      "full_top3": 6,
+      "center_top1": 6,
+      "center_top3": 6
+    }
+  },
+  "examples": [
+    {
+      "annotation_id": 1,
+      "identity_type": "hero",
+      "true_id": 52,
+      "true_name": "Rowan",
+      "full_top1": 52,
+      "full_top3": [
+        52,
+        202,
+        200
+      ],
+      "full_true_mse": 10923.5419921875,
+      "center_top1": 52,
+      "center_top3": [
+        52,
+        202,
+        200
+      ],
+      "center_true_mse": 8890.9912109375
+    },
+    {
+      "annotation_id": 2,
+      "identity_type": "hero",
+      "true_id": 200,
+      "true_name": "Misha",
+      "full_top1": 200,
+      "full_top3": [
+        200,
+        251,
+        163
+      ],
+      "full_true_mse": 9911.76953125,
+      "center_top1": 200,
+      "center_top3": [
+        200,
+        251,
+        163
+      ],
+      "center_true_mse": 8066.9833984375
+    },
+    {
+      "annotation_id": 3,
+      "identity_type": "hero",
+      "true_id": 246,
+      "true_name": "Severin (Highborn)",
+      "full_top1": 246,
+      "full_top3": [
+        246,
+        227,
+        220
+      ],
+      "full_true_mse": 9945.7421875,
+      "center_top1": 246,
+      "center_top3": [
+        246,
+        227,
+        221
+      ],
+      "center_true_mse": 8362.8369140625
+    },
+    {
+      "annotation_id": 4,
+      "identity_type": "hero",
+      "true_id": 234,
+      "true_name": "Elthara (Highborn)",
+      "full_top1": 234,
+      "full_top3": [
+        234,
+        231,
+        221
+      ],
+      "full_true_mse": 10658.1484375,
+      "center_top1": 234,
+      "center_top3": [
+        234,
+        231,
+        221
+      ],
+      "center_true_mse": 8474.228515625
+    },
+    {
+      "annotation_id": 5,
+      "identity_type": "hero",
+      "true_id": 220,
+      "true_name": "Alvida",
+      "full_top1": 220,
+      "full_top3": [
+        220,
+        52,
+        202
+      ],
+      "full_true_mse": 10052.4072265625,
+      "center_top1": 220,
+      "center_top3": [
+        220,
+        52,
+        202
+      ],
+      "center_true_mse": 8331.0615234375
+    },
+    {
+      "annotation_id": 6,
+      "identity_type": "collection",
+      "true_id": 15,
+      "true_name": "Bounty Hunter's Decree",
+      "full_top1": 15,
+      "full_top3": [
+        15,
+        17,
+        9
+      ],
+      "full_true_mse": 1433.5611572265625,
+      "center_top1": 15,
+      "center_top3": [
+        15,
+        17,
+        11
+      ],
+      "center_true_mse": 580.9762573242188
+    },
+    {
+      "annotation_id": 7,
+      "identity_type": "collection",
+      "true_id": 9,
+      "true_name": "Trader's Vault",
+      "full_top1": 9,
+      "full_top3": [
+        9,
+        15,
+        11
+      ],
+      "full_true_mse": 3228.002685546875,
+      "center_top1": 9,
+      "center_top3": [
+        9,
+        15,
+        11
+      ],
+      "center_true_mse": 2058.746337890625
+    },
+    {
+      "annotation_id": 8,
+      "identity_type": "collection",
+      "true_id": 13,
+      "true_name": "Shadowflow Blade",
+      "full_top1": 13,
+      "full_top3": [
+        13,
+        11,
+        15
+      ],
+      "full_true_mse": 3808.060302734375,
+      "center_top1": 13,
+      "center_top3": [
+        13,
+        11,
+        15
+      ],
+      "center_true_mse": 1933.1783447265625
+    },
+    {
+      "annotation_id": 9,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        11,
+        10
+      ],
+      "full_true_mse": 1088.2098388671875,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        11,
+        10
+      ],
+      "center_true_mse": 311.6369323730469
+    },
+    {
+      "annotation_id": 10,
+      "identity_type": "collection",
+      "true_id": 3,
+      "true_name": "Timeline Watch",
+      "full_top1": 3,
+      "full_top3": [
+        3,
+        11,
+        10
+      ],
+      "full_true_mse": 2992.776123046875,
+      "center_top1": 3,
+      "center_top3": [
+        3,
+        11,
+        10
+      ],
+      "center_true_mse": 1752.839111328125
+    },
+    {
+      "annotation_id": 11,
+      "identity_type": "pet",
+      "true_id": 6029,
+      "true_name": "Twinlum Spirit",
+      "full_top1": 6029,
+      "full_top3": [
+        6029,
+        6025,
+        6027
+      ],
+      "full_true_mse": 5474.70849609375,
+      "center_top1": 6029,
+      "center_top3": [
+        6029,
+        6025,
+        6027
+      ],
+      "center_true_mse": 5314.72607421875
+    },
+    {
+      "annotation_id": 12,
+      "identity_type": "hero",
+      "true_id": 226,
+      "true_name": "Kaelon (Highborn)",
+      "full_top1": 226,
+      "full_top3": [
+        226,
+        211,
+        199
+      ],
+      "full_true_mse": 9997.0234375,
+      "center_top1": 226,
+      "center_top3": [
+        226,
+        211,
+        199
+      ],
+      "center_true_mse": 8207.0419921875
+    },
+    {
+      "annotation_id": 13,
+      "identity_type": "hero",
+      "true_id": 165,
+      "true_name": "Safiya (Awakened)",
+      "full_top1": 165,
+      "full_top3": [
+        165,
+        234,
+        200
+      ],
+      "full_true_mse": 10357.44921875,
+      "center_top1": 165,
+      "center_top3": [
+        165,
+        234,
+        200
+      ],
+      "center_true_mse": 9140.447265625
+    },
+    {
+      "annotation_id": 14,
+      "identity_type": "hero",
+      "true_id": 250,
+      "true_name": "Kyno",
+      "full_top1": 250,
+      "full_top3": [
+        250,
+        241,
+        238
+      ],
+      "full_true_mse": 9878.6318359375,
+      "center_top1": 250,
+      "center_top3": [
+        250,
+        241,
+        238
+      ],
+      "center_true_mse": 9193.6357421875
+    },
+    {
+      "annotation_id": 15,
+      "identity_type": "hero",
+      "true_id": 245,
+      "true_name": "Misfortis",
+      "full_top1": 245,
+      "full_top3": [
+        245,
+        211,
+        251
+      ],
+      "full_true_mse": 8930.7548828125,
+      "center_top1": 245,
+      "center_top3": [
+        245,
+        211,
+        251
+      ],
+      "center_true_mse": 7751.193359375
+    },
+    {
+      "annotation_id": 16,
+      "identity_type": "hero",
+      "true_id": 199,
+      "true_name": "Lan (Highborn)",
+      "full_top1": 199,
+      "full_top3": [
+        199,
+        226,
+        253
+      ],
+      "full_true_mse": 8562.451171875,
+      "center_top1": 199,
+      "center_top3": [
+        199,
+        226,
+        253
+      ],
+      "center_true_mse": 7647.94482421875
+    },
+    {
+      "annotation_id": 17,
+      "identity_type": "collection",
+      "true_id": 13,
+      "true_name": "Shadowflow Blade",
+      "full_top1": 13,
+      "full_top3": [
+        13,
+        11,
+        15
+      ],
+      "full_true_mse": 2484.489013671875,
+      "center_top1": 13,
+      "center_top3": [
+        13,
+        11,
+        15
+      ],
+      "center_true_mse": 1043.15625
+    },
+    {
+      "annotation_id": 18,
+      "identity_type": "collection",
+      "true_id": 15,
+      "true_name": "Bounty Hunter's Decree",
+      "full_top1": 15,
+      "full_top3": [
+        15,
+        17,
+        13
+      ],
+      "full_true_mse": 3753.427001953125,
+      "center_top1": 15,
+      "center_top3": [
+        15,
+        17,
+        11
+      ],
+      "center_true_mse": 1807.8858642578125
+    },
+    {
+      "annotation_id": 19,
+      "identity_type": "collection",
+      "true_id": 17,
+      "true_name": "Sinner's Rose",
+      "full_top1": 17,
+      "full_top3": [
+        17,
+        15,
+        11
+      ],
+      "full_true_mse": 4807.78076171875,
+      "center_top1": 17,
+      "center_top3": [
+        17,
+        15,
+        11
+      ],
+      "center_true_mse": 2406.7578125
+    },
+    {
+      "annotation_id": 20,
+      "identity_type": "collection",
+      "true_id": 17,
+      "true_name": "Sinner's Rose",
+      "full_top1": 17,
+      "full_top3": [
+        17,
+        11,
+        15
+      ],
+      "full_true_mse": 4850.7099609375,
+      "center_top1": 17,
+      "center_top3": [
+        17,
+        15,
+        11
+      ],
+      "center_true_mse": 2478.194091796875
+    },
+    {
+      "annotation_id": 21,
+      "identity_type": "collection",
+      "true_id": 15,
+      "true_name": "Bounty Hunter's Decree",
+      "full_top1": 15,
+      "full_top3": [
+        15,
+        17,
+        11
+      ],
+      "full_true_mse": 5843.29638671875,
+      "center_top1": 15,
+      "center_top3": [
+        15,
+        17,
+        11
+      ],
+      "center_true_mse": 2893.892822265625
+    },
+    {
+      "annotation_id": 22,
+      "identity_type": "pet",
+      "true_id": 6030,
+      "true_name": "Blazefang",
+      "full_top1": 6030,
+      "full_top3": [
+        6030,
+        6025,
+        6027
+      ],
+      "full_true_mse": 4115.36083984375,
+      "center_top1": 6030,
+      "center_top3": [
+        6030,
+        6025,
+        6027
+      ],
+      "center_true_mse": 3339.2763671875
+    },
+    {
+      "annotation_id": 23,
+      "identity_type": "hero",
+      "true_id": 235,
+      "true_name": "Tavriel",
+      "full_top1": 235,
+      "full_top3": [
+        235,
+        245,
+        200
+      ],
+      "full_true_mse": 10606.306640625,
+      "center_top1": 235,
+      "center_top3": [
+        235,
+        245,
+        211
+      ],
+      "center_true_mse": 9692.8701171875
+    },
+    {
+      "annotation_id": 24,
+      "identity_type": "hero",
+      "true_id": 256,
+      "true_name": "Kafka Hibino",
+      "full_top1": 256,
+      "full_top3": [
+        256,
+        220,
+        226
+      ],
+      "full_true_mse": 9063.9189453125,
+      "center_top1": 256,
+      "center_top3": [
+        256,
+        220,
+        235
+      ],
+      "center_true_mse": 8029.34814453125
+    },
+    {
+      "annotation_id": 25,
+      "identity_type": "hero",
+      "true_id": 238,
+      "true_name": "Pippa (Awakened)",
+      "full_top1": 238,
+      "full_top3": [
+        238,
+        200,
+        211
+      ],
+      "full_true_mse": 7568.64794921875,
+      "center_top1": 238,
+      "center_top3": [
+        238,
+        200,
+        211
+      ],
+      "center_true_mse": 6895.890625
+    },
+    {
+      "annotation_id": 26,
+      "identity_type": "hero",
+      "true_id": 211,
+      "true_name": "Sion",
+      "full_top1": 211,
+      "full_top3": [
+        211,
+        245,
+        200
+      ],
+      "full_true_mse": 8222.0625,
+      "center_top1": 211,
+      "center_top3": [
+        211,
+        245,
+        226
+      ],
+      "center_true_mse": 6927.7138671875
+    },
+    {
+      "annotation_id": 27,
+      "identity_type": "hero",
+      "true_id": 241,
+      "true_name": "Harvey",
+      "full_top1": 241,
+      "full_top3": [
+        241,
+        250,
+        200
+      ],
+      "full_true_mse": 8815.9365234375,
+      "center_top1": 241,
+      "center_top3": [
+        241,
+        250,
+        251
+      ],
+      "center_true_mse": 8358.091796875
+    },
+    {
+      "annotation_id": 28,
+      "identity_type": "collection",
+      "true_id": 15,
+      "true_name": "Bounty Hunter's Decree",
+      "full_top1": 15,
+      "full_top3": [
+        15,
+        17,
+        11
+      ],
+      "full_true_mse": 5048.38037109375,
+      "center_top1": 15,
+      "center_top3": [
+        15,
+        17,
+        11
+      ],
+      "center_true_mse": 2640.1298828125
+    },
+    {
+      "annotation_id": 29,
+      "identity_type": "collection",
+      "true_id": 3,
+      "true_name": "Timeline Watch",
+      "full_top1": 3,
+      "full_top3": [
+        3,
+        11,
+        10
+      ],
+      "full_true_mse": 6174.78662109375,
+      "center_top1": 3,
+      "center_top3": [
+        3,
+        11,
+        10
+      ],
+      "center_true_mse": 3439.64404296875
+    },
+    {
+      "annotation_id": 30,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        11,
+        10
+      ],
+      "full_true_mse": 6232.30126953125,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        11,
+        10
+      ],
+      "center_true_mse": 2704.0751953125
+    },
+    {
+      "annotation_id": 31,
+      "identity_type": "collection",
+      "true_id": 13,
+      "true_name": "Shadowflow Blade",
+      "full_top1": 13,
+      "full_top3": [
+        13,
+        11,
+        10
+      ],
+      "full_true_mse": 6391.28173828125,
+      "center_top1": 13,
+      "center_top3": [
+        13,
+        11,
+        10
+      ],
+      "center_true_mse": 4189.72607421875
+    },
+    {
+      "annotation_id": 32,
+      "identity_type": "collection",
+      "true_id": 3,
+      "true_name": "Timeline Watch",
+      "full_top1": 3,
+      "full_top3": [
+        3,
+        11,
+        10
+      ],
+      "full_true_mse": 7664.861328125,
+      "center_top1": 3,
+      "center_top3": [
+        3,
+        11,
+        10
+      ],
+      "center_true_mse": 5046.50732421875
+    },
+    {
+      "annotation_id": 33,
+      "identity_type": "pet",
+      "true_id": 6028,
+      "true_name": "Count Snickerfang",
+      "full_top1": 6028,
+      "full_top3": [
+        6028,
+        6025,
+        6027
+      ],
+      "full_true_mse": 4758.646484375,
+      "center_top1": 6028,
+      "center_top3": [
+        6028,
+        6025,
+        6027
+      ],
+      "center_true_mse": 4120.71484375
+    },
+    {
+      "annotation_id": 34,
+      "identity_type": "hero",
+      "true_id": 229,
+      "true_name": "Gorok",
+      "full_top1": 229,
+      "full_top3": [
+        229,
+        227,
+        231
+      ],
+      "full_true_mse": 9816.9072265625,
+      "center_top1": 229,
+      "center_top3": [
+        229,
+        227,
+        231
+      ],
+      "center_true_mse": 7784.87939453125
+    },
+    {
+      "annotation_id": 35,
+      "identity_type": "hero",
+      "true_id": 227,
+      "true_name": "Talimar",
+      "full_top1": 227,
+      "full_top3": [
+        227,
+        246,
+        234
+      ],
+      "full_true_mse": 8944.5263671875,
+      "center_top1": 227,
+      "center_top3": [
+        227,
+        246,
+        234
+      ],
+      "center_true_mse": 7366.646484375
+    },
+    {
+      "annotation_id": 36,
+      "identity_type": "hero",
+      "true_id": 253,
+      "true_name": "Thalassa (Highborn)",
+      "full_top1": 253,
+      "full_top3": [
+        253,
+        199,
+        226
+      ],
+      "full_true_mse": 8939.734375,
+      "center_top1": 253,
+      "center_top3": [
+        253,
+        199,
+        226
+      ],
+      "center_true_mse": 7714.91357421875
+    },
+    {
+      "annotation_id": 37,
+      "identity_type": "hero",
+      "true_id": 214,
+      "true_name": "Envydiel (Awakened)",
+      "full_top1": 214,
+      "full_top3": [
+        214,
+        199,
+        234
+      ],
+      "full_true_mse": 10365.5673828125,
+      "center_top1": 214,
+      "center_top3": [
+        214,
+        199,
+        234
+      ],
+      "center_true_mse": 8816.451171875
+    },
+    {
+      "annotation_id": 38,
+      "identity_type": "hero",
+      "true_id": 202,
+      "true_name": "Aurelia",
+      "full_top1": 202,
+      "full_top3": [
+        202,
+        251,
+        200
+      ],
+      "full_true_mse": 9659.080078125,
+      "center_top1": 202,
+      "center_top3": [
+        202,
+        251,
+        200
+      ],
+      "center_true_mse": 8283.681640625
+    },
+    {
+      "annotation_id": 39,
+      "identity_type": "collection",
+      "true_id": 11,
+      "true_name": "Infused Mind Core",
+      "full_top1": 11,
+      "full_top3": [
+        11,
+        3,
+        17
+      ],
+      "full_true_mse": 2534.5634765625,
+      "center_top1": 11,
+      "center_top3": [
+        11,
+        3,
+        15
+      ],
+      "center_true_mse": 1068.512939453125
+    },
+    {
+      "annotation_id": 40,
+      "identity_type": "collection",
+      "true_id": 15,
+      "true_name": "Bounty Hunter's Decree",
+      "full_top1": 15,
+      "full_top3": [
+        15,
+        11,
+        17
+      ],
+      "full_true_mse": 4636.4208984375,
+      "center_top1": 15,
+      "center_top3": [
+        15,
+        11,
+        17
+      ],
+      "center_true_mse": 2602.54296875
+    },
+    {
+      "annotation_id": 41,
+      "identity_type": "collection",
+      "true_id": 10,
+      "true_name": "Luminous Flight",
+      "full_top1": 10,
+      "full_top3": [
+        10,
+        3,
+        11
+      ],
+      "full_true_mse": 4438.564453125,
+      "center_top1": 10,
+      "center_top3": [
+        10,
+        3,
+        11
+      ],
+      "center_true_mse": 2332.337646484375
+    },
+    {
+      "annotation_id": 42,
+      "identity_type": "collection",
+      "true_id": 13,
+      "true_name": "Shadowflow Blade",
+      "full_top1": 13,
+      "full_top3": [
+        13,
+        11,
+        15
+      ],
+      "full_true_mse": 2542.171630859375,
+      "center_top1": 13,
+      "center_top3": [
+        13,
+        11,
+        15
+      ],
+      "center_true_mse": 1123.71142578125
+    },
+    {
+      "annotation_id": 43,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        11,
+        10
+      ],
+      "full_true_mse": 3820.07763671875,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        11,
+        10
+      ],
+      "center_true_mse": 1922.106689453125
+    },
+    {
+      "annotation_id": 44,
+      "identity_type": "pet",
+      "true_id": 6021,
+      "true_name": "Aureus",
+      "full_top1": 6021,
+      "full_top3": [
+        6021,
+        6025,
+        6027
+      ],
+      "full_true_mse": 5312.591796875,
+      "center_top1": 6021,
+      "center_top3": [
+        6021,
+        6025,
+        6027
+      ],
+      "center_true_mse": 4990.962890625
+    },
+    {
+      "annotation_id": 45,
+      "identity_type": "hero",
+      "true_id": 248,
+      "true_name": "Eluard (Awakened)",
+      "full_top1": 248,
+      "full_top3": [
+        248,
+        238,
+        241
+      ],
+      "full_true_mse": 9659.9052734375,
+      "center_top1": 248,
+      "center_top3": [
+        248,
+        238,
+        241
+      ],
+      "center_true_mse": 8552.650390625
+    },
+    {
+      "annotation_id": 46,
+      "identity_type": "hero",
+      "true_id": 221,
+      "true_name": "Estrilda (Awakened)",
+      "full_top1": 221,
+      "full_top3": [
+        221,
+        234,
+        227
+      ],
+      "full_true_mse": 9221.3828125,
+      "center_top1": 221,
+      "center_top3": [
+        221,
+        234,
+        227
+      ],
+      "center_true_mse": 8266.478515625
+    },
+    {
+      "annotation_id": 47,
+      "identity_type": "hero",
+      "true_id": 231,
+      "true_name": "Begris",
+      "full_top1": 231,
+      "full_top3": [
+        231,
+        234,
+        220
+      ],
+      "full_true_mse": 8263.501953125,
+      "center_top1": 231,
+      "center_top3": [
+        231,
+        234,
+        220
+      ],
+      "center_true_mse": 7110.431640625
+    },
+    {
+      "annotation_id": 48,
+      "identity_type": "hero",
+      "true_id": 215,
+      "true_name": "Lysander",
+      "full_top1": 215,
+      "full_top3": [
+        215,
+        200,
+        231
+      ],
+      "full_true_mse": 9537.3896484375,
+      "center_top1": 215,
+      "center_top3": [
+        215,
+        200,
+        231
+      ],
+      "center_true_mse": 8943.4453125
+    },
+    {
+      "annotation_id": 49,
+      "identity_type": "hero",
+      "true_id": 163,
+      "true_name": "Daemia",
+      "full_top1": 163,
+      "full_top3": [
+        163,
+        251,
+        245
+      ],
+      "full_true_mse": 7242.89794921875,
+      "center_top1": 163,
+      "center_top3": [
+        163,
+        251,
+        245
+      ],
+      "center_true_mse": 6440.53564453125
+    },
+    {
+      "annotation_id": 50,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        13,
+        15
+      ],
+      "full_true_mse": 3802.84716796875,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        13,
+        15
+      ],
+      "center_true_mse": 1898.7191162109375
+    },
+    {
+      "annotation_id": 51,
+      "identity_type": "collection",
+      "true_id": 3,
+      "true_name": "Timeline Watch",
+      "full_top1": 3,
+      "full_top3": [
+        3,
+        11,
+        10
+      ],
+      "full_true_mse": 5719.37158203125,
+      "center_top1": 3,
+      "center_top3": [
+        3,
+        11,
+        10
+      ],
+      "center_true_mse": 3229.15625
+    },
+    {
+      "annotation_id": 52,
+      "identity_type": "collection",
+      "true_id": 11,
+      "true_name": "Infused Mind Core",
+      "full_top1": 11,
+      "full_top3": [
+        11,
+        3,
+        15
+      ],
+      "full_true_mse": 5034.6162109375,
+      "center_top1": 11,
+      "center_top3": [
+        11,
+        3,
+        15
+      ],
+      "center_true_mse": 2261.37451171875
+    },
+    {
+      "annotation_id": 53,
+      "identity_type": "collection",
+      "true_id": 13,
+      "true_name": "Shadowflow Blade",
+      "full_top1": 13,
+      "full_top3": [
+        13,
+        11,
+        15
+      ],
+      "full_true_mse": 5524.30322265625,
+      "center_top1": 13,
+      "center_top3": [
+        13,
+        11,
+        15
+      ],
+      "center_true_mse": 2563.363037109375
+    },
+    {
+      "annotation_id": 54,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        11,
+        10
+      ],
+      "full_true_mse": 6233.3115234375,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        11,
+        10
+      ],
+      "center_true_mse": 2703.889892578125
+    },
+    {
+      "annotation_id": 55,
+      "identity_type": "pet",
+      "true_id": 6027,
+      "true_name": "Nightfall Pegasus",
+      "full_top1": 6027,
+      "full_top3": [
+        6027,
+        6025,
+        6030
+      ],
+      "full_true_mse": 3809.173828125,
+      "center_top1": 6027,
+      "center_top3": [
+        6027,
+        6025,
+        6028
+      ],
+      "center_true_mse": 2827.01025390625
+    },
+    {
+      "annotation_id": 56,
+      "identity_type": "hero",
+      "true_id": 258,
+      "true_name": "Theowyn (Awakened)",
+      "full_top1": 258,
+      "full_top3": [
+        258,
+        199,
+        227
+      ],
+      "full_true_mse": 9416.3916015625,
+      "center_top1": 258,
+      "center_top3": [
+        258,
+        199,
+        227
+      ],
+      "center_true_mse": 8604.2998046875
+    },
+    {
+      "annotation_id": 57,
+      "identity_type": "hero",
+      "true_id": 242,
+      "true_name": "Dracula",
+      "full_top1": 242,
+      "full_top3": [
+        242,
+        256,
+        246
+      ],
+      "full_true_mse": 8734.453125,
+      "center_top1": 242,
+      "center_top3": [
+        242,
+        256,
+        246
+      ],
+      "center_true_mse": 8350.724609375
+    },
+    {
+      "annotation_id": 58,
+      "identity_type": "hero",
+      "true_id": 251,
+      "true_name": "Athena",
+      "full_top1": 251,
+      "full_top3": [
+        251,
+        163,
+        200
+      ],
+      "full_true_mse": 7060.09033203125,
+      "center_top1": 251,
+      "center_top3": [
+        251,
+        163,
+        200
+      ],
+      "center_true_mse": 6473.5537109375
+    },
+    {
+      "annotation_id": 59,
+      "identity_type": "hero",
+      "true_id": 244,
+      "true_name": "Hybris (Awakened)",
+      "full_top1": 244,
+      "full_top3": [
+        244,
+        199,
+        52
+      ],
+      "full_true_mse": 8488.6640625,
+      "center_top1": 244,
+      "center_top3": [
+        244,
+        199,
+        52
+      ],
+      "center_true_mse": 7696.18310546875
+    },
+    {
+      "annotation_id": 60,
+      "identity_type": "hero",
+      "true_id": 175,
+      "true_name": "Lavatune",
+      "full_top1": 175,
+      "full_top3": [
+        175,
+        256,
+        234
+      ],
+      "full_true_mse": 7643.822265625,
+      "center_top1": 175,
+      "center_top3": [
+        175,
+        256,
+        234
+      ],
+      "center_true_mse": 6930.93017578125
+    },
+    {
+      "annotation_id": 61,
+      "identity_type": "collection",
+      "true_id": 9,
+      "true_name": "Trader's Vault",
+      "full_top1": 9,
+      "full_top3": [
+        9,
+        15,
+        11
+      ],
+      "full_true_mse": 6354.490234375,
+      "center_top1": 9,
+      "center_top3": [
+        9,
+        15,
+        11
+      ],
+      "center_true_mse": 3684.8408203125
+    },
+    {
+      "annotation_id": 62,
+      "identity_type": "collection",
+      "true_id": 14,
+      "true_name": "Stormwrath's Lull",
+      "full_top1": 14,
+      "full_top3": [
+        14,
+        11,
+        10
+      ],
+      "full_true_mse": 6832.45947265625,
+      "center_top1": 14,
+      "center_top3": [
+        14,
+        11,
+        10
+      ],
+      "center_true_mse": 3167.02490234375
+    },
+    {
+      "annotation_id": 63,
+      "identity_type": "collection",
+      "true_id": 17,
+      "true_name": "Sinner's Rose",
+      "full_top1": 17,
+      "full_top3": [
+        17,
+        11,
+        15
+      ],
+      "full_true_mse": 7356.79150390625,
+      "center_top1": 17,
+      "center_top3": [
+        17,
+        15,
+        11
+      ],
+      "center_true_mse": 3837.944580078125
+    },
+    {
+      "annotation_id": 64,
+      "identity_type": "collection",
+      "true_id": 2,
+      "true_name": "Shadow Dancer",
+      "full_top1": 2,
+      "full_top3": [
+        2,
+        3,
+        10
+      ],
+      "full_true_mse": 7895.765625,
+      "center_top1": 2,
+      "center_top3": [
+        2,
+        3,
+        10
+      ],
+      "center_true_mse": 5430.3056640625
+    },
+    {
+      "annotation_id": 65,
+      "identity_type": "collection",
+      "true_id": 9,
+      "true_name": "Trader's Vault",
+      "full_top1": 9,
+      "full_top3": [
+        9,
+        11,
+        15
+      ],
+      "full_true_mse": 8756.908203125,
+      "center_top1": 9,
+      "center_top3": [
+        9,
+        11,
+        15
+      ],
+      "center_true_mse": 5846.80029296875
+    },
+    {
+      "annotation_id": 66,
+      "identity_type": "pet",
+      "true_id": 6025,
+      "true_name": "Trickery Chest",
+      "full_top1": 6025,
+      "full_top3": [
+        6025,
+        6027,
+        6028
+      ],
+      "full_true_mse": 4811.65283203125,
+      "center_top1": 6025,
+      "center_top3": [
+        6025,
+        6027,
+        6028
+      ],
+      "center_true_mse": 3898.597412109375
+    }
+  ]
+}
