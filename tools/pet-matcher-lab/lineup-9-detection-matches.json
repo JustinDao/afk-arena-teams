@@ -1,0 +1,3510 @@
+{
+  "image": "/home/justindao/git/afk-arena-teams/afk-nightmare-corridor-infernal-overlord-9.png",
+  "detector": {
+    "weights": "/home/justindao/.cache/afk-icon-detector-benchmark/run-20261108T031214Z-1901092/runs/fold-3/weights/last.pt",
+    "training_checkpoint": "app-held-out 640px YOLO11n fold",
+    "imgsz": 2080,
+    "confidence_threshold": 0.996,
+    "nms_iou": 0.55,
+    "max_det": 300
+  },
+  "matcher": {
+    "method": "mixed-type center-crop ranking, then source-scale alpha-masked identity reranking",
+    "match_box_scale": 1.15,
+    "catalog_sizes": {
+      "hero": 229,
+      "pet": 30,
+      "collection": 20
+    },
+    "uncalibrated_score": "Lower matcher MSE is a closer template match; it is not a probability."
+  },
+  "summary": {
+    "detector_box_count": 92,
+    "matcher_box_count": 90,
+    "missing_collection_assets": 0,
+    "ground_truth_count": 66,
+    "true_positive_boxes": 66,
+    "false_positive_boxes": 26,
+    "missed_boxes": 0,
+    "detection_recall": 1.0,
+    "identity_correct": 54,
+    "type_correct": 61,
+    "type_accuracy_on_matched_boxes": 0.9242424242424242,
+    "identity_accuracy_on_matched_boxes": 0.8181818181818182,
+    "identity_in_top3": 56
+  },
+  "limitations": [
+    "Detector thresholds were tuned against the single known lineup-9 sample.",
+    "Ground-truth evaluation uses one-to-one box matching at the configured IoU threshold.",
+    "Identity accuracy is reported only for detections matched to a ground-truth box.",
+    "This prototype matches identity only; it does not infer hero investments or collection levels from detector boxes."
+  ],
+  "predictions": [
+    {
+      "detection_id": 1,
+      "bbox": [
+        1426,
+        1350,
+        109,
+        105
+      ],
+      "detector_score": 0.9999997615814209,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 251,
+      "predicted_name": "Athena",
+      "matcher_mse": 4867.39794921875,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 251,
+          "name": "Athena",
+          "mse": 4867.39794921875
+        },
+        {
+          "id": 252,
+          "name": "Medusa",
+          "mse": 6517.44873046875
+        },
+        {
+          "id": 151,
+          "name": "Veithael",
+          "mse": 6612.16796875
+        }
+      ],
+      "ground_truth_annotation_id": 58,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 251,
+      "box_iou": 0.8352123552123553,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 2,
+      "bbox": [
+        237,
+        212,
+        101,
+        104
+      ],
+      "detector_score": 0.9999995231628418,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 3734.038818359375,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 3734.038818359375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 5228.1025390625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 5410.55859375
+        }
+      ],
+      "ground_truth_annotation_id": 6,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 15,
+      "box_iou": 0.8300932511458827,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 3,
+      "bbox": [
+        104,
+        401,
+        110,
+        97
+      ],
+      "detector_score": 0.9999994039535522,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 200,
+      "predicted_name": "Misha",
+      "matcher_mse": 7346.23681640625,
+      "aligned_icon_size": 85,
+      "identity_top3": [
+        {
+          "id": 200,
+          "name": "Misha",
+          "mse": 7346.23681640625
+        },
+        {
+          "id": 147,
+          "name": "Nevanthi",
+          "mse": 8345.8310546875
+        },
+        {
+          "id": 44,
+          "name": "Lucius",
+          "mse": 8490.31640625
+        }
+      ],
+      "ground_truth_annotation_id": 2,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 200,
+      "box_iou": 0.8514253502979546,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 4,
+      "bbox": [
+        238,
+        1162,
+        99,
+        104
+      ],
+      "detector_score": 0.9999992847442627,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 1620.0130615234375,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 1620.0130615234375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 3189.561767578125
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 3441.209228515625
+        }
+      ],
+      "ground_truth_annotation_id": 40,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 15,
+      "box_iou": 0.813655761024182,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 5,
+      "bbox": [
+        238,
+        969,
+        100,
+        105
+      ],
+      "detector_score": 0.9999991655349731,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 3774.8037109375,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 3774.8037109375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 4779.095703125
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 5287.4716796875
+        }
+      ],
+      "ground_truth_annotation_id": 39,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 11,
+      "box_iou": 0.8297771455666193,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 6,
+      "bbox": [
+        389,
+        1061,
+        107,
+        107
+      ],
+      "detector_score": 0.9999991655349731,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 214,
+      "predicted_name": "Envydiel (Awakened)",
+      "matcher_mse": 6508.03564453125,
+      "aligned_icon_size": 94,
+      "identity_top3": [
+        {
+          "id": 214,
+          "name": "Envydiel (Awakened)",
+          "mse": 6508.03564453125
+        },
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 7681.99658203125
+        },
+        {
+          "id": 34,
+          "name": "Raine",
+          "mse": 7975.16455078125
+        }
+      ],
+      "ground_truth_annotation_id": 37,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 214,
+      "box_iou": 0.912616672030898,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 7,
+      "bbox": [
+        105,
+        1158,
+        109,
+        106
+      ],
+      "detector_score": 0.9999985694885254,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 227,
+      "predicted_name": "Talimar",
+      "matcher_mse": 4511.326171875,
+      "aligned_icon_size": 93,
+      "identity_top3": [
+        {
+          "id": 227,
+          "name": "Talimar",
+          "mse": 4511.326171875
+        },
+        {
+          "id": 26,
+          "name": "Khasos",
+          "mse": 5317.7744140625
+        },
+        {
+          "id": 51,
+          "name": "Safiya",
+          "mse": 5372.9580078125
+        }
+      ],
+      "ground_truth_annotation_id": 35,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 227,
+      "box_iou": 0.9207562349155269,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 8,
+      "bbox": [
+        765,
+        1158,
+        107,
+        105
+      ],
+      "detector_score": 0.9999984502792358,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 221,
+      "predicted_name": "Estrilda (Awakened)",
+      "matcher_mse": 5636.69287109375,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 221,
+          "name": "Estrilda (Awakened)",
+          "mse": 5636.69287109375
+        },
+        {
+          "id": 35,
+          "name": "Vurk",
+          "mse": 7203.96728515625
+        },
+        {
+          "id": 126,
+          "name": "Astar",
+          "mse": 7231.6015625
+        }
+      ],
+      "ground_truth_annotation_id": 46,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 221,
+      "box_iou": 0.8641975308641975,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 9,
+      "bbox": [
+        1843,
+        308,
+        101,
+        102
+      ],
+      "detector_score": 0.9999982118606567,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 13,
+      "predicted_name": "Shadowflow Blade",
+      "matcher_mse": 3501.8427734375,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 3501.8427734375
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 4819.9189453125
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 5068.5986328125
+        }
+      ],
+      "ground_truth_annotation_id": 31,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 13,
+      "box_iou": 0.7996237064910631,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 10,
+      "bbox": [
+        764,
+        208,
+        108,
+        105
+      ],
+      "detector_score": 0.9999980926513672,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 226,
+      "predicted_name": "Kaelon (Highborn)",
+      "matcher_mse": 5525.6123046875,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 226,
+          "name": "Kaelon (Highborn)",
+          "mse": 5525.6123046875
+        },
+        {
+          "id": 199,
+          "name": "Lan (Highborn)",
+          "mse": 6581.2353515625
+        },
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 6657.04150390625
+        }
+      ],
+      "ground_truth_annotation_id": 12,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 226,
+      "box_iou": 0.8725071225071225,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 11,
+      "bbox": [
+        768,
+        403,
+        107,
+        104
+      ],
+      "detector_score": 0.9999980926513672,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 165,
+      "predicted_name": "Safiya (Awakened)",
+      "matcher_mse": 4629.587890625,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 165,
+          "name": "Safiya (Awakened)",
+          "mse": 4629.587890625
+        },
+        {
+          "id": 54,
+          "name": "Satrana",
+          "mse": 5986.134765625
+        },
+        {
+          "id": 180,
+          "name": "Malkrie",
+          "mse": 6033.5537109375
+        }
+      ],
+      "ground_truth_annotation_id": 13,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 165,
+      "box_iou": 0.9031734437139842,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 12,
+      "bbox": [
+        237,
+        597,
+        101,
+        103
+      ],
+      "detector_score": 0.9999980926513672,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 13,
+      "predicted_name": "Shadowflow Blade",
+      "matcher_mse": 3659.600341796875,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 3659.600341796875
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 4982.07568359375
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 5252.07275390625
+        }
+      ],
+      "ground_truth_annotation_id": 8,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 13,
+      "box_iou": 0.82211158526948,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 13,
+      "bbox": [
+        1051,
+        496,
+        101,
+        104
+      ],
+      "detector_score": 0.999997615814209,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 199,
+      "predicted_name": "Lan (Highborn)",
+      "matcher_mse": 7344.84619140625,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 199,
+          "name": "Lan (Highborn)",
+          "mse": 7344.84619140625
+        },
+        {
+          "id": 137,
+          "name": "Anasta",
+          "mse": 8236.3876953125
+        },
+        {
+          "id": 86,
+          "name": "Ukyo",
+          "mse": 8495.1640625
+        }
+      ],
+      "ground_truth_annotation_id": 16,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 199,
+      "box_iou": 0.8217734855136084,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 14,
+      "bbox": [
+        393,
+        308,
+        102,
+        101
+      ],
+      "detector_score": 0.9999972581863403,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 234,
+      "predicted_name": "Elthara (Highborn)",
+      "matcher_mse": 7065.01025390625,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 234,
+          "name": "Elthara (Highborn)",
+          "mse": 7065.01025390625
+        },
+        {
+          "id": 54,
+          "name": "Satrana",
+          "mse": 8307.458984375
+        },
+        {
+          "id": 9,
+          "name": "Brutus",
+          "mse": 8318.416015625
+        }
+      ],
+      "ground_truth_annotation_id": 4,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 234,
+      "box_iou": 0.8361334307280254,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 15,
+      "bbox": [
+        519,
+        1065,
+        103,
+        106
+      ],
+      "detector_score": 0.9999971389770508,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 13,
+      "predicted_name": "Shadowflow Blade",
+      "matcher_mse": 5057.6650390625,
+      "aligned_icon_size": 91,
+      "identity_top3": [
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 5057.6650390625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6028.974609375
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 6328.34521484375
+        }
+      ],
+      "ground_truth_annotation_id": 42,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 13,
+      "box_iou": 0.8628101785996523,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 16,
+      "bbox": [
+        897,
+        212,
+        102,
+        104
+      ],
+      "detector_score": 0.9999966621398926,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 13,
+      "predicted_name": "Shadowflow Blade",
+      "matcher_mse": 4792.59716796875,
+      "aligned_icon_size": 90,
+      "identity_top3": [
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 4792.59716796875
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6020.00830078125
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6257.841796875
+        }
+      ],
+      "ground_truth_annotation_id": 17,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 13,
+      "box_iou": 0.838311996206733,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 17,
+      "bbox": [
+        1049,
+        1063,
+        107,
+        107
+      ],
+      "detector_score": 0.9999966621398926,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 215,
+      "predicted_name": "Lysander",
+      "matcher_mse": 6194.37841796875,
+      "aligned_icon_size": 94,
+      "identity_top3": [
+        {
+          "id": 215,
+          "name": "Lysander",
+          "mse": 6194.37841796875
+        },
+        {
+          "id": 86,
+          "name": "Ukyo",
+          "mse": 7188.18310546875
+        },
+        {
+          "id": 200,
+          "name": "Misha",
+          "mse": 7280.2939453125
+        }
+      ],
+      "ground_truth_annotation_id": 48,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 215,
+      "box_iou": 0.8644599576437367,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 18,
+      "bbox": [
+        769,
+        1352,
+        100,
+        100
+      ],
+      "detector_score": 0.9999966621398926,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 231,
+      "predicted_name": "Begris",
+      "matcher_mse": 7367.89794921875,
+      "aligned_icon_size": 87,
+      "identity_top3": [
+        {
+          "id": 231,
+          "name": "Begris",
+          "mse": 7367.89794921875
+        },
+        {
+          "id": 35,
+          "name": "Vurk",
+          "mse": 7650.67041015625
+        },
+        {
+          "id": 118,
+          "name": "Granit",
+          "mse": 7678.67724609375
+        }
+      ],
+      "ground_truth_annotation_id": 47,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 231,
+      "box_iou": 0.8116224332440549,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 19,
+      "bbox": [
+        1559,
+        213,
+        103,
+        101
+      ],
+      "detector_score": 0.9999955892562866,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 3812.921875,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 3812.921875
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 5247.47509765625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 5444.369140625
+        }
+      ],
+      "ground_truth_annotation_id": 28,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 15,
+      "box_iou": 0.82211158526948,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 20,
+      "bbox": [
+        1051,
+        306,
+        106,
+        99
+      ],
+      "detector_score": 0.9999955892562866,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 245,
+      "predicted_name": "Misfortis",
+      "matcher_mse": 7009.7451171875,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 245,
+          "name": "Misfortis",
+          "mse": 7009.7451171875
+        },
+        {
+          "id": 89,
+          "name": "Flora",
+          "mse": 8141.4580078125
+        },
+        {
+          "id": 144,
+          "name": "Geralt",
+          "mse": 8471.865234375
+        }
+      ],
+      "ground_truth_annotation_id": 15,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 245,
+      "box_iou": 0.822429906542056,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 21,
+      "bbox": [
+        106,
+        211,
+        104,
+        104
+      ],
+      "detector_score": 0.9999947547912598,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 52,
+      "predicted_name": "Rowan",
+      "matcher_mse": 5739.3662109375,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 52,
+          "name": "Rowan",
+          "mse": 5739.3662109375
+        },
+        {
+          "id": 162,
+          "name": "Ginneas",
+          "mse": 6807.09375
+        },
+        {
+          "id": 144,
+          "name": "Geralt",
+          "mse": 6836.35498046875
+        }
+      ],
+      "ground_truth_annotation_id": 1,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 52,
+      "box_iou": 0.8778508237967697,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 22,
+      "bbox": [
+        1179,
+        1065,
+        103,
+        106
+      ],
+      "detector_score": 0.9999946355819702,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 13,
+      "predicted_name": "Shadowflow Blade",
+      "matcher_mse": 5055.5869140625,
+      "aligned_icon_size": 91,
+      "identity_top3": [
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 5055.5869140625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6018.96240234375
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 6321.2685546875
+        }
+      ],
+      "ground_truth_annotation_id": 53,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 13,
+      "box_iou": 0.8473354231974921,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 23,
+      "bbox": [
+        1430,
+        402,
+        102,
+        101
+      ],
+      "detector_score": 0.9999939203262329,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 256,
+      "predicted_name": "Kafka Hibino",
+      "matcher_mse": 7414.126953125,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 256,
+          "name": "Kafka Hibino",
+          "mse": 7414.126953125
+        },
+        {
+          "id": 210,
+          "name": "Shalltear Bloodfallen",
+          "mse": 7674.80908203125
+        },
+        {
+          "id": 134,
+          "name": "Thane (Awakened)",
+          "mse": 7775.51806640625
+        }
+      ],
+      "ground_truth_annotation_id": 24,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 256,
+      "box_iou": 0.8212043149251328,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 24,
+      "bbox": [
+        1715,
+        1061,
+        105,
+        107
+      ],
+      "detector_score": 0.9999939203262329,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 244,
+      "predicted_name": "Hybris (Awakened)",
+      "matcher_mse": 4599.1474609375,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 244,
+          "name": "Hybris (Awakened)",
+          "mse": 4599.1474609375
+        },
+        {
+          "id": 119,
+          "name": "Leonardo",
+          "mse": 6750.3671875
+        },
+        {
+          "id": 34,
+          "name": "Raine",
+          "mse": 6783.8955078125
+        }
+      ],
+      "ground_truth_annotation_id": 59,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 244,
+      "box_iou": 0.8792181890706023,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 25,
+      "bbox": [
+        1051,
+        1257,
+        106,
+        103
+      ],
+      "detector_score": 0.9999923706054688,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 163,
+      "predicted_name": "Daemia",
+      "matcher_mse": 4149.63427734375,
+      "aligned_icon_size": 91,
+      "identity_top3": [
+        {
+          "id": 163,
+          "name": "Daemia",
+          "mse": 4149.63427734375
+        },
+        {
+          "id": 151,
+          "name": "Veithael",
+          "mse": 6096.14794921875
+        },
+        {
+          "id": 124,
+          "name": "Talene (Awakened)",
+          "mse": 6334.361328125
+        }
+      ],
+      "ground_truth_annotation_id": 49,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 163,
+      "box_iou": 0.8551129560150076,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 26,
+      "bbox": [
+        388,
+        497,
+        105,
+        100
+      ],
+      "detector_score": 0.9999903440475464,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6010,
+      "predicted_name": "Bellbellow",
+      "matcher_mse": 7466.04150390625,
+      "aligned_icon_size": 87,
+      "identity_top3": [
+        {
+          "id": 6010,
+          "name": "Bellbellow",
+          "mse": 7466.04150390625
+        },
+        {
+          "id": 6012,
+          "name": "Talismane",
+          "mse": 7844.28076171875
+        },
+        {
+          "id": 6025,
+          "name": "Trickery Chest",
+          "mse": 7943.8671875
+        }
+      ],
+      "ground_truth_annotation_id": 5,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 220,
+      "box_iou": 0.8226180017570481,
+      "identity_correct": false,
+      "type_correct": false,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 27,
+      "bbox": [
+        1427,
+        592,
+        107,
+        102
+      ],
+      "detector_score": 0.9999901056289673,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 238,
+      "predicted_name": "Pippa (Awakened)",
+      "matcher_mse": 6405.72021484375,
+      "aligned_icon_size": 90,
+      "identity_top3": [
+        {
+          "id": 238,
+          "name": "Pippa (Awakened)",
+          "mse": 6405.72021484375
+        },
+        {
+          "id": 200,
+          "name": "Misha",
+          "mse": 8162.13427734375
+        },
+        {
+          "id": 239,
+          "name": "Icariel",
+          "mse": 8330.333984375
+        }
+      ],
+      "ground_truth_annotation_id": 25,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 238,
+      "box_iou": 0.8253594155078954,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 28,
+      "bbox": [
+        1715,
+        1254,
+        104,
+        101
+      ],
+      "detector_score": 0.9999896287918091,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 175,
+      "predicted_name": "Lavatune",
+      "matcher_mse": 7045.96142578125,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 175,
+          "name": "Lavatune",
+          "mse": 7045.96142578125
+        },
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 7822.85888671875
+        },
+        {
+          "id": 35,
+          "name": "Vurk",
+          "mse": 8144.0927734375
+        }
+      ],
+      "ground_truth_annotation_id": 60,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 175,
+      "box_iou": 0.8226463307514174,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 29,
+      "bbox": [
+        1718,
+        498,
+        98,
+        101
+      ],
+      "detector_score": 0.9999895095825195,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 241,
+      "predicted_name": "Harvey",
+      "matcher_mse": 8817.5009765625,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 241,
+          "name": "Harvey",
+          "mse": 8817.5009765625
+        },
+        {
+          "id": 151,
+          "name": "Veithael",
+          "mse": 10601.1640625
+        },
+        {
+          "id": 16,
+          "name": "Lyca",
+          "mse": 10660.3828125
+        }
+      ],
+      "ground_truth_annotation_id": 27,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 241,
+      "box_iou": 0.8033438844249655,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 30,
+      "bbox": [
+        239,
+        1352,
+        99,
+        102
+      ],
+      "detector_score": 0.9999855756759644,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 10,
+      "predicted_name": "Luminous Flight",
+      "matcher_mse": 219.8633270263672,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 10,
+          "name": "Luminous Flight",
+          "mse": 219.8633270263672
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 1980.6630859375
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 2379.450927734375
+        }
+      ],
+      "ground_truth_annotation_id": 41,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 10,
+      "box_iou": 0.7980085348506402,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 31,
+      "bbox": [
+        391,
+        1253,
+        103,
+        91
+      ],
+      "detector_score": 0.9999854564666748,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 8879.8310546875,
+      "aligned_icon_size": 80,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 8879.8310546875
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 8975.4892578125
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 9027.150390625
+        }
+      ],
+      "ground_truth_annotation_id": 38,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 202,
+      "box_iou": 0.7461365099806826,
+      "identity_correct": false,
+      "type_correct": false,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 32,
+      "bbox": [
+        1431,
+        1158,
+        102,
+        107
+      ],
+      "detector_score": 0.9999841451644897,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 242,
+      "predicted_name": "Dracula",
+      "matcher_mse": 6562.92626953125,
+      "aligned_icon_size": 90,
+      "identity_top3": [
+        {
+          "id": 242,
+          "name": "Dracula",
+          "mse": 6562.92626953125
+        },
+        {
+          "id": 45,
+          "name": "Thane",
+          "mse": 7329.1572265625
+        },
+        {
+          "id": 256,
+          "name": "Kafka Hibino",
+          "mse": 7749.79345703125
+        }
+      ],
+      "ground_truth_annotation_id": 57,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 242,
+      "box_iou": 0.8703211784593093,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 33,
+      "bbox": [
+        112,
+        966,
+        98,
+        101
+      ],
+      "detector_score": 0.9999834299087524,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 229,
+      "predicted_name": "Gorok",
+      "matcher_mse": 7925.40087890625,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 229,
+          "name": "Gorok",
+          "mse": 7925.40087890625
+        },
+        {
+          "id": 67,
+          "name": "Oden",
+          "mse": 8476.826171875
+        },
+        {
+          "id": 95,
+          "name": "Prince of Persia",
+          "mse": 8609.814453125
+        }
+      ],
+      "ground_truth_annotation_id": 34,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 229,
+      "box_iou": 0.8033438844249655,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 34,
+      "bbox": [
+        1713,
+        304,
+        100,
+        98
+      ],
+      "detector_score": 0.9999833106994629,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 8867.0859375,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 8867.0859375
+        },
+        {
+          "id": 10,
+          "name": "Luminous Flight",
+          "mse": 8921.521484375
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 9056.2216796875
+        }
+      ],
+      "ground_truth_annotation_id": 26,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 211,
+      "box_iou": 0.7400298906631008,
+      "identity_correct": false,
+      "type_correct": false,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 35,
+      "bbox": [
+        897,
+        596,
+        101,
+        95
+      ],
+      "detector_score": 0.9999793767929077,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 17,
+      "predicted_name": "Sinner's Rose",
+      "matcher_mse": 3269.04833984375,
+      "aligned_icon_size": 83,
+      "identity_top3": [
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 3269.04833984375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 4524.6513671875
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 4585.048828125
+        }
+      ],
+      "ground_truth_annotation_id": 19,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 17,
+      "box_iou": 0.7582582582582582,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 36,
+      "bbox": [
+        768,
+        593,
+        103,
+        92
+      ],
+      "detector_score": 0.9999778270721436,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 151,
+      "predicted_name": "Veithael",
+      "matcher_mse": 8570.005859375,
+      "aligned_icon_size": 81,
+      "identity_top3": [
+        {
+          "id": 151,
+          "name": "Veithael",
+          "mse": 8570.005859375
+        },
+        {
+          "id": 254,
+          "name": "Valeri",
+          "mse": 8942.3720703125
+        },
+        {
+          "id": 238,
+          "name": "Pippa (Awakened)",
+          "mse": 9157.3896484375
+        }
+      ],
+      "ground_truth_annotation_id": 14,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 250,
+      "box_iou": 0.7690934177420664,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 37,
+      "bbox": [
+        1557,
+        1354,
+        105,
+        106
+      ],
+      "detector_score": 0.999977707862854,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 17,
+      "predicted_name": "Sinner's Rose",
+      "matcher_mse": 6123.3515625,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 6123.3515625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7089.35009765625
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 7227.697265625
+        }
+      ],
+      "ground_truth_annotation_id": 63,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 17,
+      "box_iou": 0.8639498432601881,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 38,
+      "bbox": [
+        108,
+        1353,
+        104,
+        100
+      ],
+      "detector_score": 0.9999768733978271,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 253,
+      "predicted_name": "Thalassa (Highborn)",
+      "matcher_mse": 7364.61181640625,
+      "aligned_icon_size": 87,
+      "identity_top3": [
+        {
+          "id": 253,
+          "name": "Thalassa (Highborn)",
+          "mse": 7364.61181640625
+        },
+        {
+          "id": 199,
+          "name": "Lan (Highborn)",
+          "mse": 8233.732421875
+        },
+        {
+          "id": 137,
+          "name": "Anasta",
+          "mse": 8282.9189453125
+        }
+      ],
+      "ground_truth_annotation_id": 36,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 253,
+      "box_iou": 0.844087330573817,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 39,
+      "bbox": [
+        1432,
+        212,
+        103,
+        98
+      ],
+      "detector_score": 0.9999759197235107,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 225,
+      "predicted_name": "Cha Hae-in",
+      "matcher_mse": 9306.51171875,
+      "aligned_icon_size": 86,
+      "identity_top3": [
+        {
+          "id": 225,
+          "name": "Cha Hae-in",
+          "mse": 9306.51171875
+        },
+        {
+          "id": 235,
+          "name": "Tavriel",
+          "mse": 9322.478515625
+        },
+        {
+          "id": 236,
+          "name": "Saitama",
+          "mse": 9407.498046875
+        }
+      ],
+      "ground_truth_annotation_id": 23,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 235,
+      "box_iou": 0.819251684116549,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 40,
+      "bbox": [
+        949,
+        783,
+        54,
+        57
+      ],
+      "detector_score": 0.9999634027481079,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6030,
+      "predicted_name": "Blazefang",
+      "matcher_mse": 3355.693115234375,
+      "aligned_icon_size": 47,
+      "identity_top3": [
+        {
+          "id": 6030,
+          "name": "Blazefang",
+          "mse": 3355.693115234375
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 5372.77197265625
+        },
+        {
+          "id": 6012,
+          "name": "Talismane",
+          "mse": 5497.212890625
+        }
+      ],
+      "ground_truth_annotation_id": 22,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6030,
+      "box_iou": 0.75146484375,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 41,
+      "bbox": [
+        107,
+        594,
+        103,
+        94
+      ],
+      "detector_score": 0.9999579191207886,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 118,
+      "predicted_name": "Granit",
+      "matcher_mse": 8281.6982421875,
+      "aligned_icon_size": 82,
+      "identity_top3": [
+        {
+          "id": 118,
+          "name": "Granit",
+          "mse": 8281.6982421875
+        },
+        {
+          "id": 137,
+          "name": "Anasta",
+          "mse": 8282.1630859375
+        },
+        {
+          "id": 51,
+          "name": "Safiya",
+          "mse": 8424.68359375
+        }
+      ],
+      "ground_truth_annotation_id": 3,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 246,
+      "box_iou": 0.7858128398668939,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 42,
+      "bbox": [
+        280,
+        784,
+        61,
+        60
+      ],
+      "detector_score": 0.9999551773071289,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 6,
+      "predicted_name": "Sandstorm Fangs",
+      "matcher_mse": 6950.65869140625,
+      "aligned_icon_size": 52,
+      "identity_top3": [
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6950.65869140625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7018.0322265625
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 7089.37255859375
+        }
+      ],
+      "ground_truth_annotation_id": 11,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6029,
+      "box_iou": 0.7659380692167578,
+      "identity_correct": false,
+      "type_correct": false,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 43,
+      "bbox": [
+        1179,
+        308,
+        100,
+        101
+      ],
+      "detector_score": 0.999946117401123,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 17,
+      "predicted_name": "Sinner's Rose",
+      "matcher_mse": 4254.58349609375,
+      "aligned_icon_size": 87,
+      "identity_top3": [
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 4254.58349609375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 5377.701171875
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 5547.60595703125
+        }
+      ],
+      "ground_truth_annotation_id": 20,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 17,
+      "box_iou": 0.7839278714229714,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 44,
+      "bbox": [
+        927,
+        1538,
+        184,
+        70
+      ],
+      "detector_score": 0.9999324083328247,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6001,
+      "predicted_name": "Dreary Ball",
+      "matcher_mse": 3282.61474609375,
+      "aligned_icon_size": 61,
+      "identity_top3": [
+        {
+          "id": 6001,
+          "name": "Dreary Ball",
+          "mse": 3282.61474609375
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 3782.573486328125
+        },
+        {
+          "id": 6009,
+          "name": "Feline Vesperio",
+          "mse": 4504.8095703125
+        }
+      ]
+    },
+    {
+      "detection_id": 45,
+      "bbox": [
+        1433,
+        973,
+        99,
+        91
+      ],
+      "detector_score": 0.9999175071716309,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 258,
+      "predicted_name": "Theowyn (Awakened)",
+      "matcher_mse": 9913.392578125,
+      "aligned_icon_size": 80,
+      "identity_top3": [
+        {
+          "id": 258,
+          "name": "Theowyn (Awakened)",
+          "mse": 9913.392578125
+        },
+        {
+          "id": 137,
+          "name": "Anasta",
+          "mse": 10385.2705078125
+        },
+        {
+          "id": 138,
+          "name": "Kalene",
+          "mse": 10812.923828125
+        }
+      ],
+      "ground_truth_annotation_id": 56,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 258,
+      "box_iou": 0.7311906501095691,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 46,
+      "bbox": [
+        1605,
+        1539,
+        60,
+        64
+      ],
+      "detector_score": 0.9999057054519653,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6025,
+      "predicted_name": "Trickery Chest",
+      "matcher_mse": 4435.6943359375,
+      "aligned_icon_size": 53,
+      "identity_top3": [
+        {
+          "id": 6025,
+          "name": "Trickery Chest",
+          "mse": 4435.6943359375
+        },
+        {
+          "id": 6012,
+          "name": "Talismane",
+          "mse": 4698.52001953125
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 4876.416015625
+        }
+      ],
+      "ground_truth_annotation_id": 66,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6025,
+      "box_iou": 0.7777777777777778,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 47,
+      "bbox": [
+        898,
+        1356,
+        96,
+        96
+      ],
+      "detector_score": 0.9999053478240967,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 3361.312255859375,
+      "aligned_icon_size": 84,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 3361.312255859375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 4080.02783203125
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 4814.88134765625
+        }
+      ],
+      "ground_truth_annotation_id": 52,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 11,
+      "box_iou": 0.7283072546230441,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 48,
+      "bbox": [
+        1597,
+        778,
+        174,
+        73
+      ],
+      "detector_score": 0.999904990196228,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 93,
+      "predicted_name": "Lucretia",
+      "matcher_mse": 6099.95849609375,
+      "aligned_icon_size": 63,
+      "identity_top3": [
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 6099.95849609375
+        },
+        {
+          "id": 67,
+          "name": "Oden",
+          "mse": 6398.29052734375
+        },
+        {
+          "id": 68,
+          "name": "Rigby",
+          "mse": 6479.416015625
+        }
+      ]
+    },
+    {
+      "detection_id": 49,
+      "bbox": [
+        900,
+        405,
+        71,
+        74
+      ],
+      "detector_score": 0.9998880624771118,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 12,
+      "predicted_name": "Horn of Dominion",
+      "matcher_mse": 6191.60009765625,
+      "aligned_icon_size": 62,
+      "identity_top3": [
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6191.60009765625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6260.6328125
+        },
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 6384.1083984375
+        }
+      ]
+    },
+    {
+      "detection_id": 50,
+      "bbox": [
+        268,
+        1539,
+        180,
+        68
+      ],
+      "detector_score": 0.9998799562454224,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 93,
+      "predicted_name": "Lucretia",
+      "matcher_mse": 6512.01953125,
+      "aligned_icon_size": 60,
+      "identity_top3": [
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 6512.01953125
+        },
+        {
+          "id": 14,
+          "name": "Kaz",
+          "mse": 6645.837890625
+        },
+        {
+          "id": 67,
+          "name": "Oden",
+          "mse": 6651.75927734375
+        }
+      ]
+    },
+    {
+      "detection_id": 51,
+      "bbox": [
+        103,
+        590,
+        104,
+        58
+      ],
+      "detector_score": 0.9998778104782104,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 16,
+      "predicted_name": "Reaper's Talon",
+      "matcher_mse": 8024.8046875,
+      "aligned_icon_size": 50,
+      "identity_top3": [
+        {
+          "id": 16,
+          "name": "Reaper's Talon",
+          "mse": 8024.8046875
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 8421.5966796875
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 8488.0517578125
+        }
+      ]
+    },
+    {
+      "detection_id": 52,
+      "bbox": [
+        896,
+        403,
+        101,
+        105
+      ],
+      "detector_score": 0.9998219609260559,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 4004.283447265625,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 4004.283447265625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 5212.3232421875
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 5287.4169921875
+        }
+      ],
+      "ground_truth_annotation_id": 18,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 15,
+      "box_iou": 0.8380749170222854,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 53,
+      "bbox": [
+        1849,
+        501,
+        72,
+        93
+      ],
+      "detector_score": 0.9998084902763367,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 6422.41015625,
+      "aligned_icon_size": 63,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6422.41015625
+        },
+        {
+          "id": 3,
+          "name": "Timeline Watch",
+          "mse": 6488.53076171875
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6606.8662109375
+        }
+      ],
+      "ground_truth_annotation_id": 32,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 3,
+      "box_iou": 0.5291607396870555,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 54,
+      "bbox": [
+        239,
+        403,
+        97,
+        101
+      ],
+      "detector_score": 0.9997876286506653,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 9,
+      "predicted_name": "Trader's Vault",
+      "matcher_mse": 670.722412109375,
+      "aligned_icon_size": 85,
+      "identity_top3": [
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 670.722412109375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 2609.251708984375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 2753.387451171875
+        }
+      ],
+      "ground_truth_annotation_id": 7,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 9,
+      "box_iou": 0.7742215900110637,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 55,
+      "bbox": [
+        1565,
+        407,
+        74,
+        86
+      ],
+      "detector_score": 0.9997492432594299,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 3,
+      "predicted_name": "Timeline Watch",
+      "matcher_mse": 6684.58203125,
+      "aligned_icon_size": 66,
+      "identity_top3": [
+        {
+          "id": 3,
+          "name": "Timeline Watch",
+          "mse": 6684.58203125
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6750.42138671875
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6868.72607421875
+        }
+      ],
+      "ground_truth_annotation_id": 29,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 3,
+      "box_iou": 0.5029239766081871,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 56,
+      "bbox": [
+        516,
+        306,
+        106,
+        110
+      ],
+      "detector_score": 0.9997383952140808,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 5110.9033203125,
+      "aligned_icon_size": 93,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 5110.9033203125
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 6584.17578125
+        },
+        {
+          "id": 19,
+          "name": "Crescent Wheel",
+          "mse": 6993.60400390625
+        }
+      ],
+      "ground_truth_annotation_id": 9,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.8893464915688865,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 57,
+      "bbox": [
+        1559,
+        967,
+        86,
+        95
+      ],
+      "detector_score": 0.999731719493866,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 5538.8740234375,
+      "aligned_icon_size": 75,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 5538.8740234375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6018.40625
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6078.603515625
+        }
+      ],
+      "ground_truth_annotation_id": 61,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 9,
+      "box_iou": 0.6456456456456456,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 58,
+      "bbox": [
+        1605,
+        782,
+        58,
+        67
+      ],
+      "detector_score": 0.9997164607048035,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 162,
+      "predicted_name": "Ginneas",
+      "matcher_mse": 8032.419921875,
+      "aligned_icon_size": 50,
+      "identity_top3": [
+        {
+          "id": 162,
+          "name": "Ginneas",
+          "mse": 8032.419921875
+        },
+        {
+          "id": 86,
+          "name": "Ukyo",
+          "mse": 8300.572265625
+        },
+        {
+          "id": 32,
+          "name": "Thoran",
+          "mse": 8325.1943359375
+        }
+      ],
+      "ground_truth_annotation_id": 33,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6028,
+      "box_iou": 0.6832560101223113,
+      "identity_correct": false,
+      "type_correct": false,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 59,
+      "bbox": [
+        1203,
+        511,
+        54,
+        62
+      ],
+      "detector_score": 0.9997106194496155,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6074.8974609375,
+      "aligned_icon_size": 47,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6074.8974609375
+        },
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 6469.17236328125
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6537.70849609375
+        }
+      ]
+    },
+    {
+      "detection_id": 60,
+      "bbox": [
+        387,
+        303,
+        107,
+        65
+      ],
+      "detector_score": 0.9996525049209595,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 7674.8193359375,
+      "aligned_icon_size": 57,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 7674.8193359375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7704.89794921875
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 7891.66552734375
+        }
+      ]
+    },
+    {
+      "detection_id": 61,
+      "bbox": [
+        520,
+        501,
+        83,
+        96
+      ],
+      "detector_score": 0.999574601650238,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 11,
+      "predicted_name": "Infused Mind Core",
+      "matcher_mse": 6225.240234375,
+      "aligned_icon_size": 73,
+      "identity_top3": [
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6225.240234375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6463.6494140625
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 6481.90380859375
+        }
+      ],
+      "ground_truth_annotation_id": 10,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 3,
+      "box_iou": 0.6296823138928402,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 62,
+      "bbox": [
+        1425,
+        964,
+        101,
+        46
+      ],
+      "detector_score": 0.9995287656784058,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6991.04248046875,
+      "aligned_icon_size": 40,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6991.04248046875
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 7641.2197265625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7646.84912109375
+        }
+      ]
+    },
+    {
+      "detection_id": 63,
+      "bbox": [
+        1852,
+        1068,
+        68,
+        93
+      ],
+      "detector_score": 0.9995124340057373,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 2,
+      "predicted_name": "Shadow Dancer",
+      "matcher_mse": 7092.087890625,
+      "aligned_icon_size": 60,
+      "identity_top3": [
+        {
+          "id": 2,
+          "name": "Shadow Dancer",
+          "mse": 7092.087890625
+        },
+        {
+          "id": 3,
+          "name": "Timeline Watch",
+          "mse": 7358.7216796875
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 7414.86083984375
+        }
+      ]
+    },
+    {
+      "detection_id": 64,
+      "bbox": [
+        778,
+        1004,
+        81,
+        64
+      ],
+      "detector_score": 0.9994903802871704,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 54,
+      "predicted_name": "Satrana",
+      "matcher_mse": 7351.64208984375,
+      "aligned_icon_size": 57,
+      "identity_top3": [
+        {
+          "id": 54,
+          "name": "Satrana",
+          "mse": 7351.64208984375
+        },
+        {
+          "id": 118,
+          "name": "Granit",
+          "mse": 7396.76123046875
+        },
+        {
+          "id": 34,
+          "name": "Raine",
+          "mse": 7587.76806640625
+        }
+      ]
+    },
+    {
+      "detection_id": 65,
+      "bbox": [
+        269,
+        778,
+        179,
+        73
+      ],
+      "detector_score": 0.9994755387306213,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 93,
+      "predicted_name": "Lucretia",
+      "matcher_mse": 5798.9404296875,
+      "aligned_icon_size": 63,
+      "identity_top3": [
+        {
+          "id": 93,
+          "name": "Lucretia",
+          "mse": 5798.9404296875
+        },
+        {
+          "id": 67,
+          "name": "Oden",
+          "mse": 5893.47412109375
+        },
+        {
+          "id": 68,
+          "name": "Rigby",
+          "mse": 5947.5751953125
+        }
+      ]
+    },
+    {
+      "detection_id": 66,
+      "bbox": [
+        902,
+        1161,
+        72,
+        99
+      ],
+      "detector_score": 0.9994531273841858,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 3,
+      "predicted_name": "Timeline Watch",
+      "matcher_mse": 6418.11767578125,
+      "aligned_icon_size": 63,
+      "identity_top3": [
+        {
+          "id": 3,
+          "name": "Timeline Watch",
+          "mse": 6418.11767578125
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6421.8603515625
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6599.91943359375
+        }
+      ],
+      "ground_truth_annotation_id": 51,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 3,
+      "box_iou": 0.5633001422475107,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 67,
+      "bbox": [
+        1181,
+        509,
+        100,
+        94
+      ],
+      "detector_score": 0.999428927898407,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 5725.70068359375,
+      "aligned_icon_size": 82,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 5725.70068359375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6305.65185546875
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 6425.546875
+        }
+      ],
+      "ground_truth_annotation_id": 21,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 15,
+      "box_iou": 0.742848111269164,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 68,
+      "bbox": [
+        1181,
+        499,
+        77,
+        79
+      ],
+      "detector_score": 0.9993322491645813,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 6,
+      "predicted_name": "Sandstorm Fangs",
+      "matcher_mse": 6609.37109375,
+      "aligned_icon_size": 68,
+      "identity_top3": [
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6609.37109375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6718.17822265625
+        },
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 6919.03125
+        }
+      ]
+    },
+    {
+      "detection_id": 69,
+      "bbox": [
+        388,
+        495,
+        105,
+        41
+      ],
+      "detector_score": 0.9993147850036621,
+      "match_status": "skipped_box_too_small",
+      "predicted_type": null,
+      "predicted_id": null,
+      "predicted_name": null,
+      "matcher_mse": null,
+      "aligned_icon_size": 31,
+      "identity_top3": []
+    },
+    {
+      "detection_id": 70,
+      "bbox": [
+        950,
+        1544,
+        51,
+        56
+      ],
+      "detector_score": 0.9992617964744568,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6027,
+      "predicted_name": "Nightfall Pegasus",
+      "matcher_mse": 3170.8955078125,
+      "aligned_icon_size": 45,
+      "identity_top3": [
+        {
+          "id": 6027,
+          "name": "Nightfall Pegasus",
+          "mse": 3170.8955078125
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 5154.1044921875
+        },
+        {
+          "id": 6009,
+          "name": "Feline Vesperio",
+          "mse": 5406.08447265625
+        }
+      ],
+      "ground_truth_annotation_id": 55,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6027,
+      "box_iou": 0.697265625,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 71,
+      "bbox": [
+        1425,
+        1349,
+        109,
+        59
+      ],
+      "detector_score": 0.9991330504417419,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 12,
+      "predicted_name": "Horn of Dominion",
+      "matcher_mse": 7100.44873046875,
+      "aligned_icon_size": 51,
+      "identity_top3": [
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 7100.44873046875
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 7116.58154296875
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7165.9609375
+        }
+      ]
+    },
+    {
+      "detection_id": 72,
+      "bbox": [
+        763,
+        964,
+        110,
+        109
+      ],
+      "detector_score": 0.9990910291671753,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 248,
+      "predicted_name": "Eluard (Awakened)",
+      "matcher_mse": 6342.0380859375,
+      "aligned_icon_size": 95,
+      "identity_top3": [
+        {
+          "id": 248,
+          "name": "Eluard (Awakened)",
+          "mse": 6342.0380859375
+        },
+        {
+          "id": 109,
+          "name": "Desira",
+          "mse": 7616.68798828125
+        },
+        {
+          "id": 105,
+          "name": "Eluard",
+          "mse": 7703.70654296875
+        }
+      ],
+      "ground_truth_annotation_id": 45,
+      "ground_truth_type": "hero",
+      "ground_truth_id": 248,
+      "box_iou": 0.8899945580346731,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 73,
+      "bbox": [
+        1843,
+        1257,
+        104,
+        105
+      ],
+      "detector_score": 0.999087929725647,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 9,
+      "predicted_name": "Trader's Vault",
+      "matcher_mse": 7229.75537109375,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 7229.75537109375
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 8169.5517578125
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 8204.23828125
+        }
+      ],
+      "ground_truth_annotation_id": 65,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 9,
+      "box_iou": 0.8476369621443687,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 74,
+      "bbox": [
+        1554,
+        596,
+        105,
+        111
+      ],
+      "detector_score": 0.9990383386611938,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 4671.8623046875,
+      "aligned_icon_size": 92,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 4671.8623046875
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 6163.22998046875
+        },
+        {
+          "id": 19,
+          "name": "Crescent Wheel",
+          "mse": 6566.8203125
+        }
+      ],
+      "ground_truth_annotation_id": 30,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.8417304341237972,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 75,
+      "bbox": [
+        934,
+        779,
+        174,
+        71
+      ],
+      "detector_score": 0.999024510383606,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6001,
+      "predicted_name": "Dreary Ball",
+      "matcher_mse": 3353.046142578125,
+      "aligned_icon_size": 62,
+      "identity_top3": [
+        {
+          "id": 6001,
+          "name": "Dreary Ball",
+          "mse": 3353.046142578125
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 3851.190673828125
+        },
+        {
+          "id": 6012,
+          "name": "Talismane",
+          "mse": 4570.080078125
+        }
+      ]
+    },
+    {
+      "detection_id": 76,
+      "bbox": [
+        1839,
+        1062,
+        107,
+        116
+      ],
+      "detector_score": 0.9989514350891113,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 2,
+      "predicted_name": "Shadow Dancer",
+      "matcher_mse": 6922.5830078125,
+      "aligned_icon_size": 94,
+      "identity_top3": [
+        {
+          "id": 2,
+          "name": "Shadow Dancer",
+          "mse": 6922.5830078125
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 7180.17041015625
+        },
+        {
+          "id": 3,
+          "name": "Timeline Watch",
+          "mse": 7502.50634765625
+        }
+      ],
+      "ground_truth_annotation_id": 64,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 2,
+      "box_iou": 0.8512555391432792,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 77,
+      "bbox": [
+        281,
+        1544,
+        62,
+        55
+      ],
+      "detector_score": 0.9988629817962646,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6021,
+      "predicted_name": "Aureus",
+      "matcher_mse": 4300.67431640625,
+      "aligned_icon_size": 48,
+      "identity_top3": [
+        {
+          "id": 6021,
+          "name": "Aureus",
+          "mse": 4300.67431640625
+        },
+        {
+          "id": 6010,
+          "name": "Bellbellow",
+          "mse": 4810.697265625
+        },
+        {
+          "id": 6009,
+          "name": "Feline Vesperio",
+          "mse": 5244.7216796875
+        }
+      ],
+      "ground_truth_annotation_id": 44,
+      "ground_truth_type": "pet",
+      "ground_truth_id": 6021,
+      "box_iou": 0.7845934379457917,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 78,
+      "bbox": [
+        521,
+        1282,
+        83,
+        78
+      ],
+      "detector_score": 0.9988611936569214,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 6,
+      "predicted_name": "Sandstorm Fangs",
+      "matcher_mse": 7359.69482421875,
+      "aligned_icon_size": 69,
+      "identity_top3": [
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 7359.69482421875
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 7528.61572265625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7555.169921875
+        }
+      ],
+      "ground_truth_annotation_id": 43,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.5116168800379327,
+      "identity_correct": false,
+      "type_correct": true,
+      "identity_in_top3": false
+    },
+    {
+      "detection_id": 79,
+      "bbox": [
+        763,
+        964,
+        104,
+        38
+      ],
+      "detector_score": 0.998836100101471,
+      "match_status": "skipped_box_too_small",
+      "predicted_type": null,
+      "predicted_id": null,
+      "predicted_name": null,
+      "matcher_mse": null,
+      "aligned_icon_size": 29,
+      "identity_top3": []
+    },
+    {
+      "detection_id": 80,
+      "bbox": [
+        1177,
+        1255,
+        106,
+        115
+      ],
+      "detector_score": 0.9987397789955139,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 5731.80419921875,
+      "aligned_icon_size": 93,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 5731.80419921875
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 7187.52294921875
+        },
+        {
+          "id": 19,
+          "name": "Crescent Wheel",
+          "mse": 7631.20947265625
+        }
+      ],
+      "ground_truth_annotation_id": 54,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.8814085573646346,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 81,
+      "bbox": [
+        1184,
+        1269,
+        80,
+        68
+      ],
+      "detector_score": 0.9987319111824036,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 5888.53515625,
+      "aligned_icon_size": 60,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 5888.53515625
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 7115.435546875
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 7384.29248046875
+        }
+      ]
+    },
+    {
+      "detection_id": 82,
+      "bbox": [
+        1429,
+        592,
+        68,
+        71
+      ],
+      "detector_score": 0.998668909072876,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 20,
+      "predicted_name": "Ashen Tide Relic",
+      "matcher_mse": 7362.5107421875,
+      "aligned_icon_size": 60,
+      "identity_top3": [
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 7362.5107421875
+        },
+        {
+          "id": 13,
+          "name": "Shadowflow Blade",
+          "mse": 7643.41748046875
+        },
+        {
+          "id": 10,
+          "name": "Luminous Flight",
+          "mse": 7653.10107421875
+        }
+      ]
+    },
+    {
+      "detection_id": 83,
+      "bbox": [
+        387,
+        1251,
+        108,
+        42
+      ],
+      "detector_score": 0.9986500144004822,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6196.56103515625,
+      "aligned_icon_size": 37,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6196.56103515625
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6320.603515625
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6437.791015625
+        }
+      ]
+    },
+    {
+      "detection_id": 84,
+      "bbox": [
+        1581,
+        981,
+        59,
+        67
+      ],
+      "detector_score": 0.9986469149589539,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6077.6728515625,
+      "aligned_icon_size": 51,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6077.6728515625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6142.736328125
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6200.640625
+        }
+      ]
+    },
+    {
+      "detection_id": 85,
+      "bbox": [
+        253,
+        416,
+        61,
+        68
+      ],
+      "detector_score": 0.9986333250999451,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6607.6103515625,
+      "aligned_icon_size": 54,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6607.6103515625
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 6702.2373046875
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6762.02294921875
+        }
+      ]
+    },
+    {
+      "detection_id": 86,
+      "bbox": [
+        238,
+        210,
+        75,
+        76
+      ],
+      "detector_score": 0.9985973238945007,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 6,
+      "predicted_name": "Sandstorm Fangs",
+      "matcher_mse": 6124.2734375,
+      "aligned_icon_size": 66,
+      "identity_top3": [
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 6124.2734375
+        },
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 6228.60546875
+        },
+        {
+          "id": 9,
+          "name": "Trader's Vault",
+          "mse": 6441.17822265625
+        }
+      ]
+    },
+    {
+      "detection_id": 87,
+      "bbox": [
+        774,
+        624,
+        93,
+        70
+      ],
+      "detector_score": 0.9982560276985168,
+      "match_status": "matched",
+      "predicted_type": "hero",
+      "predicted_id": 160,
+      "predicted_name": "Rem",
+      "matcher_mse": 8791.603515625,
+      "aligned_icon_size": 61,
+      "identity_top3": [
+        {
+          "id": 160,
+          "name": "Rem",
+          "mse": 8791.603515625
+        },
+        {
+          "id": 60,
+          "name": "Gwyneth",
+          "mse": 8874.630859375
+        },
+        {
+          "id": 61,
+          "name": "Rosaline",
+          "mse": 8889.3935546875
+        }
+      ]
+    },
+    {
+      "detection_id": 88,
+      "bbox": [
+        398,
+        523,
+        70,
+        74
+      ],
+      "detector_score": 0.9980133771896362,
+      "match_status": "matched",
+      "predicted_type": "pet",
+      "predicted_id": 6025,
+      "predicted_name": "Trickery Chest",
+      "matcher_mse": 7354.50830078125,
+      "aligned_icon_size": 61,
+      "identity_top3": [
+        {
+          "id": 6025,
+          "name": "Trickery Chest",
+          "mse": 7354.50830078125
+        },
+        {
+          "id": 6012,
+          "name": "Talismane",
+          "mse": 7466.23193359375
+        },
+        {
+          "id": 6005,
+          "name": "Fire Breather",
+          "mse": 8018.5830078125
+        }
+      ]
+    },
+    {
+      "detection_id": 89,
+      "bbox": [
+        898,
+        966,
+        99,
+        79
+      ],
+      "detector_score": 0.9978206157684326,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 8147.1181640625,
+      "aligned_icon_size": 69,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 8147.1181640625
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 8732.0068359375
+        },
+        {
+          "id": 6,
+          "name": "Sandstorm Fangs",
+          "mse": 9079.0458984375
+        }
+      ],
+      "ground_truth_annotation_id": 50,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.6180654338549075,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 90,
+      "bbox": [
+        1857,
+        1286,
+        68,
+        48
+      ],
+      "detector_score": 0.99762362241745,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 12,
+      "predicted_name": "Horn of Dominion",
+      "matcher_mse": 5602.85595703125,
+      "aligned_icon_size": 43,
+      "identity_top3": [
+        {
+          "id": 12,
+          "name": "Horn of Dominion",
+          "mse": 5602.85595703125
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 5603.20263671875
+        },
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 5813.294921875
+        }
+      ]
+    },
+    {
+      "detection_id": 91,
+      "bbox": [
+        1559,
+        1166,
+        103,
+        101
+      ],
+      "detector_score": 0.9968380928039551,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 14,
+      "predicted_name": "Stormwrath's Lull",
+      "matcher_mse": 4904.56103515625,
+      "aligned_icon_size": 89,
+      "identity_top3": [
+        {
+          "id": 14,
+          "name": "Stormwrath's Lull",
+          "mse": 4904.56103515625
+        },
+        {
+          "id": 20,
+          "name": "Ashen Tide Relic",
+          "mse": 6387.5556640625
+        },
+        {
+          "id": 19,
+          "name": "Crescent Wheel",
+          "mse": 6859.38134765625
+        }
+      ],
+      "ground_truth_annotation_id": 62,
+      "ground_truth_type": "collection",
+      "ground_truth_id": 14,
+      "box_iou": 0.82211158526948,
+      "identity_correct": true,
+      "type_correct": true,
+      "identity_in_top3": true
+    },
+    {
+      "detection_id": 92,
+      "bbox": [
+        103,
+        1347,
+        105,
+        54
+      ],
+      "detector_score": 0.9963216781616211,
+      "match_status": "matched",
+      "predicted_type": "collection",
+      "predicted_id": 15,
+      "predicted_name": "Bounty Hunter's Decree",
+      "matcher_mse": 6934.353515625,
+      "aligned_icon_size": 47,
+      "identity_top3": [
+        {
+          "id": 15,
+          "name": "Bounty Hunter's Decree",
+          "mse": 6934.353515625
+        },
+        {
+          "id": 17,
+          "name": "Sinner's Rose",
+          "mse": 7113.91748046875
+        },
+        {
+          "id": 11,
+          "name": "Infused Mind Core",
+          "mse": 7178.53759765625
+        }
+      ]
+    }
+  ]
+}

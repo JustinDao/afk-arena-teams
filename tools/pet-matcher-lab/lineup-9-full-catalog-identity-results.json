@@ -51,6 +51,7 @@
         "predicted_id": 52,
         "predicted_name": "Rowan",
         "top1_mse": 9271.7138671875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -79,6 +80,7 @@
         "predicted_id": 200,
         "predicted_name": "Misha",
         "top1_mse": 8347.111328125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -107,6 +109,7 @@
         "predicted_id": 246,
         "predicted_name": "Severin (Highborn)",
         "top1_mse": 8848.80078125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -135,6 +138,7 @@
         "predicted_id": 234,
         "predicted_name": "Elthara (Highborn)",
         "top1_mse": 9047.447265625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -163,6 +167,7 @@
         "predicted_id": 220,
         "predicted_name": "Alvida",
         "top1_mse": 8495.3076171875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -191,6 +196,7 @@
         "predicted_id": 15,
         "predicted_name": "Bounty Hunter's Decree",
         "top1_mse": 809.4189453125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -219,6 +225,7 @@
         "predicted_id": 9,
         "predicted_name": "Trader's Vault",
         "top1_mse": 1476.168701171875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -247,6 +254,7 @@
         "predicted_id": 13,
         "predicted_name": "Shadowflow Blade",
         "top1_mse": 1875.37744140625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -275,6 +283,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 813.3013916015625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -303,6 +312,7 @@
         "predicted_id": 3,
         "predicted_name": "Timeline Watch",
         "top1_mse": 1340.2550048828125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -331,6 +341,7 @@
         "predicted_id": 6029,
         "predicted_name": "Twinlum Spirit",
         "top1_mse": 4976.98828125,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {
@@ -359,6 +370,7 @@
         "predicted_id": 226,
         "predicted_name": "Kaelon (Highborn)",
         "top1_mse": 8712.8505859375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -387,6 +399,7 @@
         "predicted_id": 165,
         "predicted_name": "Safiya (Awakened)",
         "top1_mse": 8708.3740234375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -415,6 +428,7 @@
         "predicted_id": 250,
         "predicted_name": "Kyno",
         "top1_mse": 9260.626953125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -443,6 +457,7 @@
         "predicted_id": 245,
         "predicted_name": "Misfortis",
         "top1_mse": 7803.2158203125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -471,6 +486,7 @@
         "predicted_id": 199,
         "predicted_name": "Lan (Highborn)",
         "top1_mse": 7721.58837890625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -499,6 +515,7 @@
         "predicted_id": 13,
         "predicted_name": "Shadowflow Blade",
         "top1_mse": 2558.842529296875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -527,6 +544,7 @@
         "predicted_id": 15,
         "predicted_name": "Bounty Hunter's Decree",
         "top1_mse": 3110.912353515625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -555,6 +573,7 @@
         "predicted_id": 17,
         "predicted_name": "Sinner's Rose",
         "top1_mse": 3513.51220703125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -583,6 +602,7 @@
         "predicted_id": 17,
         "predicted_name": "Sinner's Rose",
         "top1_mse": 4261.0830078125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -611,6 +631,7 @@
         "predicted_id": 15,
         "predicted_name": "Bounty Hunter's Decree",
         "top1_mse": 4584.96484375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -639,6 +660,7 @@
         "predicted_id": 6030,
         "predicted_name": "Blazefang",
         "top1_mse": 3626.789306640625,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {
@@ -667,6 +689,7 @@
         "predicted_id": 235,
         "predicted_name": "Tavriel",
         "top1_mse": 9949.0810546875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -695,6 +718,7 @@
         "predicted_id": 256,
         "predicted_name": "Kafka Hibino",
         "top1_mse": 8176.88525390625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -723,6 +747,7 @@
         "predicted_id": 238,
         "predicted_name": "Pippa (Awakened)",
         "top1_mse": 6807.07470703125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -751,6 +776,7 @@
         "predicted_id": 211,
         "predicted_name": "Sion",
         "top1_mse": 7301.28466796875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -779,6 +805,7 @@
         "predicted_id": 241,
         "predicted_name": "Harvey",
         "top1_mse": 8333.9697265625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -807,6 +834,7 @@
         "predicted_id": 15,
         "predicted_name": "Bounty Hunter's Decree",
         "top1_mse": 4915.16015625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -835,6 +863,7 @@
         "predicted_id": 3,
         "predicted_name": "Timeline Watch",
         "top1_mse": 5592.90869140625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -863,6 +892,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 5161.375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -891,6 +921,7 @@
         "predicted_id": 13,
         "predicted_name": "Shadowflow Blade",
         "top1_mse": 5537.46337890625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -919,6 +950,7 @@
         "predicted_id": 3,
         "predicted_name": "Timeline Watch",
         "top1_mse": 6448.14599609375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -947,6 +979,7 @@
         "predicted_id": 6028,
         "predicted_name": "Count Snickerfang",
         "top1_mse": 4287.88330078125,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {
@@ -975,6 +1008,7 @@
         "predicted_id": 229,
         "predicted_name": "Gorok",
         "top1_mse": 8159.78759765625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1003,6 +1037,7 @@
         "predicted_id": 227,
         "predicted_name": "Talimar",
         "top1_mse": 7696.38916015625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1031,6 +1066,7 @@
         "predicted_id": 253,
         "predicted_name": "Thalassa (Highborn)",
         "top1_mse": 7889.8720703125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1059,6 +1095,7 @@
         "predicted_id": 214,
         "predicted_name": "Envydiel (Awakened)",
         "top1_mse": 9064.9716796875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1087,6 +1124,7 @@
         "predicted_id": 202,
         "predicted_name": "Aurelia",
         "top1_mse": 8455.3623046875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1115,6 +1153,7 @@
         "predicted_id": 11,
         "predicted_name": "Infused Mind Core",
         "top1_mse": 871.9069213867188,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1143,6 +1182,7 @@
         "predicted_id": 15,
         "predicted_name": "Bounty Hunter's Decree",
         "top1_mse": 3130.064208984375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1171,6 +1211,7 @@
         "predicted_id": 10,
         "predicted_name": "Luminous Flight",
         "top1_mse": 3471.449951171875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1199,6 +1240,7 @@
         "predicted_id": 13,
         "predicted_name": "Shadowflow Blade",
         "top1_mse": 849.7546997070312,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1227,6 +1269,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 2942.26953125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1255,6 +1298,7 @@
         "predicted_id": 6021,
         "predicted_name": "Aureus",
         "top1_mse": 5048.11328125,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {
@@ -1283,6 +1327,7 @@
         "predicted_id": 248,
         "predicted_name": "Eluard (Awakened)",
         "top1_mse": 8428.9150390625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1311,6 +1356,7 @@
         "predicted_id": 221,
         "predicted_name": "Estrilda (Awakened)",
         "top1_mse": 8637.8134765625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1339,6 +1385,7 @@
         "predicted_id": 231,
         "predicted_name": "Begris",
         "top1_mse": 7314.7236328125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1367,6 +1414,7 @@
         "predicted_id": 215,
         "predicted_name": "Lysander",
         "top1_mse": 9285.5205078125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1395,6 +1443,7 @@
         "predicted_id": 163,
         "predicted_name": "Daemia",
         "top1_mse": 6260.5830078125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1423,6 +1472,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 2815.586181640625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1451,6 +1501,7 @@
         "predicted_id": 3,
         "predicted_name": "Timeline Watch",
         "top1_mse": 4778.51708984375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1479,6 +1530,7 @@
         "predicted_id": 11,
         "predicted_name": "Infused Mind Core",
         "top1_mse": 4593.103515625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1507,6 +1559,7 @@
         "predicted_id": 13,
         "predicted_name": "Shadowflow Blade",
         "top1_mse": 4247.4501953125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1535,6 +1588,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 5357.11376953125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1563,6 +1617,7 @@
         "predicted_id": 6027,
         "predicted_name": "Nightfall Pegasus",
         "top1_mse": 3330.373779296875,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {
@@ -1591,6 +1646,7 @@
         "predicted_id": 258,
         "predicted_name": "Theowyn (Awakened)",
         "top1_mse": 8754.296875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1619,6 +1675,7 @@
         "predicted_id": 242,
         "predicted_name": "Dracula",
         "top1_mse": 8447.33984375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1647,6 +1704,7 @@
         "predicted_id": 251,
         "predicted_name": "Athena",
         "top1_mse": 6314.95849609375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1675,6 +1733,7 @@
         "predicted_id": 244,
         "predicted_name": "Hybris (Awakened)",
         "top1_mse": 8081.11865234375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1703,6 +1762,7 @@
         "predicted_id": 175,
         "predicted_name": "Lavatune",
         "top1_mse": 7069.2275390625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1731,6 +1791,7 @@
         "predicted_id": 9,
         "predicted_name": "Trader's Vault",
         "top1_mse": 5380.970703125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1759,6 +1820,7 @@
         "predicted_id": 14,
         "predicted_name": "Stormwrath's Lull",
         "top1_mse": 5920.33544921875,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1787,6 +1849,7 @@
         "predicted_id": 17,
         "predicted_name": "Sinner's Rose",
         "top1_mse": 6742.10302734375,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1815,6 +1878,7 @@
         "predicted_id": 2,
         "predicted_name": "Shadow Dancer",
         "top1_mse": 6559.7158203125,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1843,6 +1907,7 @@
         "predicted_id": 9,
         "predicted_name": "Trader's Vault",
         "top1_mse": 7436.6416015625,
+        "aligned_icon_size": 85,
         "correct": true,
         "top3": [
           {
@@ -1871,6 +1936,7 @@
         "predicted_id": 6025,
         "predicted_name": "Trickery Chest",
         "top1_mse": 4311.10595703125,
+        "aligned_icon_size": 49,
         "correct": true,
         "top3": [
           {

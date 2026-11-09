@@ -49,6 +49,26 @@ def load_ground_truth_module(path):
     return module
 
 
+def load_catalogs(schema_sql, ground_truth_module):
+    heroes = ground_truth_module.simple_catalog(schema_sql, "heroes")
+    pets = ground_truth_module.simple_catalog(schema_sql, "pets")
+    collections = ground_truth_module.collection_catalog(schema_sql)
+    return {
+        "hero": [
+            {"id": entry["id"], "name": entry["name"]}
+            for entry in heroes.values()
+        ],
+        "pet": [
+            {"id": entry["id"], "name": entry["name"]}
+            for entry in pets.values()
+        ],
+        "collection": [
+            {"id": catalog_id, "name": entry["name"]}
+            for catalog_id, entry in collections.items()
+        ],
+    }
+
+
 def get_image(url, cache_dir):
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / f"{hashlib.sha256(url.encode()).hexdigest()}.webp"
@@ -462,8 +482,7 @@ def evaluate_hero_visual_states(
     }
 
 
-def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
-    source_screenshot, source_scale = source_scale_image(screenshot)
+def build_identity_candidate_assets(catalogs, cache_root):
     methods = ("hero_framed_icon", "pet_framed_icon")
     candidate_assets = []
     for method in methods:
@@ -529,6 +548,93 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
         if result is None
     ]
     candidate_assets.extend(result for result in collection_results if result is not None)
+    return candidate_assets, missing_collection_assets
+
+
+def rank_icon_box(bbox, screenshot, source_screenshot, source_scale, candidate_assets):
+    x, y, width, height = bbox
+    crop = screenshot[y : y + height, x : x + width]
+    if crop.size == 0:
+        raise ValueError(f"Detection box {bbox} falls outside the image.")
+    query = normalized_center(crop)
+    ranked = sorted(
+        (
+            (
+                float(np.mean((query - candidate["template"]) ** 2)),
+                candidate["type"],
+                candidate["id"],
+                candidate["name"],
+                candidate["url"],
+                candidate["state"],
+            )
+            for candidate in candidate_assets
+        ),
+        key=lambda result: (result[0], result[1], result[2], result[4]),
+    )
+    best_by_identity = {}
+    for item in ranked:
+        best_by_identity.setdefault((item[1], item[2]), item)
+    identity_ranking = list(best_by_identity.values())
+    best_by_type = {}
+    for item in identity_ranking:
+        best_by_type.setdefault(item[1], item)
+    type_ranking = sorted(
+        best_by_type.values(),
+        key=lambda result: (result[0], result[1], result[2]),
+    )
+    predicted_type = type_ranking[0][1]
+    aligned_crop = source_scale_crop(
+        source_screenshot,
+        bbox,
+        source_scale,
+    )
+    icon_size = min(aligned_crop.shape[:2])
+    if icon_size < 32:
+        raise ValueError(f"Detection box {bbox} is too small to match reliably.")
+    aligned_ranked = sorted(
+        (
+            (
+                aligned_alpha_mse(
+                    aligned_crop,
+                    candidate["image"],
+                    predicted_type,
+                    icon_size=icon_size,
+                ),
+                candidate,
+            )
+            for candidate in candidate_assets
+            if candidate["type"] == predicted_type
+        ),
+        key=lambda result: (
+            result[0],
+            result[1]["id"],
+            result[1]["url"],
+        ),
+    )
+    aligned_by_identity = {}
+    for score, candidate in aligned_ranked:
+        aligned_by_identity.setdefault(candidate["id"], (score, candidate))
+    aligned_identity_ranking = list(aligned_by_identity.values())
+    aligned_best_score, aligned_best_candidate = aligned_identity_ranking[0]
+    return {
+        "ranked": ranked,
+        "identity_ranking": identity_ranking,
+        "type_ranking": type_ranking,
+        "predicted_type": predicted_type,
+        "best_identity": identity_ranking[0],
+        "aligned_identity_ranking": aligned_identity_ranking,
+        "aligned_best_score": aligned_best_score,
+        "aligned_best_candidate": aligned_best_candidate,
+        "aligned_icon_size": icon_size,
+    }
+
+
+def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
+    source_screenshot, source_scale = source_scale_image(screenshot)
+    candidate_assets, missing_collection_assets = build_identity_candidate_assets(
+        catalogs,
+        cache_root,
+    )
 
     type_order = ("hero", "collection", "pet")
     confusion = {actual: {predicted: 0 for predicted in type_order} for actual in type_order}
@@ -540,42 +646,19 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
     aligned_identity_predictions = []
     collection_state_predictions = []
     for annotation in annotations:
-        x, y, width, height = annotation["bbox"]
-        crop = screenshot[y : y + height, x : x + width]
-        if crop.size == 0:
-            raise ValueError(
-                f"Annotation {annotation['annotation_id']} has a crop outside the image."
-            )
-        query = normalized_center(crop)
-        ranked = sorted(
-            (
-                (
-                    float(np.mean((query - candidate["template"]) ** 2)),
-                    candidate["type"],
-                    candidate["id"],
-                    candidate["name"],
-                    candidate["url"],
-                    candidate["state"],
-                )
-                for candidate in candidate_assets
-            ),
-            key=lambda result: (result[0], result[1], result[2], result[4]),
+        box_match = rank_icon_box(
+            annotation["bbox"],
+            screenshot,
+            source_screenshot,
+            source_scale,
+            candidate_assets,
         )
-        best_by_identity = {}
-        for item in ranked:
-            best_by_identity.setdefault((item[1], item[2]), item)
-        identity_ranking = list(best_by_identity.values())
-        best_by_type = {}
-        for item in identity_ranking:
-            best_by_type.setdefault(item[1], item)
-        type_ranking = sorted(
-            best_by_type.values(),
-            key=lambda result: (result[0], result[1], result[2]),
-        )
+        identity_ranking = box_match["identity_ranking"]
+        type_ranking = box_match["type_ranking"]
         actual_type = annotation["identity_type"]
         actual_id = annotation["catalog_id"]
-        predicted_type = type_ranking[0][1]
-        best_identity = identity_ranking[0]
+        predicted_type = box_match["predicted_type"]
+        best_identity = box_match["best_identity"]
         identity_correct = (
             best_identity[1] == actual_type and best_identity[2] == actual_id
         )
@@ -584,31 +667,10 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
         by_type[actual_type]["query_count"] += 1
         by_type[actual_type]["type_correct"] += int(type_correct)
         by_type[actual_type]["identity_correct"] += int(identity_correct)
-        aligned_crop = source_scale_crop(
-            source_screenshot,
-            annotation["bbox"],
-            source_scale,
-        )
-        aligned_ranked = sorted(
-            (
-                (
-                    aligned_alpha_mse(aligned_crop, candidate["image"], predicted_type),
-                    candidate,
-                )
-                for candidate in candidate_assets
-                if candidate["type"] == predicted_type
-            ),
-            key=lambda result: (
-                result[0],
-                result[1]["id"],
-                result[1]["url"],
-            ),
-        )
-        aligned_by_identity = {}
-        for score, candidate in aligned_ranked:
-            aligned_by_identity.setdefault(candidate["id"], (score, candidate))
-        aligned_identity_ranking = list(aligned_by_identity.values())
-        aligned_best_score, aligned_best_candidate = aligned_identity_ranking[0]
+        aligned_identity_ranking = box_match["aligned_identity_ranking"]
+        aligned_best_score = box_match["aligned_best_score"]
+        aligned_best_candidate = box_match["aligned_best_candidate"]
+        aligned_icon_size = box_match["aligned_icon_size"]
         aligned_identity_correct = (
             predicted_type == actual_type
             and aligned_best_candidate["id"] == actual_id
@@ -622,6 +684,7 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
                 "predicted_id": aligned_best_candidate["id"],
                 "predicted_name": aligned_best_candidate["name"],
                 "top1_mse": aligned_best_score,
+                "aligned_icon_size": aligned_icon_size,
                 "correct": aligned_identity_correct,
                 "top3": [
                     {
@@ -877,7 +940,10 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
             ),
             "pet": len(catalogs["pet"]),
         },
-        "collection_catalog_assets_requested": len(collection_urls),
+        "collection_catalog_assets_requested": sum(
+            candidate["type"] == "collection" for candidate in candidate_assets
+        )
+        + len(missing_collection_assets),
         "missing_collection_assets": missing_collection_assets,
         "query_count": query_count,
         "type_correct": type_correct_count,
@@ -923,23 +989,7 @@ def main():
         lab_dir / "create-lineup-identity-ground-truth.py"
     )
     schema_sql = (repo_root / "schema.sql").read_text(encoding="utf-8")
-    heroes = helper.simple_catalog(schema_sql, "heroes")
-    pets = helper.simple_catalog(schema_sql, "pets")
-    collections = helper.collection_catalog(schema_sql)
-    catalogs = {
-        "hero": [
-            {"id": entry["id"], "name": entry["name"]}
-            for entry in heroes.values()
-        ],
-        "pet": [
-            {"id": entry["id"], "name": entry["name"]}
-            for entry in pets.values()
-        ],
-        "collection": [
-            {"id": catalog_id, "name": entry["name"]}
-            for catalog_id, entry in collections.items()
-        ],
-    }
+    catalogs = load_catalogs(schema_sql, helper)
     ground_truth_path = lab_dir / "lineup-9-identity-ground-truth.json"
     ground_truth = json.loads(ground_truth_path.read_text(encoding="utf-8"))
     image_path = repo_root / ground_truth["image"]["file_name"]

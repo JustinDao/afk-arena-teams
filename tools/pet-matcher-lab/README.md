@@ -151,6 +151,17 @@ Variant recognition is evaluated separately from identity. Given the correct col
 
 This is an open-catalog retrieval baseline, not a production-ready classifier. It uses ground-truth boxes and does not test detection, rejection of unrelated icons, team grouping, or generalization to guide screenshots. The screenshot and references share CDN artwork. Cached reference assets are kept outside the repository. Per-box predictions, per-type scores, candidate counts, collection and hero variants, and assumptions are in [`lineup-9-full-catalog-identity-results.json`](./lineup-9-full-catalog-identity-results.json).
 
+### Detector-to-catalog pipeline
+
+Run the app-held-out YOLO fold and pass each detected crop to the mixed-type catalog matcher:
+
+```sh
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" \
+  tools/pet-matcher-lab/detect-and-match-lineup.py
+```
+
+By default this uses the saved fold-3 weights, near-native `imgsz=2080`, confidence `0.996`, and NMS IoU `0.55`; these thresholds were chosen on lineup 9. The matcher expands each detected box 1.15× around its center (configurable with `--match-box-scale`), while evaluation continues to use the original detector boxes. On lineup 9 the detector produced 92 boxes: all 66 labeled icons were covered at IoU ≥ 0.50, alongside 26 false-positive boxes. Compared with `0.995`, the `0.996` threshold removes one false positive without losing a labeled icon on this sample; higher tested thresholds reduced recall. Of the 66 matched icons, the matcher selected the exact identity at top-1 for 54, predicted the correct type for 61, and included the exact identity within its top 3 for 56. The 1.15× crop improves top-1 identity from 44 to 54 and top-3 from 49 to 56 over unexpanded crops, but still falls short of the labeled-box benchmark. The predictions and one-to-one evaluation are saved in [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json). These results are tuned on one sample; more independently labeled screenshots are needed before generalizing the matcher or detector thresholds. This prototype does not infer hero investments or collection levels from detector boxes.
+
 ### Recommended next steps
 
 1. **Review and expand labels first.** Correct the best-effort boxes and add diverse, fully labeled images from actual app inputs. Keep source layouts grouped across train/test splits and include text/art hard negatives.
