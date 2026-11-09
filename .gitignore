@@ -5,6 +5,10 @@
 /out-tsc
 /src/environments/environment.ts
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # Supabase CLI local link state
 supabase/.temp/
 
