@@ -199,14 +199,14 @@
       <app-collection-recommendation-editor
         [catalog]="catalogForSlot(editing.index)"
         [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
-        [nodeStats]="store.collectionNodeStats()"
+        [nodeStats]="store.collectionNodeStats().length ? store.collectionNodeStats() : nodeStatsCatalog"
         [recommendation]="recommendation"
         (selectedCatalogIdChange)="store.updateDraftCollectionRecommendation(editing.index, $event, recommendation, classOfSlot(editing.index))"
         (recommendationChange)="store.updateDraftCollectionRecommendation(editing.index, snapshot.catalogId ?? catalogForSlot(editing.index)[0].id, $event, classOfSlot(editing.index))" />
       } @else {
       <app-collection-build-editor [catalog]="catalogForSlot(editing.index)"
         [selectedCatalogId]="snapshot.catalogId ?? store.collectionCatalog()[0].id"
-        [nodeStats]="store.collectionNodeStats()" [nodes]="snapshot.nodes"
+        [nodeStats]="store.collectionNodeStats().length ? store.collectionNodeStats() : nodeStatsCatalog" [nodes]="snapshot.nodes"
         (selectedCatalogIdChange)="store.updateDraftCollectionSnapshot(editing.index, $event, snapshot.nodes, classOfSlot(editing.index))"
         (nodesChange)="store.updateDraftCollectionSnapshot(editing.index, snapshot.catalogId ?? catalogForSlot(editing.index)[0].id, $event, classOfSlot(editing.index))" />
       }

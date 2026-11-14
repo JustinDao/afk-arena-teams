@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core'
 import {
   ATTACK_COLLECTION_NODE_STATS,
+  COLLECTION_NODE_STATS,
   collectionNodeIconUrl,
   collectionNodeLabel,
   DEFENSE_COLLECTION_NODE_STATS,
@@ -30,9 +31,9 @@ import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../..
               <label class="field">
                 <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} stat</span>
                 <select [value]="nodeAt(slotIndex)?.stat ?? ''" (change)="updateStat(slotIndex, inputValue($event))">
-                  <option value="">No node</option>
+                  <option value="" [selected]="!nodeAt(slotIndex)?.stat">No node</option>
                   @for (stat of statsForSlot(slotIndex); track stat) {
-                    <option [value]="stat">{{ collectionNodeLabel(stat) }}</option>
+                    <option [value]="stat" [selected]="nodeAt(slotIndex)?.stat === stat">{{ collectionNodeLabel(stat) }}</option>
                   }
                 </select>
               </label>
@@ -43,9 +44,9 @@ import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../..
                   <label class="field">
                     <span class="visually-hidden">{{ collectionSlotLabel(slotIndex) }} tier</span>
                     <select [value]="node.tier" (change)="updateTier(slotIndex, inputValue($event))">
-                      <option value="elite">Elite</option>
-                      <option value="legendary">Legendary</option>
-                      <option value="mythic">Mythic</option>
+                      <option value="elite" [selected]="node.tier === 'elite'">Elite</option>
+                      <option value="legendary" [selected]="node.tier === 'legendary'">Legendary</option>
+                      <option value="mythic" [selected]="node.tier === 'mythic'">Mythic</option>
                     </select>
                   </label>
                 }
@@ -90,13 +91,17 @@ export class CollectionBuildEditorComponent {
 
   statsForSlot(slotIndex: number): readonly CollectionNodeStat[] {
     const currentNode = this.nodeAt(slotIndex);
+    const baseStats = this.nodeStats().length ? this.nodeStats() : COLLECTION_NODE_STATS;
     let allowed: readonly CollectionNodeStat[];
     if (slotIndex < 3) {
-      allowed = this.nodeStats().filter((stat) => ATTACK_COLLECTION_NODE_STATS.includes(stat));
+      allowed = baseStats.filter((stat) => ATTACK_COLLECTION_NODE_STATS.includes(stat));
     } else if (slotIndex < 6) {
-      allowed = this.nodeStats().filter((stat) => DEFENSE_COLLECTION_NODE_STATS.includes(stat));
+      allowed = baseStats.filter((stat) => DEFENSE_COLLECTION_NODE_STATS.includes(stat));
     } else {
-      allowed = this.nodeStats();
+      allowed = baseStats;
+    }
+    if (slotIndex >= 6 && !allowed.includes('skill_level')) {
+      allowed = [...allowed, 'skill_level'];
     }
     if (currentNode && !allowed.includes(currentNode.stat)) {
       return [currentNode.stat, ...allowed];

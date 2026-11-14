@@ -673,7 +673,7 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                         <app-collection-recommendation-editor
                           [catalog]="catalogForHero(slot.heroId)"
                           [selectedCatalogId]="snapshot.catalogId ?? defaultCatalogIdForHero(slot.heroId)"
-                          [nodeStats]="store.collectionNodeStats()"
+                          [nodeStats]="store.collectionNodeStats().length ? store.collectionNodeStats() : nodeStatsCatalog"
                           [recommendation]="rec"
                           (selectedCatalogIdChange)="updateSlotCollectionCatalogId(editing.index, $event)"
                           (recommendationChange)="updateSlotCollectionRecommendation(editing.index, $event)" />
@@ -681,7 +681,7 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                         <app-collection-build-editor
                           [catalog]="catalogForHero(slot.heroId)"
                           [selectedCatalogId]="snapshot.catalogId ?? defaultCatalogIdForHero(slot.heroId)"
-                          [nodeStats]="store.collectionNodeStats()"
+                          [nodeStats]="store.collectionNodeStats().length ? store.collectionNodeStats() : nodeStatsCatalog"
                           [nodes]="snapshot.nodes"
                           (selectedCatalogIdChange)="updateSlotCollectionCatalogId(editing.index, $event)"
                           (nodesChange)="updateSlotCollectionNodes(editing.index, $event)" />

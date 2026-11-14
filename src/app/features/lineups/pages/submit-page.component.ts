@@ -14,6 +14,7 @@ import { CollectionRecommendationEditorComponent } from '../components/collectio
 import { FormationBoardComponent, FormationBoardPet, FormationBoardSlot } from '../components/formation-board/formation-board.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { defaultAscensionForInvestment } from '../investment';
+import { COLLECTION_NODE_STATS } from '../collection-catalog';
 import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
 import { LineupsStore } from '../lineups.store';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
@@ -43,6 +44,7 @@ export class SubmitPageComponent implements OnDestroy {
   readonly store = inject(LineupsStore);
   readonly lineupView = inject(LineupViewPreferencesService);
   readonly auth = inject(AuthService);
+  readonly nodeStatsCatalog = COLLECTION_NODE_STATS;
   private readonly heroIcons = inject(HeroIconService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
