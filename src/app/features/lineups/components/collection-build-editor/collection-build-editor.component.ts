@@ -1,5 +1,10 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core'
-import { collectionNodeIconUrl, collectionNodeLabel } from '../../collection-catalog'
+import {
+  ATTACK_COLLECTION_NODE_STATS,
+  collectionNodeIconUrl,
+  collectionNodeLabel,
+  DEFENSE_COLLECTION_NODE_STATS,
+} from '../../collection-catalog'
 import { CollectionPickerComponent } from '../collection-picker/collection-picker.component'
 import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../../models'
 
@@ -84,7 +89,19 @@ export class CollectionBuildEditorComponent {
   }
 
   statsForSlot(slotIndex: number): readonly CollectionNodeStat[] {
-    return slotIndex < 6 ? this.nodeStats().filter((stat) => stat !== 'skill_level') : this.nodeStats();
+    const currentNode = this.nodeAt(slotIndex);
+    let allowed: readonly CollectionNodeStat[];
+    if (slotIndex < 3) {
+      allowed = this.nodeStats().filter((stat) => ATTACK_COLLECTION_NODE_STATS.includes(stat));
+    } else if (slotIndex < 6) {
+      allowed = this.nodeStats().filter((stat) => DEFENSE_COLLECTION_NODE_STATS.includes(stat));
+    } else {
+      allowed = this.nodeStats();
+    }
+    if (currentNode && !allowed.includes(currentNode.stat)) {
+      return [currentNode.stat, ...allowed];
+    }
+    return allowed;
   }
 
   collectionNodeLabel(stat: CollectionNodeStat): string {

@@ -259,6 +259,11 @@ describe('SubmitPageComponent', () => {
     expect(draft?.target).toBe('Infernal Overlord');
     expect(draft?.forms.length).toBe(6);
     expect(draft?.forms[0].slots[0].collectionSnapshot?.name).toBe('Captive Wings');
+    const slot0Snapshot = draft?.forms[0].slots[0].collectionSnapshot;
+    expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 0)?.stat).toBe('erosion');
+    expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 1)?.stat).toBe('mp');
+    expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 6)?.stat).toBe('skill_level');
+    expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 7)?.stat).toBe('skill_level');
 
     // Verify SubmitPageComponent preserves the imported draft formations on init
     const submitFixture = TestBed.createComponent(SubmitPageComponent);

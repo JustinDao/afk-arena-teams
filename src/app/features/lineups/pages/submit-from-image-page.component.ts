@@ -5,7 +5,12 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../core/hero-icons/hero-icon.service';
-import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../collection-catalog';
+import {
+  ATTACK_COLLECTION_NODE_STATS,
+  COLLECTION_CATALOG,
+  COLLECTION_NODE_STATS,
+  DEFENSE_COLLECTION_NODE_STATS,
+} from '../collection-catalog';
 import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
 import { AddPetModalComponent, DraftPetSelection } from '../components/add-pet-modal/add-pet-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
@@ -19,6 +24,8 @@ import {
   AscensionRank,
   CollectionCatalogItem,
   CollectionNode,
+  CollectionNodeStat,
+  CollectionNodeTier,
   CollectionSnapshot,
   DraftFormation,
   DraftSlot,
@@ -1610,7 +1617,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   buildCollectionSnapshot(
     collectionId: number | null,
     level = 1,
-    nodes: readonly string[] = [],
+    nodes: readonly (string | CollectionNode)[] = [],
     heroClass?: string | null,
     preferredName?: string | null,
   ): CollectionSnapshot | null {
@@ -1623,14 +1630,74 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       this.collections[0];
     if (!catalogItem) return null;
 
+    const rawItems: { stat: string; tier: CollectionNodeTier }[] = [];
+    for (const item of nodes) {
+      if (typeof item === 'string') {
+        const cleaned = item.trim().toLowerCase();
+        if (cleaned && cleaned !== 'none') {
+          const statKey = cleaned === 'tyr' ? 'ty' : cleaned;
+          rawItems.push({ stat: statKey, tier: 'mythic' });
+        }
+      } else if (item && typeof item.stat === 'string') {
+        const cleaned = item.stat.trim().toLowerCase();
+        if (cleaned && cleaned !== 'none') {
+          const statKey = cleaned === 'tyr' ? 'ty' : cleaned;
+          rawItems.push({ stat: statKey, tier: item.tier ?? 'mythic' });
+        }
+      }
+    }
+
+    const explicitSkillLevels = rawItems.filter((item) => item.stat === 'skill_level').length;
+    const regularItems = rawItems.filter((item) => item.stat !== 'skill_level');
+    const requiredSkillLevels = Math.max(explicitSkillLevels, Math.max(0, Math.min(2, level - 1)));
+
     const collectionNodes: CollectionNode[] = [];
-    let slotCounter = 0;
-    for (let lvlIdx = 0; lvlIdx < Math.max(0, level - 1); lvlIdx++) {
-      collectionNodes.push({ slotIndex: slotCounter++, stat: 'skill_level', tier: 'mythic' });
+    const occupiedSlots = new Set<number>();
+
+    // In AFK Arena, skill level (+1 Level) nodes go into Flex slots [6, 7]
+    for (let lvl = 0; lvl < Math.min(2, requiredSkillLevels); lvl++) {
+      const slotIndex = 6 + lvl;
+      collectionNodes.push({ slotIndex, stat: 'skill_level', tier: 'mythic' });
+      occupiedSlots.add(slotIndex);
     }
-    for (const stat of nodes) {
-      collectionNodes.push({ slotIndex: slotCounter++, stat, tier: 'mythic' });
+
+    // Place regular stats in category-aligned slots:
+    // Attack slots: [0, 1, 2]
+    // Defense slots: [3, 4, 5]
+    // Flex slots: [6, 7] (used for stats when not occupied by skill_level, or for overflow)
+    const attackSlots = [0, 1, 2];
+    const defenseSlots = [3, 4, 5];
+    const flexSlots = [6, 7];
+
+    for (const { stat, tier } of regularItems) {
+      const isAttack = ATTACK_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat);
+      const isDefense = DEFENSE_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat);
+
+      let targetSlot: number | undefined;
+      if (isAttack) {
+        targetSlot =
+          attackSlots.find((s) => !occupiedSlots.has(s)) ??
+          flexSlots.find((s) => !occupiedSlots.has(s)) ??
+          defenseSlots.find((s) => !occupiedSlots.has(s));
+      } else if (isDefense) {
+        targetSlot =
+          defenseSlots.find((s) => !occupiedSlots.has(s)) ??
+          flexSlots.find((s) => !occupiedSlots.has(s)) ??
+          attackSlots.find((s) => !occupiedSlots.has(s));
+      } else {
+        targetSlot =
+          attackSlots.find((s) => !occupiedSlots.has(s)) ??
+          defenseSlots.find((s) => !occupiedSlots.has(s)) ??
+          flexSlots.find((s) => !occupiedSlots.has(s));
+      }
+
+      if (targetSlot !== undefined) {
+        occupiedSlots.add(targetSlot);
+        collectionNodes.push({ slotIndex: targetSlot, stat, tier });
+      }
     }
+
+    collectionNodes.sort((a, b) => a.slotIndex - b.slotIndex);
     return {
       catalogId: catalogItem.id,
       name: catalogItem.name,
@@ -1758,8 +1825,12 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   updateSlotCollectionNodes(slotIndex: number, nodes: readonly CollectionNode[]): void {
     this.updateSlotFormation(slotIndex, (s) => {
       if (!s.collectionSnapshot) return s;
+      const skillLevels = nodes.filter((n) => n.stat === 'skill_level').length;
+      const statNodes = nodes.filter((n) => n.stat !== 'skill_level').map((n) => n.stat);
       return {
         ...s,
+        collectionLevel: skillLevels + 1,
+        collectionNodes: statNodes,
         collectionSnapshot: {
           ...s.collectionSnapshot,
           nodes,
