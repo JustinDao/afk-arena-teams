@@ -272,6 +272,64 @@ describe('SubmitPageComponent', () => {
     submitFixture.destroy();
   });
 
+  it('shares formation board and modal components (AddHeroModal, AddPetModal, HeroInvestmentEditor) with submit form', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitFromImagePageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        {
+          provide: HeroIconService,
+          useValue: {
+            initialize: async () => {},
+            unitIdFor: () => null,
+            iconUrl: () => '',
+            framedIconUrl: () => '',
+            lowestAscensionFor: () => 'ascended',
+            factionFor: () => null,
+            classFor: () => null,
+          },
+        },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();
+
+    comp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    fixture.detectChanges();
+
+    // 1. Formation board has the 2x3 layout (Front 2 slots, Back 3 slots)
+    expect(fixture.nativeElement.querySelector('.formation-board')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.formation-row')[0].querySelectorAll('.formation-slot').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.formation-row')[1].querySelectorAll('.formation-slot').length).toBe(3);
+
+    // 2. Pet slot opens AddPetModalComponent
+    fixture.nativeElement.querySelector('.pet-slot').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-add-pet-modal')).not.toBeNull();
+    comp.closePetModal();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-add-pet-modal')).toBeNull();
+
+    // 3. Clicking occupied hero slot opens slot modal with HeroInvestmentEditorComponent
+    comp.openSlot(0);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.slot-modal')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-hero-investment-editor')).not.toBeNull();
+
+    // 4. Clicking empty slot opens AddHeroModalComponent
+    comp.clearSlot(1);
+    comp.openSlot(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-add-hero-modal')).not.toBeNull();
+
+    comp.closeSlot();
+    fixture.detectChanges();
+    fixture.destroy();
+  });
+
   it('updates formation tabs, target options, team count, and mercenary controls when switching mode to Treasure Scramble (TS)', async () => {
     await TestBed.configureTestingModule({
       imports: [SubmitFromImagePageComponent, SubmitPageComponent],

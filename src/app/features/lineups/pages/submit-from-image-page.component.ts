@@ -1,13 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, OnDestroy, signal, viewChild, ViewEncapsulation } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../core/hero-icons/hero-icon.component';
 import { HeroIconService } from '../../../core/hero-icons/hero-icon.service';
 import { COLLECTION_CATALOG, COLLECTION_NODE_STATS } from '../collection-catalog';
-import { defaultAscensionForInvestment, parseInvestment } from '../investment';
+import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-modal.component';
+import { AddPetModalComponent, DraftPetSelection } from '../components/add-pet-modal/add-pet-modal.component';
+import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
+import { CollectionRecommendationEditorComponent } from '../components/collection-recommendation-editor/collection-recommendation-editor.component';
+import { FormationBoardComponent, FormationBoardPet, FormationBoardSlot } from '../components/formation-board/formation-board.component';
+import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
+import { defaultAscensionForInvestment, formatInvestment, parseInvestment } from '../investment';
 import { HEROES, PETS } from '../lineup-data';
 import { LineupsStore } from '../lineups.store';
 import {
+  AscensionRank,
   CollectionCatalogItem,
   CollectionNode,
   CollectionSnapshot,
@@ -15,6 +24,7 @@ import {
   DraftSlot,
   displayHeroName,
   Hero,
+  Investment,
   ModeConfig,
   Pet,
   petMaxLevel,
@@ -76,6 +86,8 @@ export interface EditableHeroSlot {
   readonly nodeAlternatives: readonly string[];
   readonly investmentCode: string;
   readonly merc: boolean;
+  readonly ascension?: AscensionRank | null;
+  readonly collectionSnapshot?: CollectionSnapshot | null;
 }
 
 export interface EditableSubstituteTeam {
@@ -145,7 +157,20 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
 @Component({
   selector: 'app-submit-from-image-page',
   standalone: true,
-  imports: [HeroIconComponent, MatButtonModule, RouterLink],
+  imports: [
+    AddHeroModalComponent,
+    AddPetModalComponent,
+    CdkTrapFocus,
+    CollectionBuildEditorComponent,
+    CollectionRecommendationEditorComponent,
+    FormationBoardComponent,
+    HeroIconComponent,
+    HeroInvestmentEditorComponent,
+    MatButtonModule,
+    RouterLink,
+  ],
+  styleUrls: ['./roster/roster-page.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <main class="import-submit-page">
       <header class="page-header panel">
@@ -404,71 +429,53 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
 
           @if (activeFormation(); as form) {
             <div class="round-header">
-              <label class="field">
+              <label class="field round-label-field">
                 <span>{{ selectedModeSlug() === 'treasure-scramble' ? 'Team label' : 'Formation / Boss label' }}</span>
                 <input
                   [value]="form.label"
                   (input)="updateActiveFormationLabel(inputValue($event))" />
               </label>
+            </div>
 
-              <div class="pet-editor-box">
-                <div class="pet-row">
-                  @if (form.petId !== null) {
-                    <app-hero-icon
-                      [name]="form.petName"
-                      [imageUrl]="store.petIconUrl(form.petId)"
-                      size="medium" />
+            <div>
+              <p class="muted">Click a position to add a hero or edit its investment{{ currentModeConfig().collectionsEnabled ? ' and collection' : '' }}.{{ currentModeConfig().allowPartialFormations ? ' Rounds may be omitted or partially filled.' : '' }}</p>
+            </div>
+
+            <app-formation-board
+              [slots]="activeBoardSlots()"
+              [pet]="activeBoardPet()"
+              [selectedSlotIndex]="editingSlot()?.index ?? null"
+              (slotClick)="openSlot($event)"
+              (slotRemove)="clearSlot($event)"
+              (petClick)="openPetModal()"
+              (petRemove)="clearPet()"
+            />
+
+            @if (form.petGuideOptions.length > 1 || form.petVisualAlternatives.length > 1) {
+              <div class="alt-group pet-alt-group">
+                <span class="alt-label">Suggested pet alternatives (click to swap):</span>
+                <div class="chip-row">
+                  @for (optName of form.petGuideOptions; track optName) {
+                    <button
+                      mat-button
+                      type="button"
+                      class="chip-btn guide-sub"
+                      (click)="updateActivePetByName(optName)">
+                      [Guide] {{ optName }}
+                    </button>
                   }
-                  <label class="field">
-                    <span>{{ selectedModeSlug() === 'treasure-scramble' ? 'Team Pet' : 'Round Pet' }}</span>
-                    <select
-                      [value]="form.petName"
-                      (change)="updateActivePetByName(inputValue($event))">
-                      <option value="">No pet</option>
-                      @for (p of pets(); track p.id) {
-                        <option [value]="p.name">{{ p.name }}</option>
-                      }
-                    </select>
-                  </label>
-                  @if (form.petId !== null) {
-                    <label class="field pet-level-input">
-                      <span>Level</span>
-                      <input
-                        type="number"
-                        min="1"
-                        [attr.max]="maxPetLevel(form.petId)"
-                        [value]="form.petLevel ?? 18"
-                        (input)="updateActivePetLevel(numberValue($event))" />
-                    </label>
+                  @for (vAlt of form.petVisualAlternatives.slice(0, 4); track vAlt.slug) {
+                    <button
+                      mat-button
+                      type="button"
+                      class="chip-btn"
+                      (click)="updateActivePetByName(vAlt.name)">
+                      {{ vAlt.name }} ({{ (vAlt.confidence * 100).toFixed(0) }}%)
+                    </button>
                   }
                 </div>
-                @if (form.petGuideOptions.length > 1 || form.petVisualAlternatives.length > 1) {
-                  <div class="alt-group">
-                    <span class="alt-label">Suggested pet alternatives (click to swap):</span>
-                    <div class="chip-row">
-                      @for (optName of form.petGuideOptions; track optName) {
-                        <button
-                          mat-button
-                          type="button"
-                          class="chip-btn guide-sub"
-                          (click)="updateActivePetByName(optName)">
-                          [Guide] {{ optName }}
-                        </button>
-                      }
-                      @for (vAlt of form.petVisualAlternatives.slice(0, 4); track vAlt.slug) {
-                        <button
-                          mat-button
-                          type="button"
-                          class="chip-btn"
-                          (click)="updateActivePetByName(vAlt.name)">
-                          {{ vAlt.name }} ({{ (vAlt.confidence * 100).toFixed(0) }}%)
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
               </div>
-            </div>
+            }
 
             @if (form.substituteTeams.length && selectedModeSlug() === 'nightmare-corridor') {
               <section class="substitutes-box" aria-label="Substitute teams for this round">
@@ -498,155 +505,6 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                 </div>
               </section>
             }
-
-            <div class="slots-list">
-              @for (slot of form.heroes; track slot.slotIndex; let sIdx = $index) {
-                <article class="slot-card" [class.needs-review]="slot.needsReview">
-                  <div class="slot-main">
-                    <div class="slot-identity">
-                      <span class="slot-badge">#{{ sIdx + 1 }} {{ sIdx < 2 ? 'Front' : 'Back' }}</span>
-                      @if (slot.heroId !== null) {
-                        <app-hero-icon
-                          [name]="slot.heroName"
-                          [imageUrl]="store.heroIconUrl(slot.heroId)"
-                          size="medium" />
-                      }
-                      <label class="field hero-select-field">
-                        <span>Hero</span>
-                        <select
-                          [value]="slot.heroName"
-                          (change)="updateSlotHeroByName(sIdx, inputValue($event))">
-                          <option value="">Empty slot</option>
-                          @for (h of heroes(); track h.id) {
-                            <option [value]="heroDisplayName(h)">{{ heroDisplayName(h) }}</option>
-                          }
-                        </select>
-                      </label>
-                      <span class="conf-badge" [class.warn]="slot.needsReview" [class.ok]="!slot.needsReview">
-                        {{ (slot.confidence * 100).toFixed(0) }}%
-                      </span>
-                    </div>
-
-                    <div class="slot-Collection-row">
-                      <label class="field">
-                        <span>Collection</span>
-                        <select
-                          [value]="slot.collectionId ?? ''"
-                          (change)="updateSlotCollection(sIdx, inputValue($event))">
-                          <option value="">None</option>
-                          @for (c of collectionsForHeroSlot(slot); track c.id) {
-                            <option [value]="c.id">{{ c.name }} ({{ c.class }})</option>
-                          }
-                        </select>
-                      </label>
-                      @if (slot.collectionId !== null) {
-                        <label class="field level-select">
-                          <span>Skill Lv.</span>
-                          <select
-                            [value]="slot.collectionLevel"
-                            (change)="updateSlotCollectionLevel(sIdx, numberValue($event))">
-                            <option [value]="1">Lv. 1</option>
-                            <option [value]="2">Lv. 2</option>
-                            <option [value]="3">Lv. 3</option>
-                          </select>
-                        </label>
-                      }
-                      <label class="field inv-input">
-                        <span>Investment</span>
-                        <input
-                          [value]="slot.investmentCode"
-                          (input)="updateSlotInvestment(sIdx, inputValue($event))"
-                          placeholder="309e60" />
-                      </label>
-                      @if (allowsMercenary()) {
-                        <label class="check merc-check">
-                          <input
-                            type="checkbox"
-                            [checked]="slot.merc"
-                            (change)="updateSlotMerc(sIdx, checkboxValue($event))" />
-                          Merc
-                        </label>
-                      }
-                    </div>
-
-                    @if (slot.collectionId !== null) {
-                      <div class="node-editor-row">
-                        <span class="alt-label">Mythic stat nodes:</span>
-                        <div class="chip-row">
-                          @for (stat of slot.collectionNodes; track $index; let nIdx = $index) {
-                            <button
-                              mat-button
-                              type="button"
-                              class="chip-btn active-node"
-                              title="Click to remove stat node"
-                              (click)="removeSlotNodeStat(sIdx, nIdx)">
-                              {{ stat.toUpperCase() }} ×
-                            </button>
-                          }
-                          <select
-                            class="add-node-select"
-                            value=""
-                            (change)="addSlotNodeStat(sIdx, inputValue($event)); resetSelect($event)">
-                            <option value="">+ Add stat node…</option>
-                            @for (ns of nodeStatsCatalog; track ns) {
-                              <option [value]="ns">{{ ns.toUpperCase() }}</option>
-                            }
-                          </select>
-                        </div>
-                      </div>
-                    }
-
-                    <div class="alternatives-drawer">
-                      @if (slot.guideAlternatives.length || slot.visualAlternatives.length) {
-                        <div class="alt-group">
-                          <span class="alt-label">Suggested hero alternatives (click to swap):</span>
-                          <div class="chip-row">
-                            @for (gAlt of slot.guideAlternatives; track gAlt) {
-                              <button
-                                mat-button
-                                type="button"
-                                class="chip-btn guide-sub"
-                                (click)="updateSlotHeroByName(sIdx, gAlt)">
-                                [Guide Sub] {{ gAlt }}
-                              </button>
-                            }
-                            @for (vAlt of slot.visualAlternatives.slice(0, 5); track vAlt.slug) {
-                              @if (vAlt.name !== slot.heroName) {
-                                <button
-                                  mat-button
-                                  type="button"
-                                  class="chip-btn"
-                                  (click)="updateSlotHeroByName(sIdx, vAlt.name)">
-                                  {{ vAlt.name }} ({{ (vAlt.confidence * 100).toFixed(0) }}%)
-                                </button>
-                              }
-                            }
-                          </div>
-                        </div>
-                      }
-                      @if (slot.collectionAlternatives.length > 1) {
-                        <div class="alt-group">
-                          <span class="alt-label">Suggested collection alternatives:</span>
-                          <div class="chip-row">
-                            @for (cAlt of slot.collectionAlternatives.slice(0, 4); track cAlt.id) {
-                              @if (cAlt.id !== slot.collectionId) {
-                                <button
-                                  mat-button
-                                  type="button"
-                                  class="chip-btn"
-                                  (click)="updateSlotCollection(sIdx, cAlt.id.toString(), cAlt.level)">
-                                  {{ cAlt.name }} (Lv.{{ cAlt.level }})
-                                </button>
-                              }
-                            }
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                </article>
-              }
-            </div>
           }
 
           <div class="footer-actions">
@@ -663,6 +521,178 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
         </section>
       </div>
     </main>
+
+    @if (petModalOpen()) {
+      @if (activeFormation(); as form) {
+        <app-add-pet-modal
+          [pets]="store.pets()"
+          [petRoster]="store.petRoster()"
+          [currentPetId]="form.petId"
+          [currentLevel]="form.petLevel"
+          (selectionChange)="updateActivePetSelection($event)"
+          (closed)="closePetModal()"
+        />
+      }
+    }
+
+    @if (editingSlot(); as editing) {
+      @if (activeFormation(); as form) {
+        @let slot = form.heroes[editing.index];
+        @if (slot) {
+          @if (slot.heroId === null) {
+            <app-add-hero-modal
+              [heroes]="store.heroes()"
+              [disabledIds]="disabledHeroIds()"
+              (heroSelected)="pickHero($event, editing.index)"
+              (closed)="closeSlot()"
+            />
+          } @else {
+            <div class="overlay" role="presentation" (click)="closeSlot()">
+              <section class="panel hero-modal slot-modal" role="dialog" aria-modal="true"
+                [attr.aria-label]="'Edit ' + slot.heroName" cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+                (click)="$event.stopPropagation()">
+                <div class="slot-modal-head">
+                  <h2 class="extra-hero">
+                    <app-hero-icon [name]="slot.heroName" [imageUrl]="store.heroIconUrl(slot.heroId)" />
+                    {{ slot.heroName }}
+                  </h2>
+                  @if (allowsMercenary()) {
+                    <label class="check merc-check">
+                      <input
+                        type="checkbox"
+                        [checked]="slot.merc"
+                        (change)="updateSlotMerc(editing.index, checkboxValue($event))" />
+                      Mercenary
+                    </label>
+                  }
+                </div>
+
+                @if (slot.guideAlternatives.length || slot.visualAlternatives.length) {
+                  <div class="alt-group">
+                    <span class="alt-label">Suggested hero alternatives (click to swap):</span>
+                    <div class="chip-row">
+                      @for (gAlt of slot.guideAlternatives; track gAlt) {
+                        <button
+                          mat-button
+                          type="button"
+                          class="chip-btn guide-sub"
+                          (click)="updateSlotHeroByName(editing.index, gAlt)">
+                          [Guide Sub] {{ gAlt }}
+                        </button>
+                      }
+                      @for (vAlt of slot.visualAlternatives.slice(0, 5); track vAlt.slug) {
+                        @if (vAlt.name !== slot.heroName) {
+                          <button
+                            mat-button
+                            type="button"
+                            class="chip-btn"
+                            (click)="updateSlotHeroByName(editing.index, vAlt.name)">
+                            {{ vAlt.name }} ({{ (vAlt.confidence * 100).toFixed(0) }}%)
+                          </button>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+
+                <p class="rules">Investment short codes use SI, furniture, and engraving, for example 309e60.</p>
+                <app-hero-investment-editor
+                  [hero]="heroFor(slot.heroId)"
+                  [investment]="slot.investmentCode"
+                  [ascension]="ascensionOfSlot(slot)"
+                  (investmentChange)="updateSlotInvestment(editing.index, $event)"
+                  (ascensionChange)="updateSlotAscension(editing.index, $event)"
+                />
+
+                @if (currentModeConfig().collectionsEnabled) {
+                  <section class="collection-assignment" [attr.aria-label]="'Collection for ' + slot.heroName">
+                    <h4>Collection</h4>
+                    @if (slot.collectionAlternatives.length > 1) {
+                      <div class="alt-group">
+                        <span class="alt-label">Suggested collection alternatives:</span>
+                        <div class="chip-row">
+                          @for (cAlt of slot.collectionAlternatives.slice(0, 4); track cAlt.id) {
+                            @if (cAlt.id !== slot.collectionId) {
+                              <button
+                                mat-button
+                                type="button"
+                                class="chip-btn"
+                                (click)="updateSlotCollection(editing.index, cAlt.id.toString(), cAlt.level)">
+                                {{ cAlt.name }} (Lv.{{ cAlt.level }})
+                              </button>
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                    <div class="collection-assignment-controls">
+                      <div class="seg" role="group" [attr.aria-label]="'Collection source for ' + slot.heroName">
+                        <button
+                          mat-button
+                          type="button"
+                          [attr.aria-pressed]="!slot.collectionId && !slot.collectionSnapshot"
+                          (click)="clearSlotCollection(editing.index)">None</button>
+                        @if (auth.user() && collectionsForHero(slot.heroId).length) {
+                          <button
+                            mat-button
+                            type="button"
+                            [attr.aria-pressed]="!!slot.collectionId"
+                            (click)="useRosterCollection(editing.index)">From roster</button>
+                        }
+                        <button
+                          mat-button
+                          type="button"
+                          [disabled]="!catalogForHero(slot.heroId).length"
+                          [attr.aria-pressed]="!!slot.collectionSnapshot"
+                          (click)="startCustomCollection(editing.index)">New build</button>
+                      </div>
+                      @if (slot.collectionSnapshot) {
+                        <div class="seg" role="group" aria-label="Collection assignment type">
+                          <button
+                            mat-button
+                            type="button"
+                            [attr.aria-pressed]="!slot.collectionSnapshot.recommendation"
+                            (click)="setSlotCollectionRecommendationMode(editing.index, false)">Exact build</button>
+                          <button
+                            mat-button
+                            type="button"
+                            [attr.aria-pressed]="!!slot.collectionSnapshot.recommendation"
+                            (click)="setSlotCollectionRecommendationMode(editing.index, true)">Flexible recommendation</button>
+                        </div>
+                      }
+                    </div>
+                    @if (slot.collectionSnapshot; as snapshot) {
+                      @if (snapshot.recommendation; as rec) {
+                        <app-collection-recommendation-editor
+                          [catalog]="catalogForHero(slot.heroId)"
+                          [selectedCatalogId]="snapshot.catalogId ?? defaultCatalogIdForHero(slot.heroId)"
+                          [nodeStats]="store.collectionNodeStats()"
+                          [recommendation]="rec"
+                          (selectedCatalogIdChange)="updateSlotCollectionCatalogId(editing.index, $event)"
+                          (recommendationChange)="updateSlotCollectionRecommendation(editing.index, $event)" />
+                      } @else {
+                        <app-collection-build-editor
+                          [catalog]="catalogForHero(slot.heroId)"
+                          [selectedCatalogId]="snapshot.catalogId ?? defaultCatalogIdForHero(slot.heroId)"
+                          [nodeStats]="store.collectionNodeStats()"
+                          [nodes]="snapshot.nodes"
+                          (selectedCatalogIdChange)="updateSlotCollectionCatalogId(editing.index, $event)"
+                          (nodesChange)="updateSlotCollectionNodes(editing.index, $event)" />
+                      }
+                    }
+                  </section>
+                }
+
+                <div class="row-wrap modal-actions">
+                  <button mat-button type="button" class="btn" (click)="clearSlot(editing.index); closeSlot()">Remove hero</button>
+                  <button mat-flat-button type="button" class="btn primary" (click)="closeSlot()">Done</button>
+                </div>
+              </section>
+            </div>
+          }
+        }
+      }
+    }
   `,
   styles: `
     .import-submit-page { max-width: 1440px; margin: 0 auto; padding: var(--app-space-3, 16px); }
@@ -868,6 +898,49 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   readonly hasAnyHero = computed(() =>
     this.formations().some((f) => f.heroes.some((h) => h.heroId !== null)),
   );
+
+  readonly auth = inject(AuthService);
+  readonly editingSlot = signal<{ readonly index: number } | null>(null);
+  readonly petModalOpen = signal(false);
+
+  readonly disabledHeroIds = computed(() => {
+    const form = this.activeFormation();
+    if (!form) return [];
+    return form.heroes
+      .filter((s) => s.heroId !== null)
+      .map((s) => s.heroId!);
+  });
+
+  readonly activeBoardSlots = computed<readonly FormationBoardSlot[]>(() => {
+    const form = this.activeFormation();
+    if (!form) return [];
+    return form.heroes.map((slot) => {
+      const heroId = slot.heroId;
+      const heroName = slot.heroName;
+      const parsedInv = parseInvestment(slot.investmentCode);
+      const ascension = this.ascensionOfSlot(slot);
+      return {
+        heroId,
+        heroName,
+        iconUrl: heroId !== null ? this.store.heroIconUrl(heroId) : null,
+        hue: heroId !== null ? this.store.hue(heroName) : 200,
+        ascension,
+        investment: parsedInv,
+        needsReview: slot.needsReview,
+      };
+    });
+  });
+
+  readonly activeBoardPet = computed<FormationBoardPet | null>(() => {
+    const form = this.activeFormation();
+    if (!form || form.petId === null) return null;
+    return {
+      id: form.petId,
+      name: form.petName,
+      iconUrl: this.store.petIconUrl(form.petId),
+      level: form.petLevel,
+    };
+  });
 
   private objectUrl: string | null = null;
   private pendingAnalyzeAfterLoad = false;
@@ -1366,8 +1439,79 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     );
   }
 
-  updateSlotInvestment(slotIndex: number, investmentCode: string): void {
+  heroFor(id: number): Hero {
+    const hero = this.heroes().find((entry) => entry.id === id);
+    if (!hero) throw new Error(`Unknown hero id: ${id}`);
+    return hero;
+  }
+
+  petFor(id: number): Pet {
+    const pet = this.pets().find((entry) => entry.id === id);
+    if (!pet) throw new Error(`Unknown pet id: ${id}`);
+    return pet;
+  }
+
+  ascensionOfSlot(slot: EditableHeroSlot): AscensionRank | null {
+    if (slot.heroId === null) return null;
+    const hero = this.heroes().find((h) => h.id === slot.heroId);
+    const parsedInv = parseInvestment(slot.investmentCode);
+    return (
+      slot.ascension ??
+      (parsedInv ? defaultAscensionForInvestment(parsedInv) : null) ??
+      (hero ? this.heroIcons.lowestAscensionFor(displayHeroName(hero)) : null)
+    );
+  }
+
+  openSlot(index: number): void {
+    this.editingSlot.set({ index });
+  }
+
+  closeSlot(): void {
+    this.editingSlot.set(null);
+  }
+
+  openPetModal(): void {
+    this.petModalOpen.set(true);
+  }
+
+  closePetModal(): void {
+    this.petModalOpen.set(false);
+  }
+
+  pickHero(heroId: number, slotIndex: number): void {
+    const hero = this.heroFor(heroId);
+    this.updateSlotHeroByName(slotIndex, displayHeroName(hero));
+  }
+
+  clearSlot(slotIndex: number): void {
+    this.updateSlotHeroByName(slotIndex, '');
+  }
+
+  clearPet(): void {
+    this.updateActivePetByName('');
+  }
+
+  updateActivePetSelection(selection: DraftPetSelection): void {
+    if (selection.petId === null) {
+      this.clearPet();
+    } else {
+      const pet = this.petFor(selection.petId);
+      this.updateActivePetByName(pet.name);
+      if (selection.level !== null) {
+        this.updateActivePetLevel(selection.level);
+      }
+    }
+    this.petModalOpen.set(false);
+  }
+
+  updateSlotInvestment(slotIndex: number, investment: Investment | string | null): void {
     const fIdx = this.activeFormationIndex();
+    const investmentCode =
+      typeof investment === 'string'
+        ? investment
+        : investment
+          ? formatInvestment(investment)
+          : '';
     this.formations.update((forms) =>
       forms.map((f, i) =>
         i === fIdx
@@ -1376,6 +1520,174 @@ export class SubmitFromImagePageComponent implements OnDestroy {
               heroes: f.heroes.map((s, idx) =>
                 idx === slotIndex ? { ...s, investmentCode } : s,
               ),
+            }
+          : f,
+      ),
+    );
+  }
+
+  updateSlotAscension(slotIndex: number, ascension: AscensionRank | null): void {
+    const fIdx = this.activeFormationIndex();
+    this.formations.update((forms) =>
+      forms.map((f, i) =>
+        i === fIdx
+          ? {
+              ...f,
+              heroes: f.heroes.map((s, idx) =>
+                idx === slotIndex ? { ...s, ascension } : s,
+              ),
+            }
+          : f,
+      ),
+    );
+  }
+
+  defaultCatalogIdForHero(heroId: number | null): number {
+    const list = this.catalogForHero(heroId);
+    return list.length ? list[0].id : (this.store.collectionCatalog()[0]?.id ?? 1);
+  }
+
+  classOfHero(heroId: number | null): string | null {
+    if (heroId === null) return null;
+    const hero = this.heroFor(heroId);
+    return hero.class ?? this.heroIcons.classFor(displayHeroName(hero));
+  }
+
+  private sameClass(itemClass: string | null | undefined, heroClass: string | null): boolean {
+    return !!heroClass && itemClass?.toLowerCase() === heroClass.toLowerCase();
+  }
+
+  collectionsForHero(heroId: number | null) {
+    const heroClass = this.classOfHero(heroId);
+    return this.store.collections().filter((collection) => this.sameClass(collection.class, heroClass));
+  }
+
+  catalogForHero(heroId: number | null) {
+    const heroClass = this.classOfHero(heroId);
+    return this.store.collectionCatalog().filter((item) => this.sameClass(item.class, heroClass));
+  }
+
+  startCustomCollection(slotIndex: number): void {
+    const form = this.activeFormation();
+    if (!form) return;
+    const slot = form.heroes[slotIndex];
+    if (!slot || slot.heroId === null || slot.collectionSnapshot) return;
+    const catalogItem = this.catalogForHero(slot.heroId)[0] ?? this.store.collectionCatalog()[0];
+    if (!catalogItem) return;
+    const snapshot: CollectionSnapshot = {
+      catalogId: catalogItem.id,
+      name: catalogItem.name,
+      class: catalogItem.class,
+      nodes: [],
+    };
+    this.updateSlotFormation(slotIndex, (s) => ({
+      ...s,
+      collectionId: catalogItem.id,
+      collectionSnapshot: snapshot,
+    }));
+  }
+
+  useRosterCollection(slotIndex: number): void {
+    const form = this.activeFormation();
+    if (!form) return;
+    const slot = form.heroes[slotIndex];
+    if (!slot || slot.heroId === null) return;
+    const collection = this.collectionsForHero(slot.heroId)[0];
+    if (collection) {
+      this.updateSlotFormation(slotIndex, (s) => ({
+        ...s,
+        collectionId: collection.catalogId ?? null,
+        collectionSnapshot: {
+          catalogId: collection.catalogId,
+          name: collection.name,
+          class: collection.class,
+          nodes: collection.nodes,
+        },
+      }));
+    }
+  }
+
+  clearSlotCollection(slotIndex: number): void {
+    this.updateSlotFormation(slotIndex, (s) => ({
+      ...s,
+      collectionId: null,
+      collectionSnapshot: null,
+    }));
+  }
+
+  setSlotCollectionRecommendationMode(slotIndex: number, enabled: boolean): void {
+    this.updateSlotFormation(slotIndex, (s) => {
+      if (!s.collectionSnapshot) return s;
+      const snapshot: CollectionSnapshot = enabled
+        ? {
+            ...s.collectionSnapshot,
+            nodes: [],
+            recommendation: s.collectionSnapshot.recommendation ?? {
+              level: 1,
+              attackStats: [],
+              defenseStats: [],
+            },
+          }
+        : {
+            ...s.collectionSnapshot,
+            nodes: [],
+            recommendation: undefined,
+          };
+      return { ...s, collectionSnapshot: snapshot };
+    });
+  }
+
+  updateSlotCollectionCatalogId(slotIndex: number, catalogId: number): void {
+    this.updateSlotFormation(slotIndex, (s) => {
+      const catalogItem = this.store.collectionCatalog().find((c) => c.id === catalogId);
+      if (!catalogItem || !s.collectionSnapshot) return s;
+      return {
+        ...s,
+        collectionId: catalogId,
+        collectionSnapshot: {
+          ...s.collectionSnapshot,
+          catalogId,
+          name: catalogItem.name,
+          class: catalogItem.class,
+        },
+      };
+    });
+  }
+
+  updateSlotCollectionNodes(slotIndex: number, nodes: readonly CollectionNode[]): void {
+    this.updateSlotFormation(slotIndex, (s) => {
+      if (!s.collectionSnapshot) return s;
+      return {
+        ...s,
+        collectionSnapshot: {
+          ...s.collectionSnapshot,
+          nodes,
+        },
+      };
+    });
+  }
+
+  updateSlotCollectionRecommendation(slotIndex: number, recommendation: any): void {
+    this.updateSlotFormation(slotIndex, (s) => {
+      if (!s.collectionSnapshot) return s;
+      return {
+        ...s,
+        collectionSnapshot: {
+          ...s.collectionSnapshot,
+          recommendation,
+        },
+      };
+    });
+  }
+
+  private updateSlotFormation(slotIndex: number, updater: (slot: EditableHeroSlot) => EditableHeroSlot): void {
+    const fIdx = this.activeFormationIndex();
+    this.formations.update((forms) =>
+      forms.map((f, i) =>
+        i === fIdx
+          ? {
+              ...f,
+              heroes: f.heroes.map((s, idx) => (idx === slotIndex ? updater(s) : s)),
             }
           : f,
       ),
@@ -1424,12 +1736,13 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         const hero = this.heroes().find((h) => h.id === slot.heroId);
         const parsedInv = parseInvestment(slot.investmentCode);
         const ascension =
+          slot.ascension ??
           defaultAscensionForInvestment(parsedInv) ??
           (hero ? this.heroIcons.lowestAscensionFor(displayHeroName(hero)) : 'ascended');
 
-        let collectionSnapshot: CollectionSnapshot | null = null;
-        if (slot.collectionId !== null) {
-          const catalogItem = this.collections.find((c) => c.id === slot.collectionId);
+        let collectionSnapshot: CollectionSnapshot | null = slot.collectionSnapshot ?? null;
+        if (!collectionSnapshot && slot.collectionId !== null) {
+          const catalogItem = this.collections.find((c) => c.id === slot.collectionId) ?? this.store.collectionCatalog().find((c) => c.id === slot.collectionId);
           if (catalogItem) {
             const nodes: CollectionNode[] = [];
             let slotCounter = 0;
@@ -1453,7 +1766,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           merc: slot.merc,
           inv: slot.investmentCode,
           ascension,
-          collectionId: '',
+          collectionId: slot.collectionId ? String(slot.collectionId) : '',
           collectionSnapshot,
         };
       });

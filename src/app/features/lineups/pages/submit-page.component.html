@@ -62,51 +62,15 @@
           ? ' Rounds may be omitted or partially filled.' : '' }}</p>
       </div>
 
-      <div class="formation-board" [class.front-right]="lineupView.orientation() === 'front-right'">
-        @for (rowIndex of [0, 1]; track rowIndex) {
-        <div class="formation-row" [class.back]="rowIndex > 0">
-          @for (slot of draft.forms[draft.cur].slots.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track
-          $index; let inRowIndex = $index) {
-          @let slotIndex = rowIndex === 0 ? inRowIndex : inRowIndex + 2;
-          @if (slot.hid === null) {
-          <button mat-button type="button" class="formation-slot empty-slot" [class.selected]="draft.slot === slotIndex"
-            (click)="openSlot(slotIndex)">
-            {{ rowIndex ? 'Back' : 'Front' }}
-          </button>
-          } @else {
-          <button mat-button type="button" class="formation-slot" [class.selected]="draft.slot === slotIndex"
-            [style.--h]="store.hue(store.heroName(slot.hid))" [attr.aria-label]="'Edit ' + store.heroName(slot.hid)"
-            (click)="openSlot(slotIndex)">
-            <app-hero-icon [name]="store.heroName(slot.hid)" [imageUrl]="store.heroIconUrl(slot.hid)" size="large"
-              [ascension]="ascensionOf(slotIndex)" [investment]="store.draftInvestment(slotIndex)" />
-            <span class="remove-slot" role="button" [attr.aria-label]="'Remove ' + store.heroName(slot.hid)"
-              (click)="$event.stopPropagation(); store.clearSlot(slotIndex)">×</span>
-          </button>
-          }
-          }
-        </div>
-        }
-      </div>
-      <section class="extras">
-        <div class="field pet-slot-field">
-          <h3>Pet <span class="muted">(optional)</span></h3>
-          @if (draft.forms[draft.cur].petId === null) {
-          <button mat-button type="button" class="formation-slot empty-slot pet-slot" aria-label="Add pet"
-            (click)="petModalOpen.set(true)">Add Pet</button>
-          } @else {
-          @let selectedPet = petFor(draft.forms[draft.cur].petId!);
-          <button mat-button type="button" class="formation-slot pet-slot"
-            [attr.aria-label]="'Edit ' + selectedPet.name + ', level ' + (draft.forms[draft.cur].petLevel ?? 'not set')"
-            (click)="petModalOpen.set(true)">
-            <app-hero-icon [name]="selectedPet.name" [imageUrl]="selectedPet.iconUrl ?? null" size="large" />
-            @if (draft.forms[draft.cur].petLevel !== null) {
-            <span class="pet-level-tag">Lv. {{ draft.forms[draft.cur].petLevel }}</span>
-            }
-            <span class="remove-slot" aria-hidden="true">×</span>
-          </button>
-          }
-        </div>
-      </section>
+      <app-formation-board
+        [slots]="boardSlots()"
+        [pet]="boardPet()"
+        [selectedSlotIndex]="editingSlot()?.index ?? null"
+        (slotClick)="openSlot($event)"
+        (slotRemove)="store.clearSlot($event)"
+        (petClick)="petModalOpen.set(true)"
+        (petRemove)="updateDraftPet({ petId: null, level: null })"
+      />
 
       <section class="result-fields">
         <h3>Result <span class="muted">(optional)</span></h3>
