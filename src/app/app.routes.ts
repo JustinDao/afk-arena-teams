@@ -36,7 +36,8 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'import-helper',
-    loadComponent: () => import('./features/lineups/pages/import-helper-page.component').then((m) => m.ImportHelperPageComponent),
+    redirectTo: 'submit/from-image',
+    pathMatch: 'full',
   },
   {
     path: 'submit',
