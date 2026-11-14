@@ -163,6 +163,46 @@ const NIGHTMARE_SUBSTITUTE_ROWS_PER_ROUND = 10;
         </div>
       </section>
 
+      @if (matchedModeInfo(); as bm) {
+        <section class="panel">
+          <div class="team-heading">
+            <div>
+              <h3>Best matching mode, lineup &amp; alternatives</h3>
+              <p class="hint">
+                Predicted Mode: <strong>{{ bm.mode_name }}</strong> · Target: <strong>{{ bm.target_name }}</strong>
+                ({{ (bm.confidence * 100).toFixed(1) }}% confidence)
+              </p>
+            </div>
+          </div>
+          @if (bm.reasons.length) {
+            <p class="recognized">{{ bm.reasons.join(' · ') }}</p>
+          }
+          @if (modeAlternatives().length) {
+            <div class="suggestions">
+              <span class="hint">Suggested alternative modes / targets (click to switch)</span>
+              @for (alt of modeAlternatives(); track alt.mode_slug + ':' + alt.target_slug) {
+                <button mat-button type="button" class="btn suggestion" (click)="applyModeAlternative(alt)">
+                  {{ alt.mode_name }}: {{ alt.target_name }} ({{ (alt.confidence * 100).toFixed(0) }}%)
+                </button>
+              }
+            </div>
+          }
+          @if (matchedLineupInfo(); as bl) {
+            <p class="recognized">
+              Closest database lineup: <strong>{{ bl.title }}</strong> (<code>{{ bl.id }}</code>, {{ (bl.similarity * 100).toFixed(1) }}% match)
+            </p>
+          }
+          @if (reviewSuggestions().length) {
+            <div class="suggestions">
+              <span class="hint">Review flags &amp; suggested corrections ({{ reviewSuggestions().length }})</span>
+              @for (sug of reviewSuggestions(); track $index) {
+                <p class="recognized">• Round {{ sug.round }} ({{ sug.formation_label }}) {{ sug.field }}: {{ sug.reason }}</p>
+              }
+            </div>
+          }
+        </section>
+      }
+
       <div class="workspace">
         <section class="panel image-panel">
           <h3>Source guide</h3>
@@ -420,6 +460,32 @@ export class ImportHelperPageComponent implements OnDestroy {
   readonly substituteSets = signal<readonly SubstituteTeamCandidate[]>([]);
   readonly selectedSubstituteSet = signal(0);
   readonly activeSubstituteSet = computed(() => this.substituteSets()[this.selectedSubstituteSet()] ?? null);
+  readonly matchedModeInfo = signal<{
+    readonly mode_slug: string;
+    readonly mode_name: string;
+    readonly target_slug: string;
+    readonly target_name: string;
+    readonly confidence: number;
+    readonly reasons: readonly string[];
+  } | null>(null);
+  readonly modeAlternatives = signal<readonly {
+    readonly mode_slug: string;
+    readonly mode_name: string;
+    readonly target_slug: string;
+    readonly target_name: string;
+    readonly confidence: number;
+  }[]>([]);
+  readonly matchedLineupInfo = signal<{
+    readonly id: string;
+    readonly title: string;
+    readonly similarity: number;
+  } | null>(null);
+  readonly reviewSuggestions = signal<readonly {
+    readonly round: number;
+    readonly formation_label: string;
+    readonly field: string;
+    readonly reason: string;
+  }[]>([]);
   readonly cropPurpose = signal<CropPurpose>('hero');
   readonly associatedHeroId = signal(-1);
   readonly jsonOutput = computed(() => JSON.stringify({
@@ -478,7 +544,16 @@ export class ImportHelperPageComponent implements OnDestroy {
     this.substituteSets.set([]);
     this.selectedSubstituteSet.set(0);
     this.selectedTeam.set(0);
+    this.matchedModeInfo.set(null);
+    this.modeAlternatives.set([]);
+    this.matchedLineupInfo.set(null);
+    this.reviewSuggestions.set([]);
     this.status.set('Image loaded locally. Analyze the entire image to generate candidate teams.');
+  }
+
+  applyModeAlternative(alt: { readonly mode_slug: string; readonly target_slug: string }): void {
+    this.mode.set(alt.mode_slug);
+    this.target.set(alt.target_slug);
   }
 
   imageLoadError(): void {
@@ -486,11 +561,196 @@ export class ImportHelperPageComponent implements OnDestroy {
     this.status.set('The selected image could not be decoded by this browser.');
   }
 
+  private resolveHeroNameBySlug(slug: string, fallbackName = ''): string {
+    const heroEntries = this.heroes();
+    const byExactSlug = heroEntries.find((h) => this.heroSlug(displayHeroName(h)) === slug);
+    if (byExactSlug) return displayHeroName(byExactSlug);
+    const stripped = slug.replace(/^highborn-/, '');
+    const byStripped = heroEntries.find((h) => this.heroSlug(displayHeroName(h)) === stripped);
+    if (byStripped) return displayHeroName(byStripped);
+    if (fallbackName) {
+      const byName = heroEntries.find((h) => displayHeroName(h).toLowerCase() === fallbackName.toLowerCase());
+      if (byName) return displayHeroName(byName);
+    }
+    return fallbackName || slug;
+  }
+
+  private resolvePetNameBySlug(slug: string | null | undefined, fallbackName = ''): string {
+    if (!slug) return '';
+    const found = this.pets().find((p) => this.petSlug(p.name) === slug || p.name.toLowerCase() === fallbackName.toLowerCase());
+    return found ? found.name : fallbackName;
+  }
+
+  private async tryBackendRecognizer(image: HTMLImageElement): Promise<boolean> {
+    const fullCanvas = document.createElement('canvas');
+    fullCanvas.width = image.naturalWidth;
+    fullCanvas.height = image.naturalHeight;
+    const ctx = fullCanvas.getContext('2d');
+    if (!ctx) return false;
+    ctx.drawImage(image, 0, 0);
+    const dataUrl = fullCanvas.toDataURL('image/png');
+
+    const endpoints = ['/api/recognize-lineup', 'http://127.0.0.1:8174/api/recognize-lineup'];
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: dataUrl }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data?.ok || !Array.isArray(data.teams)) continue;
+
+        if (data.best_mode) {
+          this.mode.set(data.best_mode.mode_slug || this.mode());
+          this.target.set(data.best_mode.target_slug || this.target());
+          this.matchedModeInfo.set({
+            mode_slug: data.best_mode.mode_slug,
+            mode_name: data.best_mode.mode_name,
+            target_slug: data.best_mode.target_slug,
+            target_name: data.best_mode.target_name,
+            confidence: Number(data.best_mode.confidence ?? 0),
+            reasons: Array.isArray(data.best_mode.reasons) ? data.best_mode.reasons : [],
+          });
+        }
+        if (Array.isArray(data.mode_alternatives)) {
+          this.modeAlternatives.set(data.mode_alternatives);
+        }
+        if (data.best_lineup_match) {
+          this.matchedLineupInfo.set({
+            id: data.best_lineup_match.id,
+            title: data.best_lineup_match.title,
+            similarity: Number(data.best_lineup_match.similarity ?? 0),
+          });
+        }
+        if (data.seed_payload?.key) {
+          this.seedKey.set(data.seed_payload.key);
+        }
+        if (Array.isArray(data.review_suggestions)) {
+          this.reviewSuggestions.set(data.review_suggestions);
+        }
+
+        const W = Math.max(1, image.naturalWidth);
+        const H = Math.max(1, image.naturalHeight);
+        const mappedTeams: ImportTeam[] = [];
+        const mappedSubs: SubstituteTeamCandidate[] = [];
+
+        for (let tIdx = 0; tIdx < data.teams.length; tIdx++) {
+          const t = data.teams[tIdx];
+          const petObj = t.pet ?? null;
+          const petName = this.resolvePetNameBySlug(petObj?.slug, petObj?.name ?? '');
+          const petOptionNames: string[] = (petObj?.options ?? [])
+            .map((s: string) => this.resolvePetNameBySlug(s, s))
+            .filter(Boolean);
+          const petVisualNames: string[] = (petObj?.visual_alternatives ?? [])
+            .map((a: { slug: string; name: string }) => this.resolvePetNameBySlug(a.slug, a.name))
+            .filter(Boolean);
+          const petSuggestions = [...new Set([petName, ...petOptionNames, ...petVisualNames].filter(Boolean))];
+
+          const heroes: HeroCrop[] = (t.heroes ?? []).map((h: {
+            slug: string;
+            name: string;
+            bbox?: number[];
+            slot_options?: string[];
+            visual_alternatives?: { slug: string; name: string }[];
+            collection?: {
+              catalog: number | null;
+              level: number | null;
+              visual_alternatives?: { id: number }[];
+              nodes?: { stat: string; visual_alternatives?: { stat: string }[] }[];
+            };
+          }) => {
+            const heroName = this.resolveHeroNameBySlug(h.slug, h.name);
+            const slotOptNames = (h.slot_options ?? []).map((s) => this.resolveHeroNameBySlug(s, s));
+            const visOptNames = (h.visual_alternatives ?? []).map((a) => this.resolveHeroNameBySlug(a.slug, a.name));
+            const suggestions = [...new Set([heroName, ...slotOptNames, ...visOptNames].filter(Boolean))];
+            const [bx = 0, by = 0, bw = 64, bh = 64] = h.bbox ?? [];
+            const coll = h.collection ?? null;
+            const collectionId = coll?.catalog ?? null;
+            const levelNodes = Math.max(0, Math.min(2, (coll?.level ?? 1) - 1));
+            const nodes = coll?.nodes ?? [];
+            const collectionStats = nodes.map((n) => n.stat).join(', ');
+            const collectionSuggestions = [...new Set((coll?.visual_alternatives ?? []).map((c) => c.id))];
+            const nodeStatSuggestions = [...new Set(nodes.flatMap((n) => (n.visual_alternatives ?? []).map((a) => a.stat)))];
+            return {
+              id: ++this.nextHeroId,
+              box: { x: bx / W, y: by / H, width: bw / W, height: bh / H },
+              suggestions,
+              collectionSuggestions,
+              nodeStatSuggestions,
+              heroName,
+              collectionId,
+              collectionStats,
+              levelNodes,
+              investmentText: '',
+              si: null,
+              furniture: null,
+              engraving: null,
+              slug: h.slug,
+            };
+          });
+
+          const fLabel = t.matched_formation_label || `Round ${t.round ?? tIdx + 1}`;
+          const fKey = t.matched_formation_key || `round-${t.round ?? tIdx + 1}`;
+          mappedTeams.push({
+            key: fKey,
+            label: fLabel,
+            pet: petName,
+            petLevel: petName ? this.petMax(petName) : null,
+            petSuggestions,
+            heroes,
+          });
+
+          for (const sub of t.substitute_teams ?? []) {
+            const subPetName = this.resolvePetNameBySlug(sub.pet, sub.pet_name ?? '');
+            const subPetSug = [...new Set((sub.pet_options ?? [sub.pet]).map((s: string) => this.resolvePetNameBySlug(s, s)).filter(Boolean))];
+            const [sbx = 0, sby = 0, sbw = 300, sbh = 64] = sub.bbox ?? [];
+            const subHeroes: SubstituteHeroCandidate[] = (sub.hero_slots ?? []).map((hs: { primary_slug: string; options: string[] }) => {
+              const opts = (hs.options ?? [hs.primary_slug]).map((s) => this.resolveHeroNameBySlug(s, s));
+              return {
+                box: { x: sbx / W, y: sby / H, width: sbw / W, height: sbh / H },
+                heroName: opts[0] ?? '',
+                suggestions: [...new Set(opts)],
+              };
+            });
+            mappedSubs.push({
+              label: `${fLabel} · Substitute ${(sub.row_index ?? 2) - 1}`,
+              pet: subPetName,
+              petSuggestions: subPetSug,
+              heroes: subHeroes,
+            });
+          }
+        }
+
+        if (mappedTeams.length) {
+          this.teams.set(mappedTeams);
+          this.substituteSets.set(mappedSubs);
+          this.selectedTeam.set(0);
+          this.selectedSubstituteSet.set(0);
+          const totalHeroes = mappedTeams.reduce((s, tm) => s + tm.heroes.length, 0);
+          this.status.set(
+            `Matched mode "${data.best_mode?.mode_name} — ${data.best_mode?.target_name}" (${((data.best_mode?.confidence ?? 0) * 100).toFixed(1)}%) and extracted ${mappedTeams.length} team(s) (${totalHeroes} heroes) + ${mappedSubs.length} substitute team(s) in ${data.elapsed_seconds}s.`,
+          );
+          return true;
+        }
+      } catch {
+        // Endpoint offline; try next or fall back to browser heuristic
+      }
+    }
+    return false;
+  }
+
   async analyzeImage(): Promise<void> {
     const image = this.sourceImage()?.nativeElement;
     if (!image || !this.imageReady() || this.analyzing()) return;
     this.analyzing.set(true);
-    this.status.set('Reading the whole image locally. The OCR worker and language data may download on first use…');
+    this.status.set('Analyzing image with mode, lineup, and visual template matcher…');
+    try {
+      if (await this.tryBackendRecognizer(image)) {
+        return;
+      }
+      this.status.set('Reading the whole image locally. The OCR worker and language data may download on first use…');
     try {
       const maxDimension = 2600;
       const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));

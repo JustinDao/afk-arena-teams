@@ -2,7 +2,7 @@
   "app_export_lineup_9": {
     "image": "/home/justindao/git/afk-arena-teams/afk-nightmare-corridor-infernal-overlord-9.png",
     "held_out_fold": "fold-3",
-    "elapsed_seconds": 15.33,
+    "elapsed_seconds": 15.53,
     "metrics": {
       "teams_assembled": 6,
       "expected_teams": 6,
@@ -20,10 +20,166 @@
       "pet_total": 6,
       "pet_accuracy": 1.0
     },
+    "best_mode": {
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "confidence": 0.99,
+      "reference_lineup_id": "nc-guide-2026-10-infernal-overlord",
+      "reference_similarity": 1.0,
+      "reasons": [
+        "Matches reference lineup 'Nightmare Corridor \u2014 Infernal Overlord (6-Boss Cycle Meta)' (30/30 heroes across 6 round(s), 100.0% round similarity).",
+        "6-round formation structure matches Nightmare Corridor 6-boss cycle."
+      ]
+    },
+    "mode_alternatives": [
+      {
+        "mode_slug": "nightmare-corridor",
+        "mode_name": "Nightmare Corridor",
+        "target_slug": "netherspinner",
+        "target_name": "Netherspinner",
+        "confidence": 0.38,
+        "reference_lineup_id": "nc-netherspinner-sample",
+        "reference_similarity": 0.1394,
+        "reasons": [
+          "6-round formation structure matches Nightmare Corridor 6-boss cycle."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "ice-shemira",
+        "target_name": "Ice Shemira",
+        "confidence": 0.297,
+        "reference_lineup_id": "cr-ice-shemira-sample",
+        "reference_similarity": 0.0765,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "burning-brute",
+        "target_name": "Burning Brute",
+        "confidence": 0.262,
+        "reference_lineup_id": "cr-burning-brute-sample",
+        "reference_similarity": 0.0273,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "kane",
+        "target_name": "Kane",
+        "confidence": 0.242,
+        "reference_lineup_id": null,
+        "reference_similarity": 0.0,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "demonic-entity",
+        "target_name": "Demonic Entity",
+        "confidence": 0.242,
+        "reference_lineup_id": null,
+        "reference_similarity": 0.0,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      }
+    ],
+    "best_lineup_match": {
+      "id": "nc-guide-2026-10-infernal-overlord",
+      "title": "Nightmare Corridor \u2014 Infernal Overlord (6-Boss Cycle Meta)",
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "source": "seed.sql",
+      "reference_team_count": 6,
+      "similarity": 1.0,
+      "mean_round_similarity": 1.0,
+      "round_alignments": [
+        {
+          "image_round": 1,
+          "matched_formation_key": "molten-crystalline-worm-queen",
+          "matched_formation_label": "Molten Crystalline Worm Queen",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 2,
+          "matched_formation_key": "cindercrow-specter",
+          "matched_formation_label": "Cindercrow Specter",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 3,
+          "matched_formation_key": "demonic-puppet",
+          "matched_formation_label": "Demonic Puppet",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 4,
+          "matched_formation_key": "ashen-prophet",
+          "matched_formation_label": "Ashen Prophet",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 5,
+          "matched_formation_key": "mirror-demon",
+          "matched_formation_label": "Mirror Demon",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 6,
+          "matched_formation_key": "infernal-overlord",
+          "matched_formation_label": "Infernal Overlord",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        }
+      ]
+    },
+    "review_suggestions": [],
     "formations": [
       {
-        "key": "round-1",
-        "label": "Round 1",
+        "key": "molten-crystalline-worm-queen",
+        "label": "Molten Crystalline Worm Queen",
         "pet": "twinlum-spirit",
         "heroes": [
           {
@@ -139,8 +295,8 @@
         ]
       },
       {
-        "key": "round-2",
-        "label": "Round 2",
+        "key": "cindercrow-specter",
+        "label": "Cindercrow Specter",
         "pet": "blazefang",
         "heroes": [
           {
@@ -271,8 +427,8 @@
         ]
       },
       {
-        "key": "round-3",
-        "label": "Round 3",
+        "key": "demonic-puppet",
+        "label": "Demonic Puppet",
         "pet": "count-snickerfang",
         "heroes": [
           {
@@ -363,8 +519,8 @@
         ]
       },
       {
-        "key": "round-4",
-        "label": "Round 4",
+        "key": "ashen-prophet",
+        "label": "Ashen Prophet",
         "pet": "aureus",
         "heroes": [
           {
@@ -465,8 +621,8 @@
         ]
       },
       {
-        "key": "round-5",
-        "label": "Round 5",
+        "key": "mirror-demon",
+        "label": "Mirror Demon",
         "pet": "nightfall-pegasus",
         "heroes": [
           {
@@ -562,8 +718,8 @@
         ]
       },
       {
-        "key": "round-6",
-        "label": "Round 6",
+        "key": "infernal-overlord",
+        "label": "Infernal Overlord",
         "pet": "trickery-chest",
         "heroes": [
           {
@@ -693,7 +849,7 @@
   "community_guide_lydydxhxpyyh1": {
     "image": "/home/justindao/git/afk-arena-teams/lydydxhxpyyh1.png",
     "held_out_fold": "fold-2",
-    "elapsed_seconds": 49.03,
+    "elapsed_seconds": 50.16,
     "metrics": {
       "teams_assembled": 6,
       "expected_teams": 6,
@@ -711,10 +867,229 @@
       "pet_total": 6,
       "pet_accuracy": 1.0
     },
+    "best_mode": {
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "confidence": 0.99,
+      "reference_lineup_id": "nc-guide-2026-10-infernal-overlord",
+      "reference_similarity": 0.9972,
+      "reasons": [
+        "Matches reference lineup 'Nightmare Corridor \u2014 Infernal Overlord (6-Boss Cycle Meta)' (30/30 heroes across 6 round(s), 99.7% round similarity).",
+        "6-round formation structure matches Nightmare Corridor 6-boss cycle.",
+        "Includes per-boss substitute team table typical of Nightmare Corridor community guides."
+      ]
+    },
+    "mode_alternatives": [
+      {
+        "mode_slug": "nightmare-corridor",
+        "mode_name": "Nightmare Corridor",
+        "target_slug": "netherspinner",
+        "target_name": "Netherspinner",
+        "confidence": 0.409,
+        "reference_lineup_id": "nc-netherspinner-sample",
+        "reference_similarity": 0.1787,
+        "reasons": [
+          "6-round formation structure matches Nightmare Corridor 6-boss cycle.",
+          "Includes per-boss substitute team table typical of Nightmare Corridor community guides."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "frost",
+        "target_name": "Frost",
+        "confidence": 0.309,
+        "reference_lineup_id": "ts-frost-sample",
+        "reference_similarity": 0.1302,
+        "reasons": [
+          "6-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "ice-shemira",
+        "target_name": "Ice Shemira",
+        "confidence": 0.309,
+        "reference_lineup_id": "cr-ice-shemira-sample",
+        "reference_similarity": 0.0929,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      },
+      {
+        "mode_slug": "cursed-realm",
+        "mode_name": "Cursed Realm",
+        "target_slug": "burning-brute",
+        "target_name": "Burning Brute",
+        "confidence": 0.27,
+        "reference_lineup_id": "cr-burning-brute-sample",
+        "reference_similarity": 0.0396,
+        "reasons": [
+          "6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss)."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "fire",
+        "target_name": "Fire",
+        "confidence": 0.254,
+        "reference_lineup_id": "ts-fire-sample",
+        "reference_similarity": 0.054,
+        "reasons": [
+          "6-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      }
+    ],
+    "best_lineup_match": {
+      "id": "nc-guide-2026-10-infernal-overlord",
+      "title": "Nightmare Corridor \u2014 Infernal Overlord (6-Boss Cycle Meta)",
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "source": "seed.sql",
+      "reference_team_count": 6,
+      "similarity": 0.9972,
+      "mean_round_similarity": 0.9972,
+      "round_alignments": [
+        {
+          "image_round": 1,
+          "matched_formation_key": "molten-crystalline-worm-queen",
+          "matched_formation_label": "Molten Crystalline Worm Queen",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 2,
+          "matched_formation_key": "cindercrow-specter",
+          "matched_formation_label": "Cindercrow Specter",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 3,
+          "matched_formation_key": "demonic-puppet",
+          "matched_formation_label": "Demonic Puppet",
+          "similarity": 0.9833,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": [
+            {
+              "type": "collection_node_diff",
+              "slot": 1,
+              "hero_slug": "harvey",
+              "image_value": [
+                "full_atk_m",
+                "atk_m"
+              ],
+              "reference_value": [
+                "full_atk_m"
+              ],
+              "note": "Slot 2 (Harvey) nodes: image shows ['full_atk_m', 'atk_m'], reference has ['full_atk_m']."
+            }
+          ]
+        },
+        {
+          "image_round": 4,
+          "matched_formation_key": "ashen-prophet",
+          "matched_formation_label": "Ashen Prophet",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 5,
+          "matched_formation_key": "mirror-demon",
+          "matched_formation_label": "Mirror Demon",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 6,
+          "matched_formation_key": "infernal-overlord",
+          "matched_formation_label": "Infernal Overlord",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        }
+      ]
+    },
+    "review_suggestions": [
+      {
+        "round": 2,
+        "formation_label": "Cindercrow Specter",
+        "slot": 4,
+        "field": "hero",
+        "type": "visual_uncertainty",
+        "current_value": "awakened-safiya",
+        "reference_value": null,
+        "suggested_alternatives": [
+          "skreg",
+          "kaz",
+          "warek",
+          "ferael"
+        ],
+        "reason": "Round 2 Slot 4 hero (Safiya (Awakened), MSE 2478.5) has a close visual runner-up: Skreg (skreg, MSE 2720.46)."
+      },
+      {
+        "round": 3,
+        "formation_label": "Demonic Puppet",
+        "slot": 2,
+        "field": "collection_nodes",
+        "type": "collection_node_diff",
+        "current_value": [
+          "full_atk_m",
+          "atk_m"
+        ],
+        "reference_value": [
+          "full_atk_m"
+        ],
+        "suggested_alternatives": [
+          [
+            "full_atk_m"
+          ],
+          [
+            "full_atk_m",
+            "full_atk_l",
+            "full_def_m"
+          ],
+          [
+            "atk_m",
+            "pp_m",
+            "atk_l"
+          ]
+        ],
+        "reason": "Slot 2 (Harvey) nodes: image shows ['full_atk_m', 'atk_m'], reference has ['full_atk_m']."
+      }
+    ],
     "formations": [
       {
-        "key": "round-1",
-        "label": "Round 1",
+        "key": "molten-crystalline-worm-queen",
+        "label": "Molten Crystalline Worm Queen",
         "pet": "twinlum-spirit",
         "heroes": [
           {
@@ -995,8 +1370,8 @@
         ]
       },
       {
-        "key": "round-2",
-        "label": "Round 2",
+        "key": "cindercrow-specter",
+        "label": "Cindercrow Specter",
         "pet": "blazefang",
         "heroes": [
           {
@@ -1235,8 +1610,8 @@
         ]
       },
       {
-        "key": "round-3",
-        "label": "Round 3",
+        "key": "demonic-puppet",
+        "label": "Demonic Puppet",
         "pet": "count-snickerfang",
         "heroes": [
           {
@@ -1439,8 +1814,8 @@
         ]
       },
       {
-        "key": "round-4",
-        "label": "Round 4",
+        "key": "ashen-prophet",
+        "label": "Ashen Prophet",
         "pet": "aureus",
         "heroes": [
           {
@@ -1679,8 +2054,8 @@
         ]
       },
       {
-        "key": "round-5",
-        "label": "Round 5",
+        "key": "mirror-demon",
+        "label": "Mirror Demon",
         "pet": "nightfall-pegasus",
         "heroes": [
           {
@@ -1854,8 +2229,8 @@
         ]
       },
       {
-        "key": "round-6",
-        "label": "Round 6",
+        "key": "infernal-overlord",
+        "label": "Infernal Overlord",
         "pet": "trickery-chest",
         "heroes": [
           {
@@ -2100,7 +2475,7 @@
   "f2p_staggered_guide": {
     "image": "/home/justindao/git/afk-arena-teams/f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp",
     "held_out_fold": "fold-1",
-    "elapsed_seconds": 15.54,
+    "elapsed_seconds": 15.71,
     "metrics": {
       "teams_assembled": 3,
       "expected_teams": 3,
@@ -2118,10 +2493,133 @@
       "pet_total": 3,
       "pet_accuracy": 1.0
     },
+    "best_mode": {
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "confidence": 0.962,
+      "reference_lineup_id": "nc-f2p-retries-infernal-overlord",
+      "reference_similarity": 1.0,
+      "reasons": [
+        "Matches reference lineup 'Nightmare Corridor \u2014 Infernal Overlord (F2P 1k Dias / Retries 3-Round Guide)' (15/15 heroes across 3 round(s), 100.0% round similarity).",
+        "3-round partial formation guide with pets & collections fits Nightmare Corridor."
+      ]
+    },
+    "mode_alternatives": [
+      {
+        "mode_slug": "nightmare-corridor",
+        "mode_name": "Nightmare Corridor",
+        "target_slug": "netherspinner",
+        "target_name": "Netherspinner",
+        "confidence": 0.325,
+        "reference_lineup_id": "nc-netherspinner-sample",
+        "reference_similarity": 0.1148,
+        "reasons": [
+          "3-round partial formation guide with pets & collections fits Nightmare Corridor."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "frost",
+        "target_name": "Frost",
+        "confidence": 0.256,
+        "reference_lineup_id": "ts-frost-sample",
+        "reference_similarity": 0.0574,
+        "reasons": [
+          "3-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "fire",
+        "target_name": "Fire",
+        "confidence": 0.243,
+        "reference_lineup_id": "ts-fire-sample",
+        "reference_similarity": 0.0383,
+        "reasons": [
+          "3-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "forest",
+        "target_name": "Forest",
+        "confidence": 0.215,
+        "reference_lineup_id": null,
+        "reference_similarity": 0.0,
+        "reasons": [
+          "3-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      },
+      {
+        "mode_slug": "treasure-scramble",
+        "mode_name": "Treasure Scramble",
+        "target_slug": "fog",
+        "target_name": "Fog",
+        "confidence": 0.215,
+        "reference_lineup_id": null,
+        "reference_similarity": 0.0,
+        "reasons": [
+          "3-team multi-formation layout is compatible with Treasure Scramble (2-7 teams)."
+        ]
+      }
+    ],
+    "best_lineup_match": {
+      "id": "nc-f2p-retries-infernal-overlord",
+      "title": "Nightmare Corridor \u2014 Infernal Overlord (F2P 1k Dias / Retries 3-Round Guide)",
+      "mode_slug": "nightmare-corridor",
+      "mode_name": "Nightmare Corridor",
+      "target_slug": "infernal-overlord",
+      "target_name": "Infernal Overlord",
+      "source": "f2p-weekly-nc-guide",
+      "reference_team_count": 3,
+      "similarity": 1.0,
+      "mean_round_similarity": 1.0,
+      "round_alignments": [
+        {
+          "image_round": 1,
+          "matched_formation_key": "molten-crystalline-worm-queen",
+          "matched_formation_label": "Molten Crystalline Worm Queen",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 2,
+          "matched_formation_key": "cindercrow-specter",
+          "matched_formation_label": "Cindercrow Specter",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        },
+        {
+          "image_round": 3,
+          "matched_formation_key": "demonic-puppet",
+          "matched_formation_label": "Demonic Puppet",
+          "similarity": 1.0,
+          "hero_overlap_count": 5,
+          "hero_exact_slot_count": 5,
+          "pet_matched": true,
+          "collection_match_count": 5,
+          "differences": []
+        }
+      ]
+    },
+    "review_suggestions": [],
     "formations": [
       {
-        "key": "round-1",
-        "label": "Round 1",
+        "key": "molten-crystalline-worm-queen",
+        "label": "Molten Crystalline Worm Queen",
         "pet": "twinlum-spirit",
         "heroes": [
           {
@@ -2189,8 +2687,8 @@
         ]
       },
       {
-        "key": "round-2",
-        "label": "Round 2",
+        "key": "cindercrow-specter",
+        "label": "Cindercrow Specter",
         "pet": "blazefang",
         "heroes": [
           {
@@ -2306,8 +2804,8 @@
         ]
       },
       {
-        "key": "round-3",
-        "label": "Round 3",
+        "key": "demonic-puppet",
+        "label": "Demonic Puppet",
         "pet": "treatspector",
         "heroes": [
           {

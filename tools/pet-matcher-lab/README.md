@@ -185,7 +185,27 @@ To run the out-of-fold end-to-end team benchmark across all three guide layouts 
 | `lydydxhxpyyh1.png` (`3000×6000` full & 6 round crops) | `fold-2` | `row_5_col` + left-panel subs | **6/6** | **43** | **30/30** | **30/30** | **43/43** | **6/6** |
 | `f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp` (`1080×1771`) | `fold-1` | `staggered_3_2` | **3/3** | — | **15/15** | **15/15** | **14/14** (15/15 slots) | **3/3** |
 
-Per-box predictions, assembled teams, and `seed.sql`-compatible `formations` are written to [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json), and the multi-guide out-of-fold benchmark is written to [`multi-guide-team-recognition-results.json`](./multi-guide-team-recognition-results.json). A Vercel-compatible Python serverless endpoint (`POST /api/recognize-lineup`) is also provided at [`api/recognize-lineup.py`](../../api/recognize-lineup.py).
+Per-box predictions, assembled teams, and `seed.sql`-compatible `formations` are written to [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json), and the multi-guide out-of-fold benchmark is written to [`multi-guide-team-recognition-results.json`](./multi-guide-team-recognition-results.json).
+
+### Mode, Lineup & Alternatives Recognizer Tool (`api/recognize-lineup.py`)
+
+[`api/recognize-lineup.py`](../../api/recognize-lineup.py) provides a complete CLI, interactive local web UI, and Vercel-compatible serverless endpoint (`POST /api/recognize-lineup`) that, given any full guide screenshot or single-round crop:
+
+1. **Determines the Best Matching Mode & Target** (`nightmare-corridor`, `cursed-realm`, `treasure-scramble`, `twisted-realm` + boss/cycle target such as `infernal-overlord`, `netherspinner`, `ice-shemira`, etc.) with confidence and reasons, plus ranked **Mode/Target Alternatives**.
+2. **Matches Against Known Database Lineups** (`seed.sql` and `lineup-data.ts`), aligning each extracted round to its corresponding boss formation (even for single-round crops) and reporting overall & per-round similarity.
+3. **Generates Multi-Level Suggested Alternatives** in case anything needs correction:
+   - **Visual Catalog Alternatives (`visual_alternatives`):** Top-5 closest hero, pet, and collection candidates (and top-3 collection node stat candidates) with MSE and calibrated confidence.
+   - **Reference Diffs & Review Suggestions (`review_suggestions`):** Flags any slot or collection node that differs from the closest matched reference lineup or has tight visual MSE margin.
+   - **Guide-Explicit Substitutes:** Decodes per-slot hero alternatives (`slot_options`), 1/2/3-way pet cascades (`pet.options`), and full substitute teams (`substitute_teams`).
+
+```sh
+# CLI report on any full guide or single-round crop:
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py afk-nightmare-corridor-infernal-overlord-9.png
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png
+
+# Launch the interactive Web UI + local API server (also serves Angular /import-helper):
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py --serve --port 8174
+```
 
 ### Recommended next steps
 

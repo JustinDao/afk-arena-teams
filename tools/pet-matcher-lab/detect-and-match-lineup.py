@@ -66,6 +66,17 @@ def parse_level_from_state(state_str):
     return int(match.group(1)) if match else 1
 
 
+def mse_to_confidence(mse, runner_up_mse=None, scale=2800.0):
+    if mse is None or not math.isfinite(mse):
+        return 0.0
+    base = math.exp(-max(0.0, float(mse)) / scale)
+    if runner_up_mse is not None and math.isfinite(runner_up_mse) and runner_up_mse > 0:
+        ratio = float(runner_up_mse) / max(1.0, float(mse))
+        margin_bonus = min(1.12, max(0.78, 0.72 + 0.20 * min(ratio, 2.0)))
+        base = base * margin_bonus
+    return round(float(max(0.01, min(0.99, base))), 3)
+
+
 def normalize_yolo_boxes(raw_boxes, raw_scores, img_shape, min_px=45):
     H, W = img_shape[:2]
     norm = []
@@ -76,7 +87,7 @@ def normalize_yolo_boxes(raw_boxes, raw_scores, img_shape, min_px=45):
         ar = w / max(1.0, h)
         if ar > 1.42 or ar < 0.45:
             continue
-        sq_sz = round(w) if ar < 0.80 else round((w + h) / 2.0)
+        sq_sz = round(w) if ar < 0.92 else round((w + h) / 2.0)
         bx = max(0, min(W - sq_sz, round(x1)))
         by = max(0, min(H - sq_sz, round(y1)))
         norm.append(([bx, by, sq_sz, sq_sz], float(s)))
@@ -290,15 +301,29 @@ def assemble_staggered_teams(img, norm_boxes):
             continue
         x_L = round(float(np.median([b[0] for b in left_col])))
         x_R = round(float(np.median([b[0] for b in right_col])))
-        y_0 = left_col[0][1]
         if len(left_col) >= 2:
             dy = round((left_col[-1][1] - left_col[0][1]) / max(1, len(left_col) - 1))
             if dy > med_w * 2.2:
                 dy = round(dy / 2.0)
+        elif len(right_col) >= 3:
+            dy = round(right_col[2][1] - right_col[1][1])
         else:
             dy = round(med_w * 1.65)
 
-        pet_y = right_col[0][1] if right_col[0][1] < y_0 else round(y_0 - 0.6 * dy)
+        y_0 = left_col[0][1]
+        if (
+            len(left_col) == 2
+            and (left_col[1][1] - left_col[0][1]) < 1.5 * dy
+            and right_col[-1][1] < left_col[-1][1]
+            and y_0 > dy
+        ):
+            y_0 = y_0 - dy
+
+        pet_y = (
+            right_col[0][1]
+            if right_col[0][1] < y_0 - 15
+            else max(0, round(y_0 - 0.35 * dy))
+        )
         pet_box = [x_R, pet_y, med_w, med_w]
         hero_slots = [
             [x_L, y_0, med_w, med_w],
@@ -351,6 +376,7 @@ def solve_teams(
         matcher.assign_unique_identities(pet_rankings) if pet_rankings else []
     )
     pet_by_team = {t_idx: assigned_pets[k] for k, t_idx in enumerate(pet_indices)}
+    pet_rank_by_team = {t_idx: pet_rankings[k] for k, t_idx in enumerate(pet_indices)}
 
     solved_teams = []
     h_cursor = 0
@@ -359,10 +385,34 @@ def solve_teams(
         team_heroes = []
         for s_idx, hbox in enumerate(team["hero_boxes"]):
             h_choice = assigned_heroes[h_cursor]
+            h_ranked = all_hero_rankings[h_cursor]
             h_top3 = [
                 {"id": x["id"], "name": x["name"], "mse": x["mse"]}
-                for x in all_hero_rankings[h_cursor][:3]
+                for x in h_ranked[:3]
             ]
+            h_visual_alts = [
+                {
+                    "id": x["id"],
+                    "slug": hero_meta[x["id"]]["slug"],
+                    "name": hero_meta[x["id"]]["name"],
+                    "class": hero_meta[x["id"]]["class"],
+                    "mse": round(float(x["mse"]), 2),
+                    "confidence": mse_to_confidence(
+                        x["mse"],
+                        h_ranked[1]["mse"] if idx == 0 and len(h_ranked) > 1 else None,
+                    ),
+                }
+                for idx, x in enumerate(h_ranked[:5])
+            ]
+            h_runner_mse = h_ranked[1]["mse"] if len(h_ranked) > 1 else None
+            h_conf = mse_to_confidence(h_choice["mse"], h_runner_mse)
+            h_needs_review = bool(
+                h_choice["mse"] > 2650.0
+                or (
+                    h_runner_mse is not None
+                    and h_runner_mse / max(1.0, h_choice["mse"]) < 1.22
+                )
+            )
             h_cursor += 1
             h_info = hero_meta[h_choice["id"]]
             h_class = h_info["class"]
@@ -380,6 +430,19 @@ def solve_teams(
                     collections_catalog=collections_catalog,
                 )
                 c_top1 = c_ranked[0]
+                c_runner_mse = (
+                    c_ranked[1]["effective_mse"] if len(c_ranked) > 1 else None
+                )
+                c_conf = mse_to_confidence(
+                    c_top1["effective_mse"], c_runner_mse, scale=2600.0
+                )
+                c_needs_review = bool(
+                    c_top1["mse"] > 2500.0
+                    or (
+                        c_runner_mse is not None
+                        and c_runner_mse / max(1.0, c_top1["effective_mse"]) < 1.18
+                    )
+                )
                 lvl = parse_level_from_state(c_top1["state"])
                 cx, cy, cw, ch = cbox
                 if layout == "app_card_3_2":
@@ -411,13 +474,34 @@ def solve_teams(
                         mse_thresh=1750.0,
                     )
                 for n_idx, n in enumerate(raw_nodes):
+                    n_top3 = n.get("top3", [])
+                    n_runner = n_top3[1]["mse"] if len(n_top3) > 1 else None
                     nodes_found.append(
                         {
                             "slot_index": n_idx,
                             "key": n["key"],
                             "stat": n["stat"],
                             "tier": n["tier"],
-                            "mse": n["mse"],
+                            "mse": round(float(n["mse"]), 2),
+                            "confidence": mse_to_confidence(
+                                n["mse"], n_runner, scale=1800.0
+                            ),
+                            "needs_review": bool(
+                                n["mse"] > 1350.0
+                                or (
+                                    n_runner is not None
+                                    and n_runner / max(1.0, n["mse"]) < 1.18
+                                )
+                            ),
+                            "visual_alternatives": [
+                                {
+                                    "key": alt["key"],
+                                    "stat": alt["stat"],
+                                    "tier": alt["tier"],
+                                    "mse": round(float(alt["mse"]), 2),
+                                }
+                                for alt in n_top3[:3]
+                            ],
                             "bbox": [
                                 roi_x0 + n["ox"],
                                 roi_y0 + n["oy"],
@@ -431,6 +515,8 @@ def solve_teams(
                     "name": c_top1["name"],
                     "level": lvl,
                     "mse": c_top1["mse"],
+                    "confidence": c_conf,
+                    "needs_review": c_needs_review,
                     "bbox": cbox,
                     "top3": [
                         {
@@ -440,6 +526,18 @@ def solve_teams(
                             "effective_mse": x["effective_mse"],
                         }
                         for x in c_ranked[:3]
+                    ],
+                    "visual_alternatives": [
+                        {
+                            "id": x["id"],
+                            "name": x["name"],
+                            "class": collections_catalog.get(x["id"], {}).get("class"),
+                            "level": parse_level_from_state(x.get("state")),
+                            "mse": round(float(x["mse"]), 2),
+                            "effective_mse": round(float(x["effective_mse"]), 2),
+                            "class_match": bool(x.get("class_match", True)),
+                        }
+                        for x in c_ranked[:5]
                     ],
                     "nodes": nodes_found,
                 }
@@ -463,6 +561,12 @@ def solve_teams(
                     collections_catalog=collections_catalog,
                 )
                 c_top1 = c_ranked[0]
+                c_runner_mse = (
+                    c_ranked[1]["effective_mse"] if len(c_ranked) > 1 else None
+                )
+                c_conf = mse_to_confidence(
+                    c_top1["effective_mse"], c_runner_mse, scale=2600.0
+                )
                 nx0, nx1 = max(0, bx - 22), min(img.shape[1], bx + round(bw * 0.56))
                 ny0, ny1 = max(0, by + round(bh * 0.44)), min(img.shape[0], by + bh + 34)
                 raw_nodes = matcher.detect_nodes_in_roi(
@@ -473,13 +577,34 @@ def solve_teams(
                     mse_thresh=1800.0,
                 )
                 for n_idx, n in enumerate(raw_nodes):
+                    n_top3 = n.get("top3", [])
+                    n_runner = n_top3[1]["mse"] if len(n_top3) > 1 else None
                     nodes_found.append(
                         {
                             "slot_index": n_idx,
                             "key": n["key"],
                             "stat": n["stat"],
                             "tier": n["tier"],
-                            "mse": n["mse"],
+                            "mse": round(float(n["mse"]), 2),
+                            "confidence": mse_to_confidence(
+                                n["mse"], n_runner, scale=1800.0
+                            ),
+                            "needs_review": bool(
+                                n["mse"] > 1400.0
+                                or (
+                                    n_runner is not None
+                                    and n_runner / max(1.0, n["mse"]) < 1.18
+                                )
+                            ),
+                            "visual_alternatives": [
+                                {
+                                    "key": alt["key"],
+                                    "stat": alt["stat"],
+                                    "tier": alt["tier"],
+                                    "mse": round(float(alt["mse"]), 2),
+                                }
+                                for alt in n_top3[:3]
+                            ],
                             "bbox": [
                                 nx0 + n["ox"],
                                 ny0 + n["oy"],
@@ -488,6 +613,18 @@ def solve_teams(
                             ],
                         }
                     )
+                c_visual_alts = [
+                    {
+                        "id": x["id"],
+                        "name": x["name"],
+                        "class": collections_catalog.get(x["id"], {}).get("class"),
+                        "level": parse_level_from_state(x.get("state")),
+                        "mse": round(float(x["mse"]), 2),
+                        "effective_mse": round(float(x["effective_mse"]), 2),
+                        "class_match": bool(x.get("class_match", True)),
+                    }
+                    for x in c_ranked[:5]
+                ]
                 if c_top1["mse"] < 2400.0:
                     lvl = parse_level_from_state(c_top1["state"])
                     coll_result = {
@@ -495,6 +632,8 @@ def solve_teams(
                         "name": c_top1["name"],
                         "level": lvl,
                         "mse": c_top1["mse"],
+                        "confidence": c_conf,
+                        "needs_review": bool(c_top1["mse"] > 2050.0),
                         "bbox": c_roi_box,
                         "top3": [
                             {
@@ -505,6 +644,7 @@ def solve_teams(
                             }
                             for x in c_ranked[:3]
                         ],
+                        "visual_alternatives": c_visual_alts,
                         "nodes": nodes_found,
                     }
                 else:
@@ -513,6 +653,8 @@ def solve_teams(
                         "name": None,
                         "level": None,
                         "mse": c_top1["mse"],
+                        "confidence": round(1.0 - c_conf, 3),
+                        "needs_review": False,
                         "bbox": c_roi_box,
                         "top3": [
                             {
@@ -523,6 +665,7 @@ def solve_teams(
                             }
                             for x in c_ranked[:3]
                         ],
+                        "visual_alternatives": c_visual_alts,
                         "nodes": nodes_found,
                     }
 
@@ -535,21 +678,45 @@ def solve_teams(
                     "class": h_class,
                     "bbox": hbox,
                     "mse": h_choice["mse"],
+                    "confidence": h_conf,
+                    "needs_review": h_needs_review,
                     "top3": h_top3,
+                    "visual_alternatives": h_visual_alts,
                     "collection": coll_result,
                 }
             )
 
         p_choice = pet_by_team.get(t_idx)
+        p_ranked = pet_rank_by_team.get(t_idx, [])
         pet_out = None
         if p_choice is not None:
             p_info = pet_meta[p_choice["id"]]
+            p_runner_mse = p_ranked[1]["mse"] if len(p_ranked) > 1 else None
+            p_conf = mse_to_confidence(p_choice["mse"], p_runner_mse, scale=2600.0)
             pet_out = {
                 "id": p_info["id"],
                 "slug": p_info["slug"],
                 "name": p_info["name"],
                 "bbox": team["pet_box"],
                 "mse": p_choice["mse"],
+                "confidence": p_conf,
+                "needs_review": bool(
+                    p_choice["mse"] > 2300.0
+                    or (
+                        p_runner_mse is not None
+                        and p_runner_mse / max(1.0, p_choice["mse"]) < 1.20
+                    )
+                ),
+                "visual_alternatives": [
+                    {
+                        "id": x["id"],
+                        "slug": pet_meta[x["id"]]["slug"],
+                        "name": pet_meta[x["id"]]["name"],
+                        "mse": round(float(x["mse"]), 2),
+                        "confidence": mse_to_confidence(x["mse"], scale=2600.0),
+                    }
+                    for x in p_ranked[:5]
+                ],
             }
         solved_teams.append(
             {
@@ -714,7 +881,7 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 [x_pet + round((span_w - p_sz) * 0.48), y0 + round(h * 0.20), p_sz, p_sz],
                 [x_pet + span_w - p_sz, y0 + round(h * 0.46), p_sz, p_sz],
             ]
-            r3 = [
+            r3_lists = [
                 matcher.rank_candidates_in_box(
                     left_panel,
                     pb,
@@ -723,10 +890,11 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                     scales=(0.88, 0.96, 1.04, 1.12),
                     pad_ratio=0.25,
                     stride=1,
-                )[0]
+                )
                 for pb in boxes
             ]
-            return "split_3", [pet_meta[x["id"]] for x in r3]
+            r3 = [lst[0] for lst in r3_lists]
+            return "split_3", [pet_meta[x["id"]] for x in r3], r3_lists[0][:5]
 
         if span_w >= 102 or tr_empty:
             p2_sz = round(h * 0.68)
@@ -734,7 +902,7 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 [x_pet - 2, y0 - 4, p2_sz, p2_sz],
                 [x_pet + max(span_w, h + 18) - p2_sz, y0 + h - p2_sz + 6, p2_sz, p2_sz],
             ]
-            r2 = [
+            r2_lists = [
                 matcher.rank_candidates_in_box(
                     left_panel,
                     pb,
@@ -743,12 +911,13 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                     scales=(0.88, 0.96, 1.04, 1.12),
                     pad_ratio=0.25,
                     stride=1,
-                )[0]
+                )
                 for pb in b2
             ]
-            return "split_2", [pet_meta[x["id"]] for x in r2]
+            r2 = [lst[0] for lst in r2_lists]
+            return "split_2", [pet_meta[x["id"]] for x in r2], r2_lists[0][:5]
 
-        r1 = matcher.rank_candidates_in_box(
+        r1_list = matcher.rank_candidates_in_box(
             left_panel,
             [x_pet, y0, h, h],
             "pet",
@@ -756,8 +925,9 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
             scales=(0.92, 0.98, 1.04),
             pad_ratio=0.18,
             stride=2,
-        )[0]
-        return "single", [pet_meta[r1["id"]]]
+        )
+        r1 = r1_list[0]
+        return "single", [pet_meta[r1["id"]]], r1_list[:5]
 
     diff = np.max(np.abs(left_panel[:, 165:760].astype(np.float32) - bg_color), axis=2)
     row_fill = (diff > 28).astype(np.float32).mean(axis=1)
@@ -822,7 +992,23 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                     }
                 )
             pet_x0 = c_segs[5][0]
-            p_mode, p_objs = decode_pet_cell(pet_x0, y0, h)
+            p_mode, p_objs, p_top5 = decode_pet_cell(pet_x0, y0, h)
+            p_runner = p_top5[1]["mse"] if len(p_top5) > 1 else None
+            p_conf = (
+                mse_to_confidence(p_top5[0]["mse"], p_runner, scale=2600.0)
+                if p_top5
+                else 0.85
+            )
+            p_visual_alts = [
+                {
+                    "id": x["id"],
+                    "slug": pet_meta[x["id"]]["slug"],
+                    "name": pet_meta[x["id"]]["name"],
+                    "mse": round(float(x["mse"]), 2),
+                    "confidence": mse_to_confidence(x["mse"], scale=2600.0),
+                }
+                for x in p_top5
+            ]
             round_teams.append(
                 {
                     "row_index": t_idx,
@@ -833,6 +1019,8 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                     "pet_name": p_objs[0]["name"],
                     "pet_mode": p_mode,
                     "pet_options": [p["slug"] for p in p_objs],
+                    "pet_confidence": p_conf,
+                    "pet_visual_alternatives": p_visual_alts,
                     "hero_slots": hero_slots,
                 }
             )
@@ -874,8 +1062,8 @@ def teams_to_seed_formations(solved_teams):
                 hero_entry["alternatives"] = h["slot_options"][1:]
             heroes_out.append(hero_entry)
         formation_entry = {
-            "key": f"round-{r_idx}",
-            "label": f"Round {r_idx}",
+            "key": team.get("matched_formation_key") or f"round-{r_idx}",
+            "label": team.get("matched_formation_label") or f"Round {r_idx}",
             "pet": team["pet"]["slug"] if team.get("pet") else None,
             "heroes": heroes_out,
         }
@@ -896,6 +1084,848 @@ def teams_to_seed_formations(solved_teams):
             ]
         formations.append(formation_entry)
     return formations
+
+
+def load_reference_lineups(
+    repo_root, hero_meta, pet_meta, collections_catalog, formations_gt=None
+):
+    if formations_gt is None:
+        lab_dir = Path(__file__).resolve().parent
+        gt_mod = load_module(
+            "lineup_identity_ground_truth",
+            lab_dir / "create-lineup-identity-ground-truth.py",
+        )
+        seed_sql = (repo_root / "seed.sql").read_text(encoding="utf-8")
+        formations_gt = gt_mod.extract_lineup(seed_sql)
+
+    f2p_heroes = [
+        [200, 234, 97, 204, 252],
+        [165, 227, 228, 205, 235],
+        [199, 211, 250, 218, 238],
+    ]
+    f2p_pets = [6029, 6030, 6023]
+    f2p_colls = [
+        [None, 14, 3, 9, None],
+        [15, 9, 14, 3, 15],
+        [15, 5, 3, None, 14],
+    ]
+    f2p_nodes = [
+        [["def_m"], ["erosion_m"], ["full_atk_m"], ["full_atk_m"], ["full_erosion_m"]],
+        [["full_atk_m"], ["full_atk_m"], ["cda_m"], ["full_atk_m"], ["is_m"]],
+        [["atk_m"], [], ["full_atk_m"], ["full_atk_m"], ["is_m"]],
+    ]
+    nc_bosses = [
+        ("molten-crystalline-worm-queen", "Molten Crystalline Worm Queen"),
+        ("cindercrow-specter", "Cindercrow Specter"),
+        ("demonic-puppet", "Demonic Puppet"),
+        ("ashen-prophet", "Ashen Prophet"),
+        ("mirror-demon", "Mirror Demon"),
+        ("infernal-overlord", "Infernal Overlord"),
+    ]
+    f2p_formations = []
+    for r_i in range(3):
+        f_heroes = []
+        for s_i in range(5):
+            hid = f2p_heroes[r_i][s_i]
+            cid = f2p_colls[r_i][s_i]
+            n_keys = f2p_nodes[r_i][s_i]
+            c_obj = None
+            if cid is not None or n_keys:
+                c_obj = {
+                    "catalog": cid,
+                    "nodes": [
+                        {
+                            "slotIndex": ni,
+                            "stat": nk[:-2],
+                            "tier": "mythic" if nk.endswith("_m") else "legendary",
+                        }
+                        for ni, nk in enumerate(n_keys)
+                    ],
+                }
+            f_heroes.append({"slug": hero_meta[hid]["slug"], "collection": c_obj})
+        f2p_formations.append(
+            {
+                "key": nc_bosses[r_i][0],
+                "label": nc_bosses[r_i][1],
+                "pet": pet_meta[f2p_pets[r_i]]["slug"],
+                "heroes": f_heroes,
+            }
+        )
+
+    def make_simple_formation(key, label, hero_slugs, pet_slug=None):
+        return {
+            "key": key,
+            "label": label,
+            "pet": pet_slug,
+            "heroes": [{"slug": s, "collection": None} for s in hero_slugs],
+        }
+
+    return [
+        {
+            "id": "nc-guide-2026-10-infernal-overlord",
+            "title": "Nightmare Corridor — Infernal Overlord (6-Boss Cycle Meta)",
+            "mode_slug": "nightmare-corridor",
+            "mode_name": "Nightmare Corridor",
+            "target_slug": "infernal-overlord",
+            "target_name": "Infernal Overlord",
+            "source": "seed.sql",
+            "formations": formations_gt,
+        },
+        {
+            "id": "nc-f2p-retries-infernal-overlord",
+            "title": "Nightmare Corridor — Infernal Overlord (F2P 1k Dias / Retries 3-Round Guide)",
+            "mode_slug": "nightmare-corridor",
+            "mode_name": "Nightmare Corridor",
+            "target_slug": "infernal-overlord",
+            "target_name": "Infernal Overlord",
+            "source": "f2p-weekly-nc-guide",
+            "formations": f2p_formations,
+        },
+        {
+            "id": "nc-netherspinner-sample",
+            "title": "Nightmare Corridor — Netherspinner (6-Boss Cycle Sample)",
+            "mode_slug": "nightmare-corridor",
+            "mode_name": "Nightmare Corridor",
+            "target_slug": "netherspinner",
+            "target_name": "Netherspinner",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "soulweaver",
+                    "Soulweaver",
+                    ["saurus", "mishka", "scarlet", "oden", "mortas"],
+                    "polar-beast",
+                ),
+                make_simple_formation(
+                    "the-devourer",
+                    "The Devourer",
+                    ["rowan", "lyca", "lorsan", "ezizh", "raine"],
+                    "fire-breather",
+                ),
+                make_simple_formation(
+                    "astral-devourer",
+                    "Astral Devourer",
+                    ["hybris", "dracula", "awakened-estrilda", "lyca", "rowan"],
+                    "dreary-ball",
+                ),
+                make_simple_formation(
+                    "dual-mantle",
+                    "Dual-Mantle",
+                    ["odysseus", "orthros", "liberta", "palmer", "talimar"],
+                    "pandy-dumpty",
+                ),
+                make_simple_formation(
+                    "cursed-caprihornus",
+                    "Cursed Caprihornus",
+                    ["elthara", "alvida", "rowan", "misha", "severin"],
+                    "tufty-ears",
+                ),
+                make_simple_formation(
+                    "netherspinner",
+                    "Netherspinner",
+                    ["tavriel", "gorok", "lavatune", "talimar", "highborn-lan"],
+                    "grassy-orb",
+                ),
+            ],
+        },
+        {
+            "id": "cr-ice-shemira-sample",
+            "title": "Cursed Realm — Ice Shemira (5 Shadow Guards + Boss)",
+            "mode_slug": "cursed-realm",
+            "mode_name": "Cursed Realm",
+            "target_slug": "ice-shemira",
+            "target_name": "Ice Shemira",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "sg1", "SG1", ["rowan", "lyca", "lorsan", "ezizh", "raine"], "dreary-ball"
+                ),
+                make_simple_formation(
+                    "sg2",
+                    "SG2",
+                    ["talimar", "tavriel", "gorok", "lavatune", "elthara"],
+                    "tufty-ears",
+                ),
+                make_simple_formation(
+                    "sg3",
+                    "SG3",
+                    ["dracula", "hybris", "lysander", "highborn-leviathan", "serenmira"],
+                    "grassy-orb",
+                ),
+                make_simple_formation(
+                    "sg4",
+                    "SG4",
+                    ["melion", "sion", "laios", "marcille", "velufira"],
+                    "polar-beast",
+                ),
+                make_simple_formation(
+                    "sg5",
+                    "SG5",
+                    ["aurelia", "knox", "highborn-lan", "jerome", "misfortis"],
+                    "fire-breather",
+                ),
+                make_simple_formation(
+                    "boss",
+                    "Boss",
+                    ["belinda", "shemira", "silas", "lucretia", "daimon"],
+                    "blade-ridge",
+                ),
+            ],
+        },
+        {
+            "id": "cr-burning-brute-sample",
+            "title": "Cursed Realm — Burning Brute (5 Shadow Guards + Boss)",
+            "mode_slug": "cursed-realm",
+            "mode_name": "Cursed Realm",
+            "target_slug": "burning-brute",
+            "target_name": "Burning Brute",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "sg1", "SG1", ["saurus", "mishka", "scarlet", "oden", "mortas"], "dreary-ball"
+                ),
+                make_simple_formation(
+                    "sg2", "SG2", ["hodgkin", "alna", "nara", "ferael", "tasi"], "tufty-ears"
+                ),
+                make_simple_formation(
+                    "sg3", "SG3", ["gwyneth", "rosaline", "arthur", "lucius", "brutus"], "grassy-orb"
+                ),
+                make_simple_formation(
+                    "sg4", "SG4", ["randle", "albedo", "yennefer", "shuna", "atheus"], "polar-beast"
+                ),
+                make_simple_formation(
+                    "sg5",
+                    "SG5",
+                    ["veithael", "rimuru", "saitama", "cha-hae-in", "sung-jinwoo"],
+                    "fire-breather",
+                ),
+                make_simple_formation(
+                    "boss",
+                    "Boss",
+                    ["awakened-belinda", "raine", "rowan", "kyno", "trix"],
+                    "blade-ridge",
+                ),
+            ],
+        },
+        {
+            "id": "ts-fire-sample",
+            "title": "Treasure Scramble — Fire Debuff",
+            "mode_slug": "treasure-scramble",
+            "mode_name": "Treasure Scramble",
+            "target_slug": "fire",
+            "target_name": "Fire",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "t1", "Team 1", ["mehira", "brutus", "lucilla", "thoran", "raine"], "flutterplume-owl"
+                ),
+                make_simple_formation(
+                    "t2", "Team 2", ["albedo", "merlin", "scarlet", "oden", "mishka"], "talismane"
+                ),
+                make_simple_formation(
+                    "t3", "Team 3", ["silas", "mortas", "haelus", "desira", "framton"], "phantasmoth"
+                ),
+            ],
+        },
+        {
+            "id": "ts-frost-sample",
+            "title": "Treasure Scramble — Frost Debuff",
+            "mode_slug": "treasure-scramble",
+            "mode_name": "Treasure Scramble",
+            "target_slug": "frost",
+            "target_name": "Frost",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "t1",
+                    "Team 1",
+                    ["highborn-kaelon", "awakened-envydiel", "gorren", "highborn-haelia", "highborn-skylan"],
+                    "flutterplume-owl",
+                ),
+                make_simple_formation(
+                    "t2",
+                    "Team 2",
+                    ["elijah-and-lailah", "brutus", "randle", "aurelia", "saitama"],
+                    "talismane",
+                ),
+            ],
+        },
+        {
+            "id": "tr-ice-shemira-sample",
+            "title": "Twisted Realm — Ice Shemira",
+            "mode_slug": "twisted-realm",
+            "mode_name": "Twisted Realm",
+            "target_slug": "ice-shemira",
+            "target_name": "Ice Shemira",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "team", "Team", ["shemira", "lucretia", "silas", "daimon", "ezizh"], "dreary-ball"
+                )
+            ],
+        },
+        {
+            "id": "tr-burning-brute-sample",
+            "title": "Twisted Realm — Burning Brute",
+            "mode_slug": "twisted-realm",
+            "mode_name": "Twisted Realm",
+            "target_slug": "burning-brute",
+            "target_name": "Burning Brute",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "team", "Team", ["belinda", "rosaline", "rowan", "raine", "lucius"], "winged-lion"
+                )
+            ],
+        },
+        {
+            "id": "tr-kane-sample",
+            "title": "Twisted Realm — Kane",
+            "mode_slug": "twisted-realm",
+            "mode_name": "Twisted Realm",
+            "target_slug": "kane",
+            "target_name": "Kane",
+            "source": "lineup-data.ts",
+            "formations": [
+                make_simple_formation(
+                    "team", "Team", ["saurus", "mishka", "scarlet", "oden", "mortas"], "flutterplume-owl"
+                )
+            ],
+        },
+    ]
+
+
+def infer_mode_and_lineup_matches(
+    solved_teams,
+    img_shape,
+    hero_meta,
+    pet_meta,
+    collections_catalog,
+    repo_root,
+    formations_gt=None,
+):
+    hero_by_slug = {v["slug"]: v for v in hero_meta.values()}
+    pet_by_slug = {v["slug"]: v for v in pet_meta.values()}
+    references = load_reference_lineups(
+        repo_root, hero_meta, pet_meta, collections_catalog, formations_gt=formations_gt
+    )
+
+    team_count = len(solved_teams)
+    has_collections = any(
+        (h.get("collection") or {}).get("catalog") is not None
+        for t in solved_teams
+        for h in t.get("heroes", [])
+    )
+    has_substitutes = any(bool(t.get("substitute_teams")) for t in solved_teams)
+
+    def compare_team_to_formation(team, ref_form):
+        pred_heroes = team.get("heroes", [])
+        ref_heroes = ref_form.get("heroes", [])
+        pred_slugs = [h["slug"] for h in pred_heroes]
+        ref_slugs = [h["slug"] for h in ref_heroes]
+
+        expanded_slugs = set(pred_slugs)
+        for h in pred_heroes:
+            expanded_slugs.update(h.get("slot_options") or [])
+        for sub in team.get("substitute_teams") or []:
+            for hs in sub.get("hero_slots") or []:
+                expanded_slugs.update(hs.get("options") or [])
+
+        n_slots = max(1, len(ref_slugs))
+        primary_overlap = len(set(pred_slugs) & set(ref_slugs)) / n_slots
+        exact_slots = (
+            sum(1 for a, b in zip(pred_slugs, ref_slugs) if a == b) / n_slots
+        )
+        expanded_overlap = len(expanded_slugs & set(ref_slugs)) / n_slots
+        hero_sim = (
+            0.55 * primary_overlap + 0.30 * exact_slots + 0.15 * expanded_overlap
+        )
+
+        pred_pet = (team.get("pet") or {}).get("slug")
+        pred_pet_opts = set(
+            (team.get("pet") or {}).get("options")
+            or ([pred_pet] if pred_pet else [])
+        )
+        for sub in team.get("substitute_teams") or []:
+            pred_pet_opts.update(sub.get("pet_options") or [])
+        ref_pet = ref_form.get("pet")
+        if ref_pet and pred_pet == ref_pet:
+            pet_sim = 1.0
+        elif ref_pet and ref_pet in pred_pet_opts:
+            pet_sim = 0.90
+        elif not ref_pet and not pred_pet:
+            pet_sim = 1.0
+        else:
+            pet_sim = 0.0
+
+        ref_has_colls = any(h.get("collection") is not None for h in ref_heroes)
+        coll_matches, coll_total = 0, 0
+        node_matches, node_total = 0, 0
+        diffs = []
+
+        for s_idx, (ph, rh) in enumerate(zip(pred_heroes, ref_heroes)):
+            if ph["slug"] != rh["slug"]:
+                if rh["slug"] in (ph.get("slot_options") or []):
+                    diffs.append(
+                        {
+                            "type": "hero_slot_variant",
+                            "slot": s_idx,
+                            "image_value": ph["slug"],
+                            "reference_value": rh["slug"],
+                            "note": f"Slot {s_idx + 1}: image primary is {ph['slug']} (includes {rh['slug']} as slot alternative).",
+                        }
+                    )
+                else:
+                    diffs.append(
+                        {
+                            "type": "hero_mismatch",
+                            "slot": s_idx,
+                            "image_value": ph["slug"],
+                            "reference_value": rh["slug"],
+                            "note": f"Slot {s_idx + 1}: image has {ph['name']} ({ph['slug']}), reference lineup has {hero_by_slug.get(rh['slug'], {}).get('name', rh['slug'])} ({rh['slug']}).",
+                        }
+                    )
+
+            if ref_has_colls:
+                coll_total += 1
+                p_cat = (ph.get("collection") or {}).get("catalog")
+                r_cat = (rh.get("collection") or {}).get("catalog")
+                if p_cat == r_cat:
+                    coll_matches += 1
+                else:
+                    p_cname = (ph.get("collection") or {}).get("name") or "None"
+                    r_cname = (
+                        collections_catalog.get(r_cat, {}).get("name", str(r_cat))
+                        if r_cat
+                        else "None"
+                    )
+                    diffs.append(
+                        {
+                            "type": "collection_mismatch",
+                            "slot": s_idx,
+                            "hero_slug": ph["slug"],
+                            "image_value": p_cat,
+                            "reference_value": r_cat,
+                            "note": f"Slot {s_idx + 1} ({ph['name']}): image collection is {p_cname}, reference has {r_cname}.",
+                        }
+                    )
+
+                r_nodes = [
+                    f"{n['stat']}_{n['tier'][0]}"
+                    for n in ((rh.get("collection") or {}).get("nodes") or [])
+                    if n["stat"] != "skill_level"
+                ]
+                p_nodes = [
+                    n["key"]
+                    for n in ((ph.get("collection") or {}).get("nodes") or [])
+                ]
+                if r_nodes or p_nodes:
+                    node_total += max(len(r_nodes), len(p_nodes))
+                    matched_n = sum(1 for a, b in zip(p_nodes, r_nodes) if a == b)
+                    node_matches += matched_n
+                    if p_nodes != r_nodes:
+                        diffs.append(
+                            {
+                                "type": "collection_node_diff",
+                                "slot": s_idx,
+                                "hero_slug": ph["slug"],
+                                "image_value": p_nodes,
+                                "reference_value": r_nodes,
+                                "note": f"Slot {s_idx + 1} ({ph['name']}) nodes: image shows {p_nodes or ['none']}, reference has {r_nodes or ['none']}.",
+                            }
+                        )
+
+        if ref_pet and pred_pet and pred_pet != ref_pet:
+            if ref_pet in pred_pet_opts:
+                diffs.append(
+                    {
+                        "type": "pet_option_variant",
+                        "slot": "pet",
+                        "image_value": pred_pet,
+                        "reference_value": ref_pet,
+                        "note": f"Pet: image primary is {pred_pet} (includes {ref_pet} in pet cascade options).",
+                    }
+                )
+            else:
+                diffs.append(
+                    {
+                        "type": "pet_mismatch",
+                        "slot": "pet",
+                        "image_value": pred_pet,
+                        "reference_value": ref_pet,
+                        "note": f"Pet: image has {pred_pet}, reference has {ref_pet}.",
+                    }
+                )
+
+        if ref_has_colls and has_collections:
+            coll_sim = coll_matches / max(1, coll_total)
+            node_sim = node_matches / max(1, node_total) if node_total else 1.0
+            total_sim = (
+                0.56 * hero_sim
+                + 0.14 * pet_sim
+                + 0.20 * coll_sim
+                + 0.10 * node_sim
+            )
+        else:
+            coll_sim = coll_matches / max(1, coll_total) if coll_total else None
+            node_sim = None
+            total_sim = 0.82 * hero_sim + 0.18 * pet_sim
+
+        return {
+            "similarity": round(float(total_sim), 4),
+            "hero_overlap_count": len(set(pred_slugs) & set(ref_slugs)),
+            "hero_exact_slot_count": sum(
+                1 for a, b in zip(pred_slugs, ref_slugs) if a == b
+            ),
+            "pet_matched": bool(ref_pet and (pred_pet == ref_pet or ref_pet in pred_pet_opts)),
+            "collection_match_count": coll_matches if ref_has_colls else None,
+            "differences": diffs,
+        }
+
+    ranked_lineups = []
+    for ref in references:
+        ref_forms = ref["formations"]
+        used_ref = set()
+        round_alignments = []
+        for t in solved_teams:
+            best_f_idx = None
+            best_cmp = None
+            for f_idx, rf in enumerate(ref_forms):
+                if f_idx in used_ref:
+                    continue
+                cmp_res = compare_team_to_formation(t, rf)
+                if best_cmp is None or cmp_res["similarity"] > best_cmp["similarity"]:
+                    best_cmp = cmp_res
+                    best_f_idx = f_idx
+            if best_f_idx is not None and best_cmp is not None:
+                used_ref.add(best_f_idx)
+                rf = ref_forms[best_f_idx]
+                round_alignments.append(
+                    {
+                        "image_round": t["round"],
+                        "matched_formation_key": rf["key"],
+                        "matched_formation_label": rf["label"],
+                        "similarity": best_cmp["similarity"],
+                        "hero_overlap_count": best_cmp["hero_overlap_count"],
+                        "hero_exact_slot_count": best_cmp["hero_exact_slot_count"],
+                        "pet_matched": best_cmp["pet_matched"],
+                        "collection_match_count": best_cmp["collection_match_count"],
+                        "differences": best_cmp["differences"],
+                    }
+                )
+
+        if round_alignments:
+            mean_sim = float(np.mean([ra["similarity"] for ra in round_alignments]))
+            count_ratio = min(team_count, len(ref_forms)) / max(
+                team_count, len(ref_forms), 1
+            )
+            overall_sim = round(
+                min(1.0, mean_sim * (0.94 + 0.06 * count_ratio)), 4
+            )
+        else:
+            mean_sim = 0.0
+            overall_sim = 0.0
+
+        ranked_lineups.append(
+            {
+                "id": ref["id"],
+                "title": ref["title"],
+                "mode_slug": ref["mode_slug"],
+                "mode_name": ref["mode_name"],
+                "target_slug": ref["target_slug"],
+                "target_name": ref["target_name"],
+                "source": ref["source"],
+                "reference_team_count": len(ref_forms),
+                "similarity": overall_sim,
+                "mean_round_similarity": round(mean_sim, 4),
+                "round_alignments": round_alignments,
+            }
+        )
+
+    ranked_lineups.sort(
+        key=lambda x: (x["similarity"], x["mean_round_similarity"]), reverse=True
+    )
+    best_lineup = ranked_lineups[0] if ranked_lineups else None
+
+    if best_lineup and best_lineup["mean_round_similarity"] >= 0.60:
+        align_by_round = {
+            ra["image_round"]: ra for ra in best_lineup["round_alignments"]
+        }
+        for t in solved_teams:
+            ra = align_by_round.get(t["round"])
+            if ra and ra["similarity"] >= 0.60:
+                t["matched_formation_key"] = ra["matched_formation_key"]
+                t["matched_formation_label"] = ra["matched_formation_label"]
+                t["reference_similarity"] = ra["similarity"]
+
+    # Build Mode & Target candidates combining lineup similarity and structural priors
+    mode_catalog = [
+        ("nightmare-corridor", "Nightmare Corridor", "infernal-overlord", "Infernal Overlord", 6),
+        ("nightmare-corridor", "Nightmare Corridor", "netherspinner", "Netherspinner", 6),
+        ("cursed-realm", "Cursed Realm", "ice-shemira", "Ice Shemira", 6),
+        ("cursed-realm", "Cursed Realm", "burning-brute", "Burning Brute", 6),
+        ("cursed-realm", "Cursed Realm", "kane", "Kane", 6),
+        ("cursed-realm", "Cursed Realm", "demonic-entity", "Demonic Entity", 6),
+        ("cursed-realm", "Cursed Realm", "the-unhinged", "The Unhinged", 6),
+        ("cursed-realm", "Cursed Realm", "grotesque-mage", "Grotesque Mage", 6),
+        ("treasure-scramble", "Treasure Scramble", "fire", "Fire", 4),
+        ("treasure-scramble", "Treasure Scramble", "frost", "Frost", 4),
+        ("treasure-scramble", "Treasure Scramble", "forest", "Forest", 4),
+        ("treasure-scramble", "Treasure Scramble", "fog", "Fog", 4),
+        ("treasure-scramble", "Treasure Scramble", "fountain", "Fountain", 4),
+        ("twisted-realm", "Twisted Realm", "ice-shemira", "Ice Shemira", 1),
+        ("twisted-realm", "Twisted Realm", "burning-brute", "Burning Brute", 1),
+        ("twisted-realm", "Twisted Realm", "kane", "Kane", 1),
+        ("twisted-realm", "Twisted Realm", "grotesque-mage", "Grotesque Mage", 1),
+    ]
+
+    mode_candidates = []
+    for m_slug, m_name, t_slug, t_name, expected_teams in mode_catalog:
+        matching_refs = [
+            rl
+            for rl in ranked_lineups
+            if rl["mode_slug"] == m_slug and rl["target_slug"] == t_slug
+        ]
+        best_ref = matching_refs[0] if matching_refs else None
+        ref_sim = best_ref["mean_round_similarity"] if best_ref else 0.0
+
+        reasons = []
+        struct_score = 0.10
+        if m_slug == "nightmare-corridor":
+            if team_count == 6:
+                struct_score += 0.32
+                reasons.append("6-round formation structure matches Nightmare Corridor 6-boss cycle.")
+            elif team_count in (2, 3, 4, 5) and has_collections:
+                struct_score += 0.26
+                reasons.append(f"{team_count}-round partial formation guide with pets & collections fits Nightmare Corridor.")
+            elif team_count == 1 and has_collections:
+                struct_score += 0.22
+                reasons.append("Single-round crop with 5 heroes + collection badges fits a Nightmare Corridor boss round.")
+            if has_substitutes:
+                struct_score += 0.08
+                reasons.append("Includes per-boss substitute team table typical of Nightmare Corridor community guides.")
+        elif m_slug == "cursed-realm":
+            if team_count == 6:
+                struct_score += 0.26
+                reasons.append("6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss).")
+            elif team_count == 1:
+                struct_score += 0.16
+                reasons.append("Single-round crop could be a Cursed Realm Boss or Shadow Guard formation.")
+        elif m_slug == "treasure-scramble":
+            if 2 <= team_count <= 7:
+                struct_score += 0.22
+                reasons.append(f"{team_count}-team multi-formation layout is compatible with Treasure Scramble (2-7 teams).")
+        elif m_slug == "twisted-realm":
+            if team_count == 1:
+                struct_score += 0.25
+                reasons.append("Single 5-hero + pet formation matches Twisted Realm single-boss format.")
+
+        if best_ref and ref_sim >= 0.25:
+            matched_h = sum(ra["hero_overlap_count"] for ra in best_ref["round_alignments"])
+            total_h = 5 * len(best_ref["round_alignments"])
+            reasons.insert(
+                0,
+                f"Matches reference lineup '{best_ref['title']}' ({matched_h}/{total_h} heroes across {len(best_ref['round_alignments'])} round(s), {round(ref_sim * 100, 1)}% round similarity).",
+            )
+
+        combined_conf = round(
+            min(0.99, max(0.02, 0.72 * ref_sim + 0.28 * min(1.0, struct_score * 2.4))),
+            3,
+        )
+        if not reasons:
+            reasons.append(f"Alternative {m_name} ({t_name}) candidate.")
+
+        mode_candidates.append(
+            {
+                "mode_slug": m_slug,
+                "mode_name": m_name,
+                "target_slug": t_slug,
+                "target_name": t_name,
+                "confidence": combined_conf,
+                "reference_lineup_id": best_ref["id"] if best_ref else None,
+                "reference_similarity": round(ref_sim, 4),
+                "reasons": reasons,
+            }
+        )
+
+    mode_candidates.sort(
+        key=lambda x: (x["confidence"], x["reference_similarity"]), reverse=True
+    )
+    best_mode = mode_candidates[0]
+    mode_alternatives = mode_candidates[1:6]
+
+    # Compile actionable review_suggestions (both visual uncertainty and reference diffs)
+    review_suggestions = []
+    align_map = (
+        {ra["image_round"]: ra for ra in best_lineup["round_alignments"]}
+        if best_lineup and best_lineup["mean_round_similarity"] >= 0.55
+        else {}
+    )
+
+    for t in solved_teams:
+        r_num = t["round"]
+        f_label = t.get("matched_formation_label") or f"Round {r_num}"
+        ra = align_map.get(r_num)
+
+        # 1. Reference diffs for this round
+        if ra and ra["differences"]:
+            for diff in ra["differences"]:
+                slot_idx = diff["slot"]
+                if slot_idx == "pet":
+                    p_alts = [
+                        a["slug"]
+                        for a in ((t.get("pet") or {}).get("visual_alternatives") or [])[:4]
+                    ]
+                    if diff["reference_value"] and diff["reference_value"] not in p_alts:
+                        p_alts.insert(0, diff["reference_value"])
+                    review_suggestions.append(
+                        {
+                            "round": r_num,
+                            "formation_label": f_label,
+                            "slot": "pet",
+                            "field": "pet",
+                            "type": diff["type"],
+                            "current_value": diff["image_value"],
+                            "reference_value": diff["reference_value"],
+                            "suggested_alternatives": p_alts,
+                            "reason": diff["note"],
+                        }
+                    )
+                else:
+                    h_obj = t["heroes"][slot_idx]
+                    if "hero" in diff["type"]:
+                        h_alts = [
+                            a["slug"]
+                            for a in (h_obj.get("visual_alternatives") or [])[:4]
+                        ]
+                        if diff["reference_value"] and diff["reference_value"] not in h_alts:
+                            h_alts.insert(0, diff["reference_value"])
+                        review_suggestions.append(
+                            {
+                                "round": r_num,
+                                "formation_label": f_label,
+                                "slot": slot_idx + 1,
+                                "field": "hero",
+                                "type": diff["type"],
+                                "current_value": diff["image_value"],
+                                "reference_value": diff["reference_value"],
+                                "suggested_alternatives": h_alts,
+                                "reason": diff["note"],
+                            }
+                        )
+                    elif "collection_node" in diff["type"]:
+                        n_alts = [
+                            [a["key"] for a in (n.get("visual_alternatives") or [])[:3]]
+                            for n in ((h_obj.get("collection") or {}).get("nodes") or [])
+                        ]
+                        review_suggestions.append(
+                            {
+                                "round": r_num,
+                                "formation_label": f_label,
+                                "slot": slot_idx + 1,
+                                "field": "collection_nodes",
+                                "type": diff["type"],
+                                "current_value": diff["image_value"],
+                                "reference_value": diff["reference_value"],
+                                "suggested_alternatives": [diff["reference_value"]] + n_alts,
+                                "reason": diff["note"],
+                            }
+                        )
+                    elif "collection" in diff["type"]:
+                        c_alts = [
+                            {"id": a["id"], "name": a["name"]}
+                            for a in ((h_obj.get("collection") or {}).get("visual_alternatives") or [])[:4]
+                        ]
+                        review_suggestions.append(
+                            {
+                                "round": r_num,
+                                "formation_label": f_label,
+                                "slot": slot_idx + 1,
+                                "field": "collection",
+                                "type": diff["type"],
+                                "current_value": diff["image_value"],
+                                "reference_value": diff["reference_value"],
+                                "suggested_alternatives": c_alts,
+                                "reason": diff["note"],
+                            }
+                        )
+
+        # 2. Visual uncertainty flags
+        for s_idx, h_obj in enumerate(t["heroes"]):
+            if h_obj.get("needs_review"):
+                v_alts = h_obj.get("visual_alternatives") or []
+                runner = v_alts[1] if len(v_alts) > 1 else None
+                review_suggestions.append(
+                    {
+                        "round": r_num,
+                        "formation_label": f_label,
+                        "slot": s_idx + 1,
+                        "field": "hero",
+                        "type": "visual_uncertainty",
+                        "current_value": h_obj["slug"],
+                        "reference_value": None,
+                        "suggested_alternatives": [a["slug"] for a in v_alts[1:5]],
+                        "reason": (
+                            f"Round {r_num} Slot {s_idx + 1} hero ({h_obj['name']}, MSE {round(h_obj['mse'], 1)}) has a close visual runner-up: "
+                            f"{runner['name']} ({runner['slug']}, MSE {runner['mse']})."
+                            if runner
+                            else f"Round {r_num} Slot {s_idx + 1} hero ({h_obj['name']}) has elevated visual MSE ({round(h_obj['mse'], 1)})."
+                        ),
+                    }
+                )
+            coll = h_obj.get("collection") or {}
+            if coll.get("needs_review") and coll.get("catalog") is not None:
+                c_alts = coll.get("visual_alternatives") or []
+                c_runner = c_alts[1] if len(c_alts) > 1 else None
+                review_suggestions.append(
+                    {
+                        "round": r_num,
+                        "formation_label": f_label,
+                        "slot": s_idx + 1,
+                        "field": "collection",
+                        "type": "visual_uncertainty",
+                        "current_value": coll["name"],
+                        "reference_value": None,
+                        "suggested_alternatives": [a["name"] for a in c_alts[1:4]],
+                        "reason": (
+                            f"Round {r_num} Slot {s_idx + 1} collection ({coll['name']}, MSE {round(coll['mse'], 1)}) has a close visual alternative: "
+                            f"{c_runner['name']} (MSE {c_runner['mse']})."
+                            if c_runner
+                            else f"Round {r_num} Slot {s_idx + 1} collection ({coll['name']}) has elevated MSE ({round(coll['mse'], 1)})."
+                        ),
+                    }
+                )
+
+        if (t.get("pet") or {}).get("needs_review"):
+            p_obj = t["pet"]
+            p_alts = p_obj.get("visual_alternatives") or []
+            p_runner = p_alts[1] if len(p_alts) > 1 else None
+            review_suggestions.append(
+                {
+                    "round": r_num,
+                    "formation_label": f_label,
+                    "slot": "pet",
+                    "field": "pet",
+                    "type": "visual_uncertainty",
+                    "current_value": p_obj["slug"],
+                    "reference_value": None,
+                    "suggested_alternatives": [a["slug"] for a in p_alts[1:5]],
+                    "reason": (
+                        f"Round {r_num} pet ({p_obj['name']}, MSE {round(p_obj['mse'], 1)}) has a close visual alternative: "
+                        f"{p_runner['name']} ({p_runner['slug']}, MSE {p_runner['mse']})."
+                        if p_runner
+                        else f"Round {r_num} pet ({p_obj['name']}) has elevated visual MSE ({round(p_obj['mse'], 1)})."
+                    ),
+                }
+            )
+
+    return {
+        "best_mode": best_mode,
+        "mode_alternatives": mode_alternatives,
+        "best_lineup_match": best_lineup,
+        "lineup_alternatives": ranked_lineups[1:5],
+        "review_suggestions": review_suggestions,
+    }
 
 
 def detect_and_assemble_teams_for_image(
@@ -1010,6 +2040,9 @@ def detect_and_assemble_teams_for_image(
                     "name": p_row["pet_name"],
                     "mode": p_row["pet_mode"],
                     "options": p_row["pet_options"],
+                    "confidence": p_row.get("pet_confidence", 0.9),
+                    "needs_review": False,
+                    "visual_alternatives": p_row.get("pet_visual_alternatives", []),
                     "bbox": p_row["bbox"],
                 }
                 for s_idx, h_entry in enumerate(t["heroes"]):
@@ -1176,11 +2209,24 @@ def run_all_guides_benchmark(
         collections_catalog,
     )
     eval_app = evaluate_assembled_teams(teams_app, formations_gt)
+    inf_app = infer_mode_and_lineup_matches(
+        teams_app,
+        img_app.shape,
+        hero_meta,
+        pet_meta,
+        collections_catalog,
+        repo_root,
+        formations_gt=formations_gt,
+    )
     results["app_export_lineup_9"] = {
         "image": str(p_app),
         "held_out_fold": "fold-3",
         "elapsed_seconds": round(time.time() - t0, 2),
         "metrics": eval_app,
+        "best_mode": inf_app["best_mode"],
+        "mode_alternatives": inf_app["mode_alternatives"],
+        "best_lineup_match": inf_app["best_lineup_match"],
+        "review_suggestions": inf_app["review_suggestions"],
         "formations": teams_to_seed_formations(teams_app),
     }
 
@@ -1209,11 +2255,24 @@ def run_all_guides_benchmark(
                         {"slotIndex": 2, "stat": "atk", "tier": "mythic"}
                     )
     eval_lyd = evaluate_assembled_teams(teams_lyd, formations_lyd_gt)
+    inf_lyd = infer_mode_and_lineup_matches(
+        teams_lyd,
+        img_lyd.shape,
+        hero_meta,
+        pet_meta,
+        collections_catalog,
+        repo_root,
+        formations_gt=formations_gt,
+    )
     results["community_guide_lydydxhxpyyh1"] = {
         "image": str(p_lyd),
         "held_out_fold": "fold-2",
         "elapsed_seconds": round(time.time() - t0, 2),
         "metrics": eval_lyd,
+        "best_mode": inf_lyd["best_mode"],
+        "mode_alternatives": inf_lyd["mode_alternatives"],
+        "best_lineup_match": inf_lyd["best_lineup_match"],
+        "review_suggestions": inf_lyd["review_suggestions"],
         "formations": teams_to_seed_formations(teams_lyd),
     }
 
@@ -1262,6 +2321,15 @@ def run_all_guides_benchmark(
             n_tot3 += len(exp_n)
             if pred_n == exp_n:
                 n_ok3 += len(exp_n)
+    inf_f2p = infer_mode_and_lineup_matches(
+        teams_f2p,
+        img_f2p.shape,
+        hero_meta,
+        pet_meta,
+        collections_catalog,
+        repo_root,
+        formations_gt=formations_gt,
+    )
     results["f2p_staggered_guide"] = {
         "image": str(p_f2p),
         "held_out_fold": "fold-1",
@@ -1283,6 +2351,10 @@ def run_all_guides_benchmark(
             "pet_total": 3,
             "pet_accuracy": p_ok3 / 3.0,
         },
+        "best_mode": inf_f2p["best_mode"],
+        "mode_alternatives": inf_f2p["mode_alternatives"],
+        "best_lineup_match": inf_f2p["best_lineup_match"],
+        "review_suggestions": inf_f2p["review_suggestions"],
         "formations": teams_to_seed_formations(teams_f2p),
     }
 
@@ -1290,6 +2362,8 @@ def run_all_guides_benchmark(
     out_path.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     for k, v in results.items():
         m = v["metrics"]
+        bm = v["best_mode"]
+        bl = v["best_lineup_match"]
         sub_str = (
             f" | Substitute Teams={m['substitute_teams_count']}"
             if m.get("substitute_teams_count")
@@ -1297,6 +2371,8 @@ def run_all_guides_benchmark(
         )
         print(
             f"[{k}] ({v['held_out_fold']}, {v['elapsed_seconds']}s): "
+            f"Mode={bm['mode_name']} ({bm['target_name']}, conf={bm['confidence']}) | "
+            f"Best Lineup={bl['id']} ({round(bl['similarity'] * 100, 1)}%) | "
             f"Teams={m['teams_assembled']}/{m['expected_teams']}{sub_str} | "
             f"Heroes={m['hero_correct']}/{m['hero_total']} | "
             f"Collections={m['collection_correct']}/{m['collection_total']} | "
@@ -1491,6 +2567,15 @@ def main():
         detector_boxes=detector_boxes,
         detector_scores=detector_scores,
     )
+    mode_inference = infer_mode_and_lineup_matches(
+        solved_teams,
+        screenshot.shape,
+        hero_meta,
+        pet_meta,
+        collections_catalog,
+        repo_root,
+        formations_gt=formations_gt,
+    )
     assembled_formations = teams_to_seed_formations(solved_teams)
 
     known_image_path = (repo_root / "afk-nightmare-corridor-infernal-overlord-9.png").resolve()
@@ -1561,6 +2646,11 @@ def main():
             "Ground-truth box evaluation uses one-to-one box matching at the configured IoU threshold.",
             "Team assembly uses layout-specific spatial grouping, Hungarian unique assignment for heroes and pets, soft hero-class prior (0.80x) for collections, and ROI template matching for collection node stat icons.",
         ],
+        "best_mode": mode_inference["best_mode"],
+        "mode_alternatives": mode_inference["mode_alternatives"],
+        "best_lineup_match": mode_inference["best_lineup_match"],
+        "lineup_alternatives": mode_inference["lineup_alternatives"],
+        "review_suggestions": mode_inference["review_suggestions"],
         "teams": solved_teams,
         "formations": assembled_formations,
         "predictions": predictions,
