@@ -160,6 +160,46 @@ def collection_asset_url(collection_id, nodes):
     )
 
 
+def collection_node_asset_url(stat, tier):
+    tier_code = {"elite": "e", "legendary": "l", "mythic": "m"}.get(tier)
+    if tier_code is None:
+        raise ValueError(f'Unknown collection node tier "{tier}".')
+    return f"{CDN_BASE}/collection_stats_icon/{stat}_{tier_code}.webp"
+
+
+def visible_collection_stat_nodes(nodes):
+    visible = []
+    for node in nodes:
+        if node["stat"] == "skill_level":
+            continue
+        tier_code = {"elite": "e", "legendary": "l", "mythic": "m"}[node["tier"]]
+        visible.append(
+            {
+                "slot_index": node.get("slotIndex"),
+                "stat": node["stat"],
+                "tier": node["tier"],
+                "key": f"{node['stat']}_{tier_code}",
+                "asset_url": collection_node_asset_url(node["stat"], node["tier"]),
+            }
+        )
+    return visible
+
+
+def collection_node_bboxes(collection_bbox, node_count):
+    cx, cy, cw, ch = collection_bbox
+    node_size = 42
+    top = cy + ch + 3
+    if node_count == 1:
+        return [[round(cx + (cw - node_size) / 2), top, node_size, node_size]]
+    if node_count == 2:
+        center_x = cx + cw / 2
+        return [
+            [round(center_x - node_size - 2), top, node_size, node_size],
+            [round(center_x + 2), top, node_size, node_size],
+        ]
+    return []
+
+
 def main():
     repo_root = Path(__file__).resolve().parents[2]
     seed_sql = (repo_root / "seed.sql").read_text(encoding="utf-8")
@@ -235,6 +275,10 @@ def main():
                     "formation_label": formation["label"],
                     "formation_position": position,
                     "assigned_hero_slug": hero["slug"],
+                    "collection_nodes": collection["nodes"],
+                    "visible_stat_nodes": visible_collection_stat_nodes(
+                        collection["nodes"]
+                    ),
                 }
             )
 
@@ -261,6 +305,8 @@ def main():
         )
 
     annotations = []
+    collection_node_annotations = []
+    next_node_id = 1001
     for identity, annotation in zip(expected, image_annotations):
         annotations.append(
             {
@@ -271,6 +317,33 @@ def main():
                 **identity,
             }
         )
+        if identity["identity_type"] == "collection":
+            visible_nodes = identity["visible_stat_nodes"]
+            node_boxes = collection_node_bboxes(
+                annotation["bbox"], len(visible_nodes)
+            )
+            for node_meta, node_bbox in zip(visible_nodes, node_boxes):
+                collection_node_annotations.append(
+                    {
+                        "annotation_id": next_node_id,
+                        "parent_collection_annotation_id": annotation["id"],
+                        "image_id": image["id"],
+                        "bbox": node_bbox,
+                        "lineup_id": LINEUP_ID,
+                        "identity_type": "collection_node",
+                        "stat": node_meta["stat"],
+                        "tier": node_meta["tier"],
+                        "key": node_meta["key"],
+                        "slot_index": node_meta["slot_index"],
+                        "asset_url": node_meta["asset_url"],
+                        "formation_key": identity["formation_key"],
+                        "formation_label": identity["formation_label"],
+                        "formation_position": identity["formation_position"],
+                        "assigned_hero_slug": identity["assigned_hero_slug"],
+                        "collection_catalog_id": identity["catalog_id"],
+                    }
+                )
+                next_node_id += 1
 
     output = {
         "lineup_id": LINEUP_ID,
@@ -282,12 +355,16 @@ def main():
             "height": image["height"],
         },
         "identity_counts": {
-            identity_type: sum(
-                item["identity_type"] == identity_type for item in annotations
-            )
-            for identity_type in ("hero", "collection", "pet")
+            **{
+                identity_type: sum(
+                    item["identity_type"] == identity_type for item in annotations
+                )
+                for identity_type in ("hero", "collection", "pet")
+            },
+            "collection_node": len(collection_node_annotations),
         },
         "annotations": annotations,
+        "collection_node_annotations": collection_node_annotations,
     }
     output_path = (
         repo_root / "tools" / "pet-matcher-lab" / "lineup-9-identity-ground-truth.json"

@@ -1,0 +1,1674 @@
+{
+  "app_export_lineup_9": {
+    "image": "/home/justindao/git/afk-arena-teams/afk-nightmare-corridor-infernal-overlord-9.png",
+    "held_out_fold": "fold-3",
+    "elapsed_seconds": 14.64,
+    "metrics": {
+      "teams_assembled": 6,
+      "expected_teams": 6,
+      "hero_correct": 30,
+      "hero_total": 30,
+      "hero_accuracy": 1.0,
+      "collection_correct": 30,
+      "collection_total": 30,
+      "collection_accuracy": 1.0,
+      "collection_node_correct": 42,
+      "collection_node_total": 42,
+      "collection_node_accuracy": 1.0,
+      "pet_correct": 6,
+      "pet_total": 6,
+      "pet_accuracy": 1.0
+    },
+    "formations": [
+      {
+        "key": "round-1",
+        "label": "Round 1",
+        "pet": "twinlum-spirit",
+        "heroes": [
+          {
+            "slug": "highborn-elthara",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "erosion",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "mp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "alvida",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "rowan",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "misha",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "def",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-severin",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-2",
+        "label": "Round 2",
+        "pet": "blazefang",
+        "heroes": [
+          {
+            "slug": "misfortis",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-lan",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-kaelon",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-safiya",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "kyno",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "def",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-3",
+        "label": "Round 3",
+        "pet": "count-snickerfang",
+        "heroes": [
+          {
+            "slug": "sion",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "harvey",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "tavriel",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "kafka-hibino",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-pippa",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-4",
+        "label": "Round 4",
+        "pet": "aureus",
+        "heroes": [
+          {
+            "slug": "awakened-envydiel",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "aurelia",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "erosion",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "gorok",
+            "collection": {
+              "catalog": 11,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "buffer",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "talimar",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-thalassa",
+            "collection": {
+              "catalog": 10,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "heal",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-5",
+        "label": "Round 5",
+        "pet": "nightfall-pegasus",
+        "heroes": [
+          {
+            "slug": "lysander",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "pp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "daemia",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "mp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-eluard",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-estrilda",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "begris",
+            "collection": {
+              "catalog": 11,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "ty",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-6",
+        "label": "Round 6",
+        "pet": "trickery-chest",
+        "heroes": [
+          {
+            "slug": "awakened-hybris",
+            "collection": {
+              "catalog": 2,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "cda",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "lavatune",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-theowyn",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "dracula",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "ll",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "athena",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "hp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "community_guide_lydydxhxpyyh1": {
+    "image": "/home/justindao/git/afk-arena-teams/lydydxhxpyyh1.png",
+    "held_out_fold": "fold-2",
+    "elapsed_seconds": 19.07,
+    "metrics": {
+      "teams_assembled": 6,
+      "expected_teams": 6,
+      "hero_correct": 30,
+      "hero_total": 30,
+      "hero_accuracy": 1.0,
+      "collection_correct": 30,
+      "collection_total": 30,
+      "collection_accuracy": 1.0,
+      "collection_node_correct": 43,
+      "collection_node_total": 43,
+      "collection_node_accuracy": 1.0,
+      "pet_correct": 0,
+      "pet_total": 0,
+      "pet_accuracy": 0
+    },
+    "formations": [
+      {
+        "key": "round-1",
+        "label": "Round 1",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "highborn-elthara",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "erosion",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "mp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "alvida",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "rowan",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "misha",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "def",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-severin",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-2",
+        "label": "Round 2",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "misfortis",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-lan",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-kaelon",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-safiya",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "kyno",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "def",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-3",
+        "label": "Round 3",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "sion",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "harvey",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "tavriel",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "kafka-hibino",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-pippa",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-4",
+        "label": "Round 4",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "awakened-envydiel",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "aurelia",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "erosion",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "gorok",
+            "collection": {
+              "catalog": 11,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "buffer",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "talimar",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "highborn-thalassa",
+            "collection": {
+              "catalog": 10,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "heal",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-5",
+        "label": "Round 5",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "lysander",
+            "collection": {
+              "catalog": 13,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "pp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "daemia",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "mp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-eluard",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-estrilda",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "begris",
+            "collection": {
+              "catalog": 11,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "ty",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-6",
+        "label": "Round 6",
+        "pet": null,
+        "heroes": [
+          {
+            "slug": "awakened-hybris",
+            "collection": {
+              "catalog": 2,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "cda",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "lavatune",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-theowyn",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "err",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "dracula",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "ll",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "athena",
+            "collection": {
+              "catalog": 17,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 3,
+                  "stat": "hp",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "f2p_staggered_guide": {
+    "image": "/home/justindao/git/afk-arena-teams/f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp",
+    "held_out_fold": "fold-1",
+    "elapsed_seconds": 18.64,
+    "metrics": {
+      "teams_assembled": 3,
+      "expected_teams": 3,
+      "hero_correct": 15,
+      "hero_total": 15,
+      "hero_accuracy": 1.0,
+      "collection_correct": 15,
+      "collection_total": 15,
+      "collection_accuracy": 1.0,
+      "collection_node_correct": 14,
+      "collection_node_total": 14,
+      "collection_node_accuracy": 1.0,
+      "pet_correct": 3,
+      "pet_total": 3,
+      "pet_accuracy": 1.0
+    },
+    "formations": [
+      {
+        "key": "round-1",
+        "label": "Round 1",
+        "pet": "twinlum-spirit",
+        "heroes": [
+          {
+            "slug": "misha",
+            "collection": null
+          },
+          {
+            "slug": "highborn-elthara",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "erosion",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "albedo",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "randle",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "medusa",
+            "collection": null
+          }
+        ]
+      },
+      {
+        "key": "round-2",
+        "label": "Round 2",
+        "pet": "blazefang",
+        "heroes": [
+          {
+            "slug": "awakened-safiya",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "talimar",
+            "collection": {
+              "catalog": 9,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-skriath",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "cda",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "awakened-thoran",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "tavriel",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "round-3",
+        "label": "Round 3",
+        "pet": "treatspector",
+        "heroes": [
+          {
+            "slug": "highborn-lan",
+            "collection": {
+              "catalog": 15,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 2,
+                  "stat": "atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "sion",
+            "collection": {
+              "catalog": 5,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                },
+                {
+                  "slotIndex": 1,
+                  "stat": "skill_level",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "kyno",
+            "collection": {
+              "catalog": 3,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "full_atk",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          },
+          {
+            "slug": "laios",
+            "collection": null
+          },
+          {
+            "slug": "awakened-pippa",
+            "collection": {
+              "catalog": 14,
+              "nodes": [
+                {
+                  "slotIndex": 0,
+                  "stat": "is",
+                  "tier": "mythic"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -151,16 +151,40 @@ Variant recognition is evaluated separately from identity. Given the correct col
 
 This is an open-catalog retrieval baseline, not a production-ready classifier. It uses ground-truth boxes and does not test detection, rejection of unrelated icons, team grouping, or generalization to guide screenshots. The screenshot and references share CDN artwork. Cached reference assets are kept outside the repository. Per-box predictions, per-type scores, candidate counts, collection and hero variants, and assumptions are in [`lineup-9-full-catalog-identity-results.json`](./lineup-9-full-catalog-identity-results.json).
 
-### Detector-to-catalog pipeline
+### Detector-to-catalog and structured team assembly pipeline
 
-Run the app-held-out YOLO fold and pass each detected crop to the mixed-type catalog matcher:
+Run the app-held-out YOLO fold, pass each detected crop to the multi-scale inner-mask BLAS catalog matcher, and assemble structured AFK Arena teams (including heroes, collections, collection levels, collection node stat icons, and pets):
 
 ```sh
 "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" \
   tools/pet-matcher-lab/detect-and-match-lineup.py
 ```
 
-By default this uses the saved fold-3 weights, near-native `imgsz=2080`, confidence `0.996`, and NMS IoU `0.55`; these thresholds were chosen on lineup 9. The matcher expands each detected box 1.15× around its center (configurable with `--match-box-scale`), while evaluation continues to use the original detector boxes. On lineup 9 the detector produced 92 boxes: all 66 labeled icons were covered at IoU ≥ 0.50, alongside 26 false-positive boxes. Compared with `0.995`, the `0.996` threshold removes one false positive without losing a labeled icon on this sample; higher tested thresholds reduced recall. Of the 66 matched icons, the matcher selected the exact identity at top-1 for 54, predicted the correct type for 61, and included the exact identity within its top 3 for 56. The 1.15× crop improves top-1 identity from 44 to 54 and top-3 from 49 to 56 over unexpanded crops, but still falls short of the labeled-box benchmark. The predictions and one-to-one evaluation are saved in [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json). These results are tuned on one sample; more independently labeled screenshots are needed before generalizing the matcher or detector thresholds. This prototype does not infer hero investments or collection levels from detector boxes.
+By default this uses the saved fold-3 weights, near-native `imgsz=2080`, confidence `0.996`, and NMS IoU `0.55`. The matcher expands each detected box 1.15× around its center (configurable with `--match-box-scale`), while evaluation continues to use the original detector boxes.
+
+Replacing the earlier unaligned `96×96` center-crop + fixed-size `icon_size = min(aligned_crop.shape[:2])` stage with **multi-scale, shift-invariant inner-mask BLAS template matching** (`64×64` templates with hero face inner mask `y: 8..46, x: 10..54` to exclude SI/furniture/engraving badges) raises box-level identity accuracy on the 66 matched YOLO detections from `54/66` (`81.8%`) to **`66/66` (`100.0%`)** (and type accuracy from `61/66` to **`66/66`**).
+
+In addition to per-box matching, `detect-and-match-lineup.py` runs a **4-Class Spatial Team & Collection Node Assembler** (`hero`, `collection`, `pet`, `collection_node` across `78` stat-tier icons from `collection_stats_icon/{stat}_{e|l|m}.webp`):
+
+1. **Layout auto-detection & spatial slot recovery:** Automatically identifies the guide layout archetype (`app_card_3_2`, `row_5_col` including horizontal-strip tiling for tall `3000×6000` infographics, or `staggered_3_2`) and recovers exact 5-hero, 5-collection, and pet slot coordinates.
+2. **Global uniqueness via Hungarian assignment:** Solves hero and pet identities across all teams in the guide simultaneously using exact Jonker-Volgenant (`Kuhn-Munkres`) minimum-cost unique assignment.
+3. **Soft Hero-Class → Collection-Class prior (`0.80×` MSE):** Uses each matched hero's class (`Warrior`, `Tank`, `Ranger`, `Mage`, `Support`) as a soft prior when ranking collections, while remaining robust to schema/game discrepancies (such as `awakened-theowyn` equipping Support collection `9 Trader's Vault`).
+4. **Collection node stat icon detection:** Scans the node ROI attached to each collection/hero slot against all `78` `collection_stats_icon/{stat}_{e|l|m}.webp` templates (`26 stats × 3 tiers`) and combines detected stat nodes with collection level (`lvl1..3` → `skill_level` nodes) to emit `seed.sql`-compatible `formations` JSON.
+
+To run the out-of-fold end-to-end team benchmark across all three guide layouts (`fold-3`, `fold-2`, `fold-1`), pass `--eval-all-guides`:
+
+```sh
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" \
+  tools/pet-matcher-lab/detect-and-match-lineup.py --eval-all-guides
+```
+
+| Guide image | Held-out fold | Layout archetype | Teams | Heroes | Collections | Collection Node Icons | Pets |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `afk-nightmare-corridor-infernal-overlord-9.png` (`2040×2082`) | `fold-3` | `app_card_3_2` | **6/6** | **30/30** | **30/30** | **42/42** | **6/6** |
+| `lydydxhxpyyh1.png` (`3000×6000` full & 6 round crops) | `fold-2` | `row_5_col` | **6/6** | **30/30** | **30/30** | **43/43** | — |
+| `f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp` (`1080×1771`) | `fold-1` | `staggered_3_2` | **3/3** | **15/15** | **15/15** | **14/14** (15/15 slots) | **3/3** |
+
+Per-box predictions, assembled teams, and `seed.sql`-compatible `formations` are written to [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json), and the multi-guide out-of-fold benchmark is written to [`multi-guide-team-recognition-results.json`](./multi-guide-team-recognition-results.json). A Vercel-compatible Python serverless endpoint (`POST /api/recognize-lineup`) is also provided at [`api/recognize-lineup.py`](../../api/recognize-lineup.py).
 
 ### Recommended next steps
 

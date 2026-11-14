@@ -57,6 +57,24 @@ class HeroAssetUrlTests(unittest.TestCase):
                 self.assertTrue(url.endswith(expected_filename))
                 self.assertEqual(source, "screenshot_visual_override")
 
+    def test_collection_node_stat_icons_and_bboxes(self):
+        nodes = [
+            {"slotIndex": 0, "stat": "skill_level", "tier": "mythic"},
+            {"slotIndex": 1, "stat": "erosion", "tier": "mythic"},
+            {"slotIndex": 2, "stat": "mp", "tier": "mythic"},
+        ]
+        visible = HELPER.visible_collection_stat_nodes(nodes)
+        self.assertEqual([item["key"] for item in visible], ["erosion_m", "mp_m"])
+        self.assertTrue(
+            visible[0]["asset_url"].endswith("/collection_stats_icon/erosion_m.webp")
+        )
+        bboxes_two = HELPER.collection_node_bboxes([232, 206, 111, 114], 2)
+        self.assertEqual(len(bboxes_two), 2)
+        self.assertEqual(bboxes_two[0][2:], [42, 42])
+        self.assertLess(bboxes_two[0][0], bboxes_two[1][0])
+        bboxes_one = HELPER.collection_node_bboxes([232, 206, 111, 114], 1)
+        self.assertEqual(len(bboxes_one), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

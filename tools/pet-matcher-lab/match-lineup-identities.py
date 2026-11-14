@@ -38,6 +38,43 @@ HERO_ASCENSIONS = (
     ("ascended_4", "a4"),
     ("ascended_5", "a5"),
 )
+COLLECTION_STAT_CODES = (
+    "hp",
+    "atk",
+    "def",
+    "crit",
+    "cda",
+    "cbr",
+    "cd_dr",
+    "acc",
+    "dodge",
+    "ll",
+    "heal",
+    "prf",
+    "ty",
+    "is",
+    "diss",
+    "pp",
+    "mp",
+    "prm",
+    "mrm",
+    "erosion",
+    "buffer",
+    "err",
+    "full_hp",
+    "full_atk",
+    "full_def",
+    "full_erosion",
+    "skill_level",
+)
+COLLECTION_NODE_TIERS = (
+    ("elite", "e"),
+    ("legendary", "l"),
+    ("mythic", "m"),
+)
+TENSOR_TEMPLATE_SIZE = 64
+_TENSOR_CACHE = {}
+_NODE_ASSET_CACHE = {}
 
 
 def load_ground_truth_module(path):
@@ -551,6 +588,391 @@ def build_identity_candidate_assets(catalogs, cache_root):
     return candidate_assets, missing_collection_assets
 
 
+def load_hero_and_pet_metadata(schema_sql, ground_truth_module):
+    hero_vals = ground_truth_module.insert_values(schema_sql, "heroes")
+    hero_rows = re.findall(
+        r"^\s*\((\d+),\s*'((?:[^']|'')*)',\s*'((?:[^']|'')*)',\s*'((?:[^']|'')*)',\s*'((?:[^']|'')*)'",
+        hero_vals,
+        flags=re.MULTILINE,
+    )
+    hero_meta = {
+        int(hid): {
+            "id": int(hid),
+            "slug": slug,
+            "name": name.replace("''", "'"),
+            "faction": faction,
+            "class": hclass,
+        }
+        for hid, slug, name, faction, hclass in hero_rows
+    }
+    pets_by_slug = ground_truth_module.simple_catalog(schema_sql, "pets")
+    pet_meta = {
+        entry["id"]: {"id": entry["id"], "slug": slug, "name": entry["name"]}
+        for slug, entry in pets_by_slug.items()
+    }
+    collections_meta = ground_truth_module.collection_catalog(schema_sql)
+    return hero_meta, pet_meta, collections_meta
+
+
+def build_collection_node_assets(cache_root):
+    cache_key = str(cache_root.resolve())
+    if cache_key in _NODE_ASSET_CACHE:
+        return _NODE_ASSET_CACHE[cache_key]
+
+    node_dir = cache_root / "collection_stats_icon"
+    node_dir.mkdir(parents=True, exist_ok=True)
+    node_items = [
+        (stat, tier_name, tier_code, f"{stat}_{tier_code}")
+        for stat in COLLECTION_STAT_CODES
+        for tier_name, tier_code in COLLECTION_NODE_TIERS
+    ]
+
+    def fetch_node(item):
+        stat, tier_name, tier_code, key = item
+        named_path = node_dir / f"{key}.webp"
+        url = f"{CDN_BASE}/collection_stats_icon/{key}.webp"
+        if named_path.is_file():
+            image = cv2.imread(str(named_path), cv2.IMREAD_UNCHANGED)
+            if image is not None:
+                return key, {
+                    "key": key,
+                    "stat": stat,
+                    "tier": tier_name,
+                    "tier_code": tier_code,
+                    "url": url,
+                    "image": image,
+                }
+        image = get_image(url, node_dir)
+        if image is not None and not named_path.is_file():
+            cv2.imwrite(str(named_path), image)
+        if image is None:
+            return key, None
+        return key, {
+            "key": key,
+            "stat": stat,
+            "tier": tier_name,
+            "tier_code": tier_code,
+            "url": url,
+            "image": image,
+        }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        loaded = dict(executor.map(fetch_node, node_items))
+    result = {k: v for k, v in loaded.items() if v is not None}
+    _NODE_ASSET_CACHE[cache_key] = result
+    return result
+
+
+def build_type_tensors(candidate_assets, cache_root=None):
+    cache_key = id(candidate_assets)
+    if cache_key in _TENSOR_CACHE:
+        return _TENSOR_CACHE[cache_key]
+
+    if cache_root is None:
+        cache_root = Path.home() / ".cache" / "afk-icon-detector-benchmark" / "identity-assets"
+    expanded_assets = list(candidate_assets)
+    seen_hero_base = {
+        c["id"] for c in expanded_assets if c["type"] == "hero" and c.get("state") == "base"
+    }
+    hero_entries = [
+        {"id": c["id"], "name": c["name"]}
+        for c in candidate_assets
+        if c["type"] == "hero" and c["id"] not in seen_hero_base
+    ]
+    for entry in hero_entries:
+        url = f"{CDN_BASE}/unit_icon_by_id/{entry['id']}.webp"
+        im = get_image(url, cache_root / "hero_base_icon")
+        if im is not None:
+            expanded_assets.append(
+                {
+                    "type": "hero",
+                    "id": entry["id"],
+                    "name": entry["name"],
+                    "url": url,
+                    "state": "base",
+                    "template": normalized_center(im),
+                    "image": im,
+                }
+            )
+
+    sz = TENSOR_TEMPLATE_SIZE
+    by_type = {}
+    for c in expanded_assets:
+        im = c["image"]
+        rgb = cv2.resize(im[:, :, :3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32)
+        alpha = (
+            cv2.resize(im[:, :, 3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+            if (im.ndim == 3 and im.shape[2] == 4)
+            else np.ones((sz, sz), dtype=np.float32)
+        )
+        m2 = np.zeros_like(alpha)
+        if c["type"] == "hero":
+            m2[8:46, 10:54] = 1.0
+        else:
+            m2[6:58, 6:58] = 1.0
+        mask = alpha * m2
+        by_type.setdefault(c["type"], []).append((c, rgb, mask[:, :, None]))
+
+    type_tensors = {}
+    for t_name, items in by_type.items():
+        T = np.stack([x[1] for x in items], axis=0)
+        M = np.stack([x[2] for x in items], axis=0)
+        D = np.sum(M, axis=(1, 2, 3)) * 3.0
+        m_single = M[0]
+        d_single = float(D[0])
+        T_flat = T.reshape(T.shape[0], -1)
+        M_flat = np.repeat(m_single, 3, axis=2).reshape(1, -1)
+        TM_flat = T_flat * M_flat
+        T2 = np.sum(T_flat * TM_flat, axis=1, keepdims=True).T
+        type_tensors[t_name] = (items, T_flat, M_flat, TM_flat, T2, d_single)
+
+    _TENSOR_CACHE[cache_key] = type_tensors
+    return type_tensors
+
+
+def assign_unique_identities(slot_rankings):
+    """Exact minimum-cost unique identity assignment (Jonker-Volgenant / Kuhn-Munkres)."""
+    n_slots = len(slot_rankings)
+    if n_slots == 0:
+        return []
+    cand_ids = sorted({item["id"] for rank_list in slot_rankings for item in rank_list[:8]})
+    id_to_col = {cid: idx for idx, cid in enumerate(cand_ids)}
+    n_cols = len(cand_ids)
+    if n_cols < n_slots:
+        return [r[0] for r in slot_rankings]
+
+    cost = np.full((n_slots + 1, n_cols + 1), 1e9, dtype=np.float64)
+    cost[0, :] = 0.0
+    cost[:, 0] = 0.0
+    for i, rank_list in enumerate(slot_rankings, start=1):
+        for item in rank_list[:8]:
+            j = id_to_col[item["id"]] + 1
+            cost[i, j] = min(cost[i, j], float(item.get("effective_mse", item["mse"])))
+
+    u = np.zeros(n_slots + 1, dtype=np.float64)
+    v = np.zeros(n_cols + 1, dtype=np.float64)
+    p = np.zeros(n_cols + 1, dtype=np.int32)
+    way = np.zeros(n_cols + 1, dtype=np.int32)
+
+    for i in range(1, n_slots + 1):
+        p[0] = i
+        j0 = 0
+        minv = np.full(n_cols + 1, np.inf, dtype=np.float64)
+        used = np.zeros(n_cols + 1, dtype=bool)
+        while True:
+            used[j0] = True
+            i0 = p[j0]
+            delta = np.inf
+            j1 = 0
+            for j in range(1, n_cols + 1):
+                if not used[j]:
+                    cur = cost[i0, j] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+            for j in range(n_cols + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+
+    assigned_col = np.zeros(n_slots + 1, dtype=np.int32)
+    for j in range(1, n_cols + 1):
+        if p[j] > 0:
+            assigned_col[p[j]] = j - 1
+
+    results = []
+    for i, rank_list in enumerate(slot_rankings):
+        chosen_id = cand_ids[assigned_col[i + 1]]
+        chosen = next((item for item in rank_list if item["id"] == chosen_id), rank_list[0])
+        results.append(chosen)
+    return results
+
+
+def rank_candidates_in_box(
+    img,
+    bbox,
+    t_name,
+    type_tensors,
+    scales=(0.88, 0.94, 1.0, 1.06, 1.12),
+    pad_ratio=0.25,
+    stride=2,
+    allowed_class=None,
+    collections_catalog=None,
+):
+    bx, by, bw, bh = bbox
+    est_sz = min(bw, bh)
+    cx, cy = bx + bw / 2.0, by + bh / 2.0
+    items, T_flat, M_flat, TM_flat, T2, d_single = type_tensors[t_name]
+    sz = TENSOR_TEMPLATE_SIZE
+
+    best_per_idx = np.full(len(items), np.inf, dtype=np.float32)
+    for scale_mult in scales:
+        s_px = est_sz * scale_mult
+        if s_px < 24:
+            continue
+        pad_px = s_px * pad_ratio
+        half = s_px / 2.0 + pad_px
+        x0, y0 = max(0, round(cx - half)), max(0, round(cy - half))
+        x1, y1 = min(img.shape[1], round(cx + half)), min(img.shape[0], round(cy + half))
+        if x1 - x0 < 20 or y1 - y0 < 20:
+            continue
+        roi = img[y0:y1, x0:x1].astype(np.float32)
+        sf = sz / float(s_px)
+        r_w, r_h = max(sz, round(roi.shape[1] * sf)), max(sz, round(roi.shape[0] * sf))
+        roi_r = cv2.resize(roi, (r_w, r_h), interpolation=cv2.INTER_AREA)
+        patches = [
+            roi_r[oy : oy + sz, ox : ox + sz]
+            for oy in range(0, r_h - sz + 1, stride)
+            for ox in range(0, r_w - sz + 1, stride)
+        ]
+        if not patches:
+            continue
+        P = np.stack(patches, axis=0)
+        P_flat = P.reshape(P.shape[0], -1)
+        P2 = np.sum((P_flat**2) * M_flat, axis=1, keepdims=True)
+        dist = (P2 + T2 - 2.0 * (P_flat @ TM_flat.T)) / d_single
+        min_d = dist.min(axis=0)
+        best_per_idx = np.minimum(best_per_idx, min_d)
+
+    scored_items = []
+    for idx in range(len(items)):
+        c = items[idx][0]
+        cid = c["id"]
+        mse_val = float(best_per_idx[idx])
+        eff_mse = mse_val
+        if (
+            allowed_class is not None
+            and t_name == "collection"
+            and collections_catalog is not None
+            and cid in collections_catalog
+        ):
+            if collections_catalog[cid]["class"] == allowed_class:
+                eff_mse = mse_val * 0.80
+        scored_items.append((eff_mse, mse_val, cid, c["name"], c["state"], c["url"], c))
+    scored_items.sort(key=lambda x: (x[0], x[2], x[5]))
+
+    seen = {}
+    for eff_mse, mse_val, cid, cname, cstate, curl, cand in scored_items:
+        if cid not in seen:
+            seen[cid] = {
+                "id": cid,
+                "name": cname,
+                "state": cstate,
+                "url": curl,
+                "mse": mse_val,
+                "effective_mse": eff_mse,
+                "candidate": cand,
+            }
+    return list(seen.values())
+
+
+def detect_nodes_in_roi(
+    roi_bgr,
+    node_assets,
+    sz_list=(40, 42, 44, 46),
+    max_nodes=2,
+    mse_thresh=1500.0,
+    include_skill_level=False,
+):
+    if roi_bgr is None or roi_bgr.size == 0:
+        return []
+    roi = roi_bgr.astype(np.float32)
+    keys = [
+        k
+        for k in sorted(node_assets.keys())
+        if include_skill_level or not k.startswith("skill_level")
+    ]
+    if not keys:
+        return []
+
+    candidates = []
+    for sz in sz_list:
+        if roi.shape[0] < sz or roi.shape[1] < sz:
+            continue
+        T_list, M_list = [], []
+        for k in keys:
+            im = node_assets[k]["image"]
+            t = cv2.resize(im[:, :, :3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32)
+            m = (
+                cv2.resize(im[:, :, 3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+            )[:, :, None]
+            T_list.append(t)
+            M_list.append(m)
+        T = np.stack(T_list, axis=0)
+        M = np.stack(M_list, axis=0)
+        m_single = M[0]
+        d_single = float(m_single.sum() * 3.0)
+        H_r, W_r = roi.shape[:2]
+        coords = [(ox, oy) for oy in range(0, H_r - sz + 1, 2) for ox in range(0, W_r - sz + 1, 2)]
+        if not coords:
+            continue
+        patches = np.stack([roi[oy : oy + sz, ox : ox + sz] for ox, oy in coords], axis=0)
+        P_flat = patches.reshape(patches.shape[0], -1)
+        T_flat = T.reshape(T.shape[0], -1)
+        M_flat = np.repeat(m_single, 3, axis=2).reshape(1, -1)
+        TM_flat = T_flat * M_flat
+        P2 = np.sum((P_flat**2) * M_flat, axis=1, keepdims=True)
+        T2 = np.sum(T_flat * TM_flat, axis=1, keepdims=True).T
+        dist = (P2 + T2 - 2.0 * (P_flat @ TM_flat.T)) / d_single
+        best_tmpl = np.argmin(dist, axis=1)
+        best_mse = dist[np.arange(dist.shape[0]), best_tmpl]
+        for p_idx in np.where(best_mse < mse_thresh)[0]:
+            ox, oy = coords[p_idx]
+            order = np.argsort(dist[p_idx])[:3]
+            top3 = [
+                {
+                    "key": keys[idx],
+                    "stat": node_assets[keys[idx]]["stat"],
+                    "tier": node_assets[keys[idx]]["tier"],
+                    "mse": float(dist[p_idx, idx]),
+                }
+                for idx in order
+            ]
+            k = keys[best_tmpl[p_idx]]
+            meta = node_assets[k]
+            candidates.append(
+                {
+                    "mse": float(best_mse[p_idx]),
+                    "ox": int(ox),
+                    "oy": int(oy),
+                    "sz": int(sz),
+                    "key": k,
+                    "stat": meta["stat"],
+                    "tier": meta["tier"],
+                    "asset_url": meta["url"],
+                    "top3": top3,
+                }
+            )
+
+    candidates.sort(key=lambda x: x["mse"])
+    picked = []
+    for cand in candidates:
+        cx = cand["ox"] + cand["sz"] / 2.0
+        if all(
+            abs(cx - (p["ox"] + p["sz"] / 2.0)) > max(cand["sz"], p["sz"]) * 0.65
+            for p in picked
+        ):
+            picked.append(cand)
+            if len(picked) >= max_nodes:
+                break
+    picked.sort(key=lambda x: x["ox"])
+    return picked
+
+
 def rank_icon_box(bbox, screenshot, source_screenshot, source_scale, candidate_assets):
     x, y, width, height = bbox
     crop = screenshot[y : y + height, x : x + width]
@@ -582,7 +1004,7 @@ def rank_icon_box(bbox, screenshot, source_screenshot, source_scale, candidate_a
         best_by_type.values(),
         key=lambda result: (result[0], result[1], result[2]),
     )
-    predicted_type = type_ranking[0][1]
+
     aligned_crop = source_scale_crop(
         source_screenshot,
         bbox,
@@ -591,30 +1013,26 @@ def rank_icon_box(bbox, screenshot, source_screenshot, source_scale, candidate_a
     icon_size = min(aligned_crop.shape[:2])
     if icon_size < 32:
         raise ValueError(f"Detection box {bbox} is too small to match reliably.")
-    aligned_ranked = sorted(
-        (
-            (
-                aligned_alpha_mse(
-                    aligned_crop,
-                    candidate["image"],
-                    predicted_type,
-                    icon_size=icon_size,
-                ),
-                candidate,
-            )
-            for candidate in candidate_assets
-            if candidate["type"] == predicted_type
-        ),
-        key=lambda result: (
-            result[0],
-            result[1]["id"],
-            result[1]["url"],
-        ),
-    )
-    aligned_by_identity = {}
-    for score, candidate in aligned_ranked:
-        aligned_by_identity.setdefault(candidate["id"], (score, candidate))
-    aligned_identity_ranking = list(aligned_by_identity.values())
+
+    type_tensors = build_type_tensors(candidate_assets)
+    if max(width, height) < 88:
+        predicted_type = "pet"
+        nominal_box = [x, y, 64, 64]
+        blas_ranked = rank_candidates_in_box(screenshot, nominal_box, "pet", type_tensors)
+    else:
+        nominal_box = [x, y, 111, 111]
+        h_ranked = rank_candidates_in_box(screenshot, nominal_box, "hero", type_tensors)
+        c_ranked = rank_candidates_in_box(screenshot, nominal_box, "collection", type_tensors)
+        if h_ranked[0]["mse"] <= c_ranked[0]["mse"]:
+            predicted_type = "hero"
+            blas_ranked = h_ranked
+        else:
+            predicted_type = "collection"
+            blas_ranked = c_ranked
+
+    aligned_identity_ranking = [
+        (item["mse"], item["candidate"]) for item in blas_ranked
+    ]
     aligned_best_score, aligned_best_candidate = aligned_identity_ranking[0]
     return {
         "ranked": ranked,
@@ -626,6 +1044,98 @@ def rank_icon_box(bbox, screenshot, source_screenshot, source_scale, candidate_a
         "aligned_best_score": aligned_best_score,
         "aligned_best_candidate": aligned_best_candidate,
         "aligned_icon_size": icon_size,
+    }
+
+
+def evaluate_collection_node_stat_icons(annotations, screenshot, cache_root):
+    node_assets = build_collection_node_assets(cache_root)
+    collection_annotations = [
+        item for item in annotations if item["identity_type"] == "collection"
+    ]
+    slot_predictions = []
+    node_query_count = 0
+    node_exact_correct = 0
+    node_stat_correct = 0
+    for annotation in collection_annotations:
+        cx, cy, cw, ch = annotation["bbox"]
+        roi = screenshot[
+            max(0, cy + ch - 6) : min(screenshot.shape[0], cy + ch + 56),
+            max(0, cx - 12) : min(screenshot.shape[1], cx + cw + 12),
+        ]
+        detected_nodes = detect_nodes_in_roi(
+            roi,
+            node_assets,
+            sz_list=(40, 42, 44, 46),
+            max_nodes=2,
+            mse_thresh=1500.0,
+        )
+        expected_nodes = annotation.get("visible_stat_nodes", [])
+        expected_keys = [item["key"] for item in expected_nodes]
+        predicted_keys = [item["key"] for item in detected_nodes]
+        expected_stats = [item["stat"] for item in expected_nodes]
+        predicted_stats = [item["stat"] for item in detected_nodes]
+        node_query_count += len(expected_keys)
+        if predicted_keys == expected_keys:
+            node_exact_correct += len(expected_keys)
+        else:
+            node_exact_correct += sum(
+                p == e for p, e in zip(predicted_keys, expected_keys)
+            )
+        if predicted_stats == expected_stats:
+            node_stat_correct += len(expected_stats)
+        else:
+            node_stat_correct += sum(
+                p == e for p, e in zip(predicted_stats, expected_stats)
+            )
+        slot_predictions.append(
+            {
+                "collection_annotation_id": annotation["annotation_id"],
+                "collection_id": annotation["catalog_id"],
+                "assigned_hero_slug": annotation.get("assigned_hero_slug"),
+                "expected_nodes": expected_keys,
+                "predicted_nodes": predicted_keys,
+                "exact_slot_match": predicted_keys == expected_keys,
+                "detected_details": [
+                    {
+                        "key": item["key"],
+                        "stat": item["stat"],
+                        "tier": item["tier"],
+                        "mse": item["mse"],
+                        "bbox": [
+                            max(0, cx - 12) + item["ox"],
+                            max(0, cy + ch - 6) + item["oy"],
+                            item["sz"],
+                            item["sz"],
+                        ],
+                        "top3": item["top3"],
+                    }
+                    for item in detected_nodes
+                ],
+            }
+        )
+    return {
+        "candidate_count": len(
+            [k for k in node_assets if not k.startswith("skill_level")]
+        ),
+        "total_cached_node_icons": len(node_assets),
+        "collection_slot_count": len(slot_predictions),
+        "slot_exact_correct": sum(item["exact_slot_match"] for item in slot_predictions),
+        "slot_exact_accuracy": (
+            sum(item["exact_slot_match"] for item in slot_predictions)
+            / len(slot_predictions)
+            if slot_predictions
+            else 0
+        ),
+        "node_query_count": node_query_count,
+        "node_exact_correct": node_exact_correct,
+        "node_exact_accuracy": (
+            node_exact_correct / node_query_count if node_query_count else 0
+        ),
+        "node_stat_correct": node_stat_correct,
+        "node_stat_accuracy": (
+            node_stat_correct / node_query_count if node_query_count else 0
+        ),
+        "predictions": slot_predictions,
     }
 
 
@@ -931,6 +1441,11 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
         source_scale,
         cache_root,
     )
+    collection_node_stat_icons = evaluate_collection_node_stat_icons(
+        annotations,
+        screenshot,
+        cache_root,
+    )
     return {
         "candidate_count": len(candidate_assets),
         "candidate_counts_by_type": {
@@ -939,6 +1454,7 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
                 candidate["type"] == "collection" for candidate in candidate_assets
             ),
             "pet": len(catalogs["pet"]),
+            "collection_node": collection_node_stat_icons["candidate_count"],
         },
         "collection_catalog_assets_requested": sum(
             candidate["type"] == "collection" for candidate in candidate_assets
@@ -977,6 +1493,7 @@ def evaluate_unknown_type(annotations, catalogs, screenshot, cache_root):
             "level_accuracy": collection_level_correct / len(collection_state_predictions),
             "predictions": collection_state_predictions,
         },
+        "collection_node_stat_icons": collection_node_stat_icons,
         "hero_visual_state": hero_visual_state,
         "predictions": predictions,
     }
@@ -1083,6 +1600,13 @@ def main():
         "collection variant accuracy (known collection ID): "
         f"exact {collection_state['correct']}/{collection_state['query_count']}, "
         f"level {collection_state['level_correct']}/{collection_state['query_count']}"
+    )
+    node_stats = unknown_type["collection_node_stat_icons"]
+    print(
+        "collection node stat icon accuracy: "
+        f"nodes {node_stats['node_exact_correct']}/{node_stats['node_query_count']} "
+        f"(slots {node_stats['slot_exact_correct']}/{node_stats['collection_slot_count']}, "
+        f"{node_stats['candidate_count']} stat-tier candidates)"
     )
     hero_state = unknown_type["hero_visual_state"]
     print(
