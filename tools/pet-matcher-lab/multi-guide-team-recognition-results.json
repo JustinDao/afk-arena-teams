@@ -2,10 +2,11 @@
   "app_export_lineup_9": {
     "image": "/home/justindao/git/afk-arena-teams/afk-nightmare-corridor-infernal-overlord-9.png",
     "held_out_fold": "fold-3",
-    "elapsed_seconds": 14.64,
+    "elapsed_seconds": 15.33,
     "metrics": {
       "teams_assembled": 6,
       "expected_teams": 6,
+      "substitute_teams_count": 0,
       "hero_correct": 30,
       "hero_total": 30,
       "hero_accuracy": 1.0,
@@ -692,10 +693,11 @@
   "community_guide_lydydxhxpyyh1": {
     "image": "/home/justindao/git/afk-arena-teams/lydydxhxpyyh1.png",
     "held_out_fold": "fold-2",
-    "elapsed_seconds": 19.07,
+    "elapsed_seconds": 49.03,
     "metrics": {
       "teams_assembled": 6,
       "expected_teams": 6,
+      "substitute_teams_count": 43,
       "hero_correct": 30,
       "hero_total": 30,
       "hero_accuracy": 1.0,
@@ -705,15 +707,15 @@
       "collection_node_correct": 43,
       "collection_node_total": 43,
       "collection_node_accuracy": 1.0,
-      "pet_correct": 0,
-      "pet_total": 0,
-      "pet_accuracy": 0
+      "pet_correct": 6,
+      "pet_total": 6,
+      "pet_accuracy": 1.0
     },
     "formations": [
       {
         "key": "round-1",
         "label": "Round 1",
-        "pet": null,
+        "pet": "twinlum-spirit",
         "heroes": [
           {
             "slug": "highborn-elthara",
@@ -825,12 +827,177 @@
               ]
             }
           }
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit"
+            ],
+            "heroes": [
+              "misha",
+              "highborn-elthara",
+              "gorren",
+              "highborn-severin",
+              "alvida"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "trickery-chest",
+            "pet_options": [
+              "trickery-chest"
+            ],
+            "heroes": [
+              "highborn-severin",
+              "highborn-elthara",
+              "misha",
+              "emilia",
+              "alvida"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "pearlcrest-ibis",
+            "pet_options": [
+              "pearlcrest-ibis",
+              "treatspector",
+              "twinlum-spirit"
+            ],
+            "heroes": [
+              "highborn-elthara",
+              "highborn-severin",
+              [
+                "misha",
+                "alvida"
+              ],
+              [
+                "awakened-lyca",
+                "melion"
+              ],
+              "awakened-gavus"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit"
+            ],
+            "heroes": [
+              "awakened-eluard",
+              "highborn-elthara",
+              "alvida",
+              "highborn-haelia",
+              "highborn-severin"
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit"
+            ],
+            "heroes": [
+              "highborn-elthara",
+              "highborn-severin",
+              "highborn-skylan",
+              "alvida",
+              "serenmira"
+            ]
+          },
+          {
+            "sub_index": 6,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit",
+              "flutterplume-owl"
+            ],
+            "heroes": [
+              "highborn-elthara",
+              [
+                "warek",
+                "atheus",
+                "alvida"
+              ],
+              "misha",
+              [
+                "ferael",
+                "warek",
+                "alvida",
+                "randle"
+              ],
+              [
+                "mezoth",
+                "yennefer"
+              ]
+            ]
+          },
+          {
+            "sub_index": 7,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit"
+            ],
+            "heroes": [
+              "highborn-elthara",
+              "highborn-leviathan",
+              "misha",
+              [
+                "rimuru",
+                "awakened-fawkes"
+              ],
+              [
+                "khazard",
+                "dracula"
+              ]
+            ]
+          },
+          {
+            "sub_index": 8,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit",
+              "treatspector"
+            ],
+            "heroes": [
+              "highborn-elthara",
+              [
+                "kafka-hibino",
+                "awakened-thoran"
+              ],
+              [
+                "misha",
+                "liberta"
+              ],
+              "velufira",
+              [
+                "dracula",
+                "highborn-skylan"
+              ]
+            ]
+          },
+          {
+            "sub_index": 9,
+            "pet": "flutterplume-owl",
+            "pet_options": [
+              "flutterplume-owl"
+            ],
+            "heroes": [
+              "alvida",
+              "highborn-elthara",
+              "highborn-skylan",
+              "randle",
+              "highborn-severin"
+            ]
+          }
         ]
       },
       {
         "key": "round-2",
         "label": "Round 2",
-        "pet": null,
+        "pet": "blazefang",
         "heroes": [
           {
             "slug": "misfortis",
@@ -957,12 +1124,120 @@
               ]
             }
           }
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang"
+            ],
+            "heroes": [
+              "highborn-kaelon",
+              "awakened-estrilda",
+              "awakened-safiya",
+              [
+                "talimar",
+                "nara"
+              ],
+              "tavriel"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang"
+            ],
+            "heroes": [
+              "awakened-estrilda",
+              "highborn-lan",
+              "highborn-kaelon",
+              "kyno",
+              "misfortis"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang",
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "talimar",
+              "daemia",
+              "awakened-estrilda",
+              "tavriel",
+              "awakened-skriath"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "count-snickerfang",
+            "pet_options": [
+              "count-snickerfang",
+              "blazefang"
+            ],
+            "heroes": [
+              "tavriel",
+              "talimar",
+              "awakened-skriath",
+              "daemia",
+              "awakened-estrilda"
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "count-snickerfang",
+            "pet_options": [
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "tavriel",
+              "awakened-thoran",
+              "highborn-thalassa",
+              "talimar",
+              "awakened-skriath"
+            ]
+          },
+          {
+            "sub_index": 6,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang"
+            ],
+            "heroes": [
+              "kyno",
+              "awakened-estrilda",
+              "tavriel",
+              "highborn-lan",
+              "highborn-kaelon"
+            ]
+          },
+          {
+            "sub_index": 7,
+            "pet": "count-snickerfang",
+            "pet_options": [
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "talimar",
+              "tavriel",
+              "awakened-thoran",
+              [
+                "daemia",
+                "aurelia"
+              ],
+              "awakened-skriath"
+            ]
+          }
         ]
       },
       {
         "key": "round-3",
         "label": "Round 3",
-        "pet": null,
+        "pet": "count-snickerfang",
         "heroes": [
           {
             "slug": "sion",
@@ -1039,7 +1314,10 @@
                   "tier": "mythic"
                 }
               ]
-            }
+            },
+            "alternatives": [
+              "laios"
+            ]
           },
           {
             "slug": "awakened-pippa",
@@ -1054,12 +1332,116 @@
               ]
             }
           }
+        ],
+        "pet_options": [
+          "count-snickerfang",
+          "aureus"
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "count-snickerfang",
+            "pet_options": [
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "tavriel",
+              "sion",
+              "laios",
+              "veithael",
+              "awakened-pippa"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "treatspector",
+            "pet_options": [
+              "treatspector"
+            ],
+            "heroes": [
+              "sion",
+              "laios",
+              "rimuru",
+              "awakened-pippa",
+              "tavriel"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus",
+              "treatspector"
+            ],
+            "heroes": [
+              "sion",
+              "laios",
+              [
+                "highborn-lan",
+                "serenmira"
+              ],
+              "kyno",
+              "awakened-pippa"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus",
+              "treatspector",
+              "fox-fatale"
+            ],
+            "heroes": [
+              "sion",
+              "laios",
+              "awakened-pippa",
+              [
+                "rimuru",
+                "kyno"
+              ],
+              [
+                "serenmira",
+                "emilia",
+                "daemia",
+                "lorsan"
+              ]
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "aureus",
+            "pet_options": [
+              "aureus"
+            ],
+            "heroes": [
+              "sion",
+              "harvey",
+              "tavriel",
+              "talimar",
+              "awakened-pippa"
+            ]
+          },
+          {
+            "sub_index": 6,
+            "pet": "aureus",
+            "pet_options": [
+              "aureus"
+            ],
+            "heroes": [
+              "serenmira",
+              "sion",
+              "awakened-pippa",
+              "laios",
+              "lorsan"
+            ]
+          }
         ]
       },
       {
         "key": "round-4",
         "label": "Round 4",
-        "pet": null,
+        "pet": "aureus",
         "heroes": [
           {
             "slug": "awakened-envydiel",
@@ -1156,12 +1538,150 @@
               ]
             }
           }
+        ],
+        "pet_options": [
+          "aureus",
+          "count-snickerfang"
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "aureus",
+            "pet_options": [
+              "aureus",
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "awakened-envydiel",
+              [
+                "khasos",
+                "awakened-theowyn"
+              ],
+              "gorok",
+              [
+                "aurelia",
+                "mezoth"
+              ],
+              "highborn-thalassa"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "count-snickerfang",
+            "pet_options": [
+              "count-snickerfang"
+            ],
+            "heroes": [
+              "awakened-envydiel",
+              [
+                "laios",
+                "warek"
+              ],
+              "highborn-thalassa",
+              "aurelia",
+              "gorok"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "winged-lion",
+            "pet_options": [
+              "winged-lion",
+              "pandy-dumpty",
+              "flutterplume-owl"
+            ],
+            "heroes": [
+              "awakened-envydiel",
+              "highborn-thalassa",
+              "dracula",
+              "gorok",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "flutterplume-owl",
+            "pet_options": [
+              "flutterplume-owl"
+            ],
+            "heroes": [
+              "awakened-envydiel",
+              "highborn-thalassa",
+              "begris",
+              "dracula",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "begris",
+              "gorok",
+              "awakened-envydiel",
+              "highborn-thalassa",
+              "dracula"
+            ]
+          },
+          {
+            "sub_index": 6,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang"
+            ],
+            "heroes": [
+              "ivan",
+              "awakened-envydiel",
+              "tavriel",
+              "gorok",
+              "misha"
+            ]
+          },
+          {
+            "sub_index": 7,
+            "pet": "winged-lion",
+            "pet_options": [
+              "winged-lion",
+              "blazefang",
+              "aureus"
+            ],
+            "heroes": [
+              "awakened-envydiel",
+              "athena",
+              [
+                "kaz",
+                "talimar"
+              ],
+              "gorok",
+              "highborn-thalassa"
+            ]
+          },
+          {
+            "sub_index": 8,
+            "pet": "blazefang",
+            "pet_options": [
+              "blazefang"
+            ],
+            "heroes": [
+              "ivan",
+              "awakened-envydiel",
+              "gorok",
+              "misha",
+              [
+                "highborn-thalassa",
+                "kyno"
+              ]
+            ]
+          }
         ]
       },
       {
         "key": "round-5",
         "label": "Round 5",
-        "pet": null,
+        "pet": "nightfall-pegasus",
         "heroes": [
           {
             "slug": "lysander",
@@ -1253,12 +1773,90 @@
               ]
             }
           }
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "lysander",
+              "begris",
+              "awakened-eluard",
+              "aurelia",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "lysander",
+              "begris",
+              "awakened-eluard",
+              "awakened-estrilda",
+              "jerome"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "lysander",
+              "begris",
+              "awakened-eluard",
+              "daemia",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "lysander",
+              "begris",
+              "awakened-eluard",
+              [
+                "serenmira",
+                "judy-punch"
+              ],
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "nightfall-pegasus",
+            "pet_options": [
+              "nightfall-pegasus"
+            ],
+            "heroes": [
+              "begris",
+              "awakened-athalia",
+              [
+                "aurelia",
+                "daemia"
+              ],
+              "lysander",
+              "marcille"
+            ]
+          }
         ]
       },
       {
         "key": "round-6",
         "label": "Round 6",
-        "pet": null,
+        "pet": "trickery-chest",
         "heroes": [
           {
             "slug": "awakened-hybris",
@@ -1380,6 +1978,121 @@
               ]
             }
           }
+        ],
+        "substitute_teams": [
+          {
+            "sub_index": 1,
+            "pet": "twinlum-spirit",
+            "pet_options": [
+              "twinlum-spirit",
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "lavatune",
+              "dracula",
+              "highborn-leviathan",
+              "awakened-hybris",
+              "awakened-theowyn"
+            ]
+          },
+          {
+            "sub_index": 2,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "judy-punch",
+              "dracula",
+              "lavatune",
+              "awakened-hybris",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 3,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "athena",
+              "judy-punch",
+              "lavatune",
+              "awakened-hybris",
+              "dracula"
+            ]
+          },
+          {
+            "sub_index": 4,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "lavatune",
+              "judy-punch",
+              "dracula",
+              "awakened-hybris",
+              "athena"
+            ]
+          },
+          {
+            "sub_index": 5,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "jerome",
+              "lavatune",
+              "athena",
+              "awakened-hybris",
+              "judy-punch"
+            ]
+          },
+          {
+            "sub_index": 6,
+            "pet": "trickery-chest",
+            "pet_options": [
+              "trickery-chest"
+            ],
+            "heroes": [
+              "highborn-leviathan",
+              "awakened-hybris",
+              "dracula",
+              "lavatune",
+              "awakened-theowyn"
+            ]
+          },
+          {
+            "sub_index": 7,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "highborn-leviathan",
+              "judy-punch",
+              "dracula",
+              "awakened-hybris",
+              "lavatune"
+            ]
+          },
+          {
+            "sub_index": 8,
+            "pet": "pandy-dumpty",
+            "pet_options": [
+              "pandy-dumpty"
+            ],
+            "heroes": [
+              "highborn-leviathan",
+              "dracula",
+              "lavatune",
+              "awakened-hybris",
+              "knox"
+            ]
+          }
         ]
       }
     ]
@@ -1387,10 +2100,11 @@
   "f2p_staggered_guide": {
     "image": "/home/justindao/git/afk-arena-teams/f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp",
     "held_out_fold": "fold-1",
-    "elapsed_seconds": 18.64,
+    "elapsed_seconds": 15.54,
     "metrics": {
       "teams_assembled": 3,
       "expected_teams": 3,
+      "substitute_teams_count": 0,
       "hero_correct": 15,
       "hero_total": 15,
       "hero_accuracy": 1.0,

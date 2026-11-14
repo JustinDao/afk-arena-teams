@@ -170,6 +170,7 @@ In addition to per-box matching, `detect-and-match-lineup.py` runs a **4-Class S
 2. **Global uniqueness via Hungarian assignment:** Solves hero and pet identities across all teams in the guide simultaneously using exact Jonker-Volgenant (`Kuhn-Munkres`) minimum-cost unique assignment.
 3. **Soft Hero-Class → Collection-Class prior (`0.80×` MSE):** Uses each matched hero's class (`Warrior`, `Tank`, `Ranger`, `Mage`, `Support`) as a soft prior when ranking collections, while remaining robust to schema/game discrepancies (such as `awakened-theowyn` equipping Support collection `9 Trader's Vault`).
 4. **Collection node stat icon detection:** Scans the node ROI attached to each collection/hero slot against all `78` `collection_stats_icon/{stat}_{e|l|m}.webp` templates (`26 stats × 3 tiers`) and combines detected stat nodes with collection level (`lvl1..3` → `skill_level` nodes) to emit `seed.sql`-compatible `formations` JSON.
+5. **Left-panel pets & substitute/alternative teams decoder (`lydydxhxpyyh1.png`):** For full `3000×6000` dual-panel infographics, segments the left-panel (`x = 0..1048`) into 6 rounds (`49` total rows = `6` primary rows + `43` substitute/alternative team rows) and decodes each hero slot (`single`, `split_2` diagonal alternatives, `multi_3`, and `2×2` `multi_4` quad alternatives) and pet slot (`single`, `split_2`, and `split_3` cascaded pet options, including base/evolved pet icons from `unit_icon_by_id`).
 
 To run the out-of-fold end-to-end team benchmark across all three guide layouts (`fold-3`, `fold-2`, `fold-1`), pass `--eval-all-guides`:
 
@@ -178,11 +179,11 @@ To run the out-of-fold end-to-end team benchmark across all three guide layouts 
   tools/pet-matcher-lab/detect-and-match-lineup.py --eval-all-guides
 ```
 
-| Guide image | Held-out fold | Layout archetype | Teams | Heroes | Collections | Collection Node Icons | Pets |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `afk-nightmare-corridor-infernal-overlord-9.png` (`2040×2082`) | `fold-3` | `app_card_3_2` | **6/6** | **30/30** | **30/30** | **42/42** | **6/6** |
-| `lydydxhxpyyh1.png` (`3000×6000` full & 6 round crops) | `fold-2` | `row_5_col` | **6/6** | **30/30** | **30/30** | **43/43** | — |
-| `f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp` (`1080×1771`) | `fold-1` | `staggered_3_2` | **3/3** | **15/15** | **15/15** | **14/14** (15/15 slots) | **3/3** |
+| Guide image | Held-out fold | Layout archetype | Teams | Substitute Teams | Heroes | Collections | Collection Node Icons | Pets |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `afk-nightmare-corridor-infernal-overlord-9.png` (`2040×2082`) | `fold-3` | `app_card_3_2` | **6/6** | — | **30/30** | **30/30** | **42/42** | **6/6** |
+| `lydydxhxpyyh1.png` (`3000×6000` full & 6 round crops) | `fold-2` | `row_5_col` + left-panel subs | **6/6** | **43** | **30/30** | **30/30** | **43/43** | **6/6** |
+| `f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp` (`1080×1771`) | `fold-1` | `staggered_3_2` | **3/3** | — | **15/15** | **15/15** | **14/14** (15/15 slots) | **3/3** |
 
 Per-box predictions, assembled teams, and `seed.sql`-compatible `formations` are written to [`lineup-9-detection-matches.json`](./lineup-9-detection-matches.json), and the multi-guide out-of-fold benchmark is written to [`multi-guide-team-recognition-results.json`](./multi-guide-team-recognition-results.json). A Vercel-compatible Python serverless endpoint (`POST /api/recognize-lineup`) is also provided at [`api/recognize-lineup.py`](../../api/recognize-lineup.py).
 

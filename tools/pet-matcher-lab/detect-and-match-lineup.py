@@ -562,6 +562,290 @@ def solve_teams(
     return solved_teams
 
 
+def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
+    """
+    Decode the left panel (x=0..1048) of a 2-column community guide (such as lydydxhxpyyh1.png):
+    extracts each round's primary pet(s), primary hero slot alternatives, and all substitute/alternative teams.
+    """
+    left_panel = img[:, : min(1048, img.shape[1])]
+    bg_color = np.median(left_panel[500:5900, 20:100], axis=(0, 1))
+    hero_t_name = "hero_left" if "hero_left" in type_tensors else "hero"
+
+    def is_bg_region(patch, thresh=0.65):
+        if patch.size == 0:
+            return True
+        d = np.max(np.abs(patch.astype(np.float32) - bg_color), axis=2)
+        return float((d < 26).mean()) > thresh
+
+    def decode_hero_cell(x0, y0, w, h):
+        s_rank = matcher.rank_candidates_in_box(
+            left_panel,
+            [x0, y0, w, h],
+            hero_t_name,
+            type_tensors,
+            scales=(0.92, 0.98, 1.04),
+            pad_ratio=0.16,
+            stride=2,
+        )
+        mse_single = s_rank[0]["mse"]
+
+        tr_patch = left_panel[y0 + 3 : y0 + 22, x0 + w - 22 : x0 + w - 3]
+        bl_patch = left_panel[y0 + h - 22 : y0 + h - 3, x0 + 3 : x0 + 22]
+        br_patch = left_panel[y0 + h - 24 : y0 + h - 3, x0 + w - 24 : x0 + w - 3]
+        tr_empty = is_bg_region(tr_patch)
+        bl_empty = is_bg_region(bl_patch)
+        br_empty = is_bg_region(br_patch)
+
+        if not tr_empty and mse_single > 1500:
+            q_sz = round(min(w, h) * 0.50)
+            tl_q = matcher.rank_candidates_in_box(
+                left_panel,
+                [x0 - 4, y0 - 4, q_sz, q_sz],
+                hero_t_name,
+                type_tensors,
+                scales=(0.86, 0.96, 1.06),
+                pad_ratio=0.24,
+                stride=2,
+            )[0]
+            tr_q = matcher.rank_candidates_in_box(
+                left_panel,
+                [x0 + w - q_sz + 4, y0 - 4, q_sz, q_sz],
+                hero_t_name,
+                type_tensors,
+                scales=(0.86, 0.96, 1.06),
+                pad_ratio=0.24,
+                stride=2,
+            )[0]
+            if bl_empty and br_empty:
+                bc_q = matcher.rank_candidates_in_box(
+                    left_panel,
+                    [x0 + round((w - q_sz) / 2), y0 + h - q_sz + 4, q_sz, q_sz],
+                    hero_t_name,
+                    type_tensors,
+                    scales=(0.86, 0.96, 1.06),
+                    pad_ratio=0.24,
+                    stride=2,
+                )[0]
+                q_list = [tl_q, tr_q, bc_q]
+            elif br_empty:
+                bl_q = matcher.rank_candidates_in_box(
+                    left_panel,
+                    [x0 - 4, y0 + h - q_sz + 4, q_sz, q_sz],
+                    hero_t_name,
+                    type_tensors,
+                    scales=(0.86, 0.96, 1.06),
+                    pad_ratio=0.24,
+                    stride=2,
+                )[0]
+                q_list = [tl_q, tr_q, bl_q]
+            else:
+                bl_q = matcher.rank_candidates_in_box(
+                    left_panel,
+                    [x0 - 4, y0 + h - q_sz + 4, q_sz, q_sz],
+                    hero_t_name,
+                    type_tensors,
+                    scales=(0.86, 0.96, 1.06),
+                    pad_ratio=0.24,
+                    stride=2,
+                )[0]
+                br_q = matcher.rank_candidates_in_box(
+                    left_panel,
+                    [x0 + w - q_sz + 4, y0 + h - q_sz + 4, q_sz, q_sz],
+                    hero_t_name,
+                    type_tensors,
+                    scales=(0.86, 0.96, 1.06),
+                    pad_ratio=0.24,
+                    stride=2,
+                )[0]
+                q_list = [tl_q, tr_q, bl_q, br_q]
+            mse_quad = float(np.mean([q["mse"] for q in q_list]))
+            if mse_quad < mse_single * 0.78 and len({q["id"] for q in q_list}) == len(q_list):
+                return f"multi_{len(q_list)}", [hero_meta[q["id"]]["slug"] for q in q_list]
+
+        if tr_empty or bl_empty:
+            d_sz = round(min(w, h) * 0.62)
+            tl_box = [x0 - 5, y0 - 5, d_sz, d_sz]
+            br_box = [x0 + w - d_sz + 5, y0 + h - d_sz + 5, d_sz, d_sz]
+            tl_rank = matcher.rank_candidates_in_box(
+                left_panel,
+                tl_box,
+                hero_t_name,
+                type_tensors,
+                scales=(0.86, 0.96, 1.06, 1.14),
+                pad_ratio=0.24,
+                stride=2,
+            )
+            br_rank = matcher.rank_candidates_in_box(
+                left_panel,
+                br_box,
+                hero_t_name,
+                type_tensors,
+                scales=(0.86, 0.96, 1.06, 1.14),
+                pad_ratio=0.24,
+                stride=2,
+            )
+            mse_diag = 0.5 * (tl_rank[0]["mse"] + br_rank[0]["mse"])
+            if (tr_empty and mse_diag < mse_single * 0.98) or (
+                bl_empty and mse_diag < mse_single * 0.82
+            ):
+                return "split_2", [
+                    hero_meta[tl_rank[0]["id"]]["slug"],
+                    hero_meta[br_rank[0]["id"]]["slug"],
+                ]
+
+        return "single", [hero_meta[s_rank[0]["id"]]["slug"]]
+
+    def decode_pet_cell(x_pet, y0, h):
+        roi = left_panel[
+            max(0, y0 - 8) : min(left_panel.shape[0], y0 + h + 22), x_pet:868
+        ]
+        d = np.max(np.abs(roi.astype(np.float32) - bg_color), axis=2)
+        col_active = (d > 30).mean(axis=0)
+        active_xs = np.where(col_active > 0.22)[0]
+        span_w = int(active_xs[-1]) + 1 if len(active_xs) else h
+
+        tr_patch = left_panel[y0 + 3 : y0 + 22, x_pet + h - 20 : x_pet + h + 15]
+        tr_empty = is_bg_region(tr_patch)
+
+        if span_w >= 150 or (x_pet + span_w) >= 862:
+            p_sz = round(h * 0.58)
+            boxes = [
+                [x_pet - 4, y0 - 8, p_sz, p_sz],
+                [x_pet + round((span_w - p_sz) * 0.48), y0 + round(h * 0.20), p_sz, p_sz],
+                [x_pet + span_w - p_sz, y0 + round(h * 0.46), p_sz, p_sz],
+            ]
+            r3 = [
+                matcher.rank_candidates_in_box(
+                    left_panel,
+                    pb,
+                    "pet",
+                    type_tensors,
+                    scales=(0.88, 0.96, 1.04, 1.12),
+                    pad_ratio=0.25,
+                    stride=1,
+                )[0]
+                for pb in boxes
+            ]
+            return "split_3", [pet_meta[x["id"]] for x in r3]
+
+        if span_w >= 102 or tr_empty:
+            p2_sz = round(h * 0.68)
+            b2 = [
+                [x_pet - 2, y0 - 4, p2_sz, p2_sz],
+                [x_pet + max(span_w, h + 18) - p2_sz, y0 + h - p2_sz + 6, p2_sz, p2_sz],
+            ]
+            r2 = [
+                matcher.rank_candidates_in_box(
+                    left_panel,
+                    pb,
+                    "pet",
+                    type_tensors,
+                    scales=(0.88, 0.96, 1.04, 1.12),
+                    pad_ratio=0.25,
+                    stride=1,
+                )[0]
+                for pb in b2
+            ]
+            return "split_2", [pet_meta[x["id"]] for x in r2]
+
+        r1 = matcher.rank_candidates_in_box(
+            left_panel,
+            [x_pet, y0, h, h],
+            "pet",
+            type_tensors,
+            scales=(0.92, 0.98, 1.04),
+            pad_ratio=0.18,
+            stride=2,
+        )[0]
+        return "single", [pet_meta[r1["id"]]]
+
+    diff = np.max(np.abs(left_panel[:, 165:760].astype(np.float32) - bg_color), axis=2)
+    row_fill = (diff > 28).astype(np.float32).mean(axis=1)
+
+    in_seg = False
+    row_segs = []
+    for y in range(500, min(5980, left_panel.shape[0])):
+        if row_fill[y] > 0.35 and not in_seg:
+            y_start = y
+            in_seg = True
+        elif row_fill[y] <= 0.35 and in_seg:
+            if y - y_start >= 75:
+                row_segs.append((y_start, y))
+            in_seg = False
+    if in_seg and min(5980, left_panel.shape[0]) - y_start >= 75:
+        row_segs.append((y_start, min(5980, left_panel.shape[0])))
+
+    rounds = []
+    for seg in row_segs:
+        if not rounds or (seg[0] - rounds[-1][-1][1]) > 50:
+            rounds.append([seg])
+        else:
+            rounds[-1].append(seg)
+
+    decoded_rounds = []
+    for r_idx, r_rows in enumerate(rounds, start=1):
+        row_masks = []
+        for y0, y1 in r_rows:
+            r_diff = np.max(
+                np.abs(left_panel[y0:y1, :880].astype(np.float32) - bg_color), axis=2
+            )
+            row_masks.append((r_diff > 28).astype(np.float32).mean(axis=0))
+        col_profile = np.percentile(np.stack(row_masks, axis=0), 80, axis=0)
+        c_segs = []
+        in_c = False
+        for x in range(145, 875):
+            if col_profile[x] > 0.45 and not in_c:
+                x_start = x
+                in_c = True
+            elif col_profile[x] <= 0.45 and in_c:
+                if x - x_start >= 60:
+                    c_segs.append((x_start, x))
+                in_c = False
+        if in_c and 875 - x_start >= 60:
+            c_segs.append((x_start, 875))
+        if len(c_segs) < 6:
+            continue
+
+        round_teams = []
+        for t_idx, (y0, y1) in enumerate(r_rows, start=1):
+            h = y1 - y0
+            hero_slots = []
+            for c_idx in range(5):
+                cx0, _ = c_segs[c_idx]
+                mode, slugs = decode_hero_cell(cx0, y0, h, h)
+                hero_slots.append(
+                    {
+                        "slot": c_idx,
+                        "mode": mode,
+                        "primary_slug": slugs[0],
+                        "options": slugs,
+                    }
+                )
+            pet_x0 = c_segs[5][0]
+            p_mode, p_objs = decode_pet_cell(pet_x0, y0, h)
+            round_teams.append(
+                {
+                    "row_index": t_idx,
+                    "is_primary": t_idx == 1,
+                    "bbox": [c_segs[0][0], y0, c_segs[5][1] - c_segs[0][0], h],
+                    "pet": p_objs[0]["slug"],
+                    "pet_id": p_objs[0]["id"],
+                    "pet_name": p_objs[0]["name"],
+                    "pet_mode": p_mode,
+                    "pet_options": [p["slug"] for p in p_objs],
+                    "hero_slots": hero_slots,
+                }
+            )
+        decoded_rounds.append(
+            {
+                "round": r_idx,
+                "primary_row": round_teams[0] if round_teams else None,
+                "substitute_teams": round_teams[1:] if len(round_teams) > 1 else [],
+            }
+        )
+    return decoded_rounds
+
+
 def teams_to_seed_formations(solved_teams):
     formations = []
     for team in solved_teams:
@@ -585,15 +869,32 @@ def teams_to_seed_formations(solved_teams):
                     )
                     slot_counter += 1
                 coll_obj = {"catalog": coll["catalog"], "nodes": nodes_list}
-            heroes_out.append({"slug": h["slug"], "collection": coll_obj})
-        formations.append(
-            {
-                "key": f"round-{r_idx}",
-                "label": f"Round {r_idx}",
-                "pet": team["pet"]["slug"] if team.get("pet") else None,
-                "heroes": heroes_out,
-            }
-        )
+            hero_entry = {"slug": h["slug"], "collection": coll_obj}
+            if h.get("slot_options") and len(h["slot_options"]) > 1:
+                hero_entry["alternatives"] = h["slot_options"][1:]
+            heroes_out.append(hero_entry)
+        formation_entry = {
+            "key": f"round-{r_idx}",
+            "label": f"Round {r_idx}",
+            "pet": team["pet"]["slug"] if team.get("pet") else None,
+            "heroes": heroes_out,
+        }
+        if team.get("pet") and team["pet"].get("options") and len(team["pet"]["options"]) > 1:
+            formation_entry["pet_options"] = team["pet"]["options"]
+        if team.get("substitute_teams"):
+            formation_entry["substitute_teams"] = [
+                {
+                    "sub_index": sub["row_index"] - 1,
+                    "pet": sub["pet"],
+                    "pet_options": sub["pet_options"],
+                    "heroes": [
+                        s["primary_slug"] if len(s["options"]) == 1 else s["options"]
+                        for s in sub["hero_slots"]
+                    ],
+                }
+                for sub in team["substitute_teams"]
+            ]
+        formations.append(formation_entry)
     return formations
 
 
@@ -695,6 +996,28 @@ def detect_and_assemble_teams_for_image(
         pet_meta,
         collections_catalog,
     )
+    if H >= 3000 and W >= 2400:
+        left_rounds = decode_left_panel_rounds(
+            img, matcher, type_tensors, hero_meta, pet_meta
+        )
+        for i, t in enumerate(solved_teams):
+            if i < len(left_rounds):
+                lr = left_rounds[i]
+                p_row = lr["primary_row"]
+                t["pet"] = {
+                    "id": p_row["pet_id"],
+                    "slug": p_row["pet"],
+                    "name": p_row["pet_name"],
+                    "mode": p_row["pet_mode"],
+                    "options": p_row["pet_options"],
+                    "bbox": p_row["bbox"],
+                }
+                for s_idx, h_entry in enumerate(t["heroes"]):
+                    if s_idx < len(p_row["hero_slots"]):
+                        slot_opts = p_row["hero_slots"][s_idx]["options"]
+                        if len(slot_opts) > 1:
+                            h_entry["slot_options"] = slot_opts
+                t["substitute_teams"] = lr["substitute_teams"]
     return solved_teams
 
 
@@ -705,10 +1028,14 @@ def evaluate_assembled_teams(solved_teams, formations_gt):
     coll_ok, coll_tot = 0, 0
     pet_ok, pet_tot = 0, 0
     node_ok, node_tot = 0, 0
+    sub_teams_count = sum(len(t.get("substitute_teams", [])) for t in solved_teams)
     for team, gt_f in zip(solved_teams, formations_gt):
         if gt_f.get("pet"):
             pet_tot += 1
-            if team.get("pet") and team["pet"]["slug"] == gt_f["pet"]:
+            if team.get("pet") and (
+                team["pet"]["slug"] == gt_f["pet"]
+                or gt_f["pet"] in team["pet"].get("options", [])
+            ):
                 pet_ok += 1
         for h_pred, h_gt in zip(team["heroes"], gt_f["heroes"]):
             hero_tot += 1
@@ -735,6 +1062,7 @@ def evaluate_assembled_teams(solved_teams, formations_gt):
     return {
         "teams_assembled": team_count,
         "expected_teams": expected_team_count,
+        "substitute_teams_count": sub_teams_count,
         "hero_correct": hero_ok,
         "hero_total": hero_tot,
         "hero_accuracy": hero_ok / hero_tot if hero_tot else 0,
@@ -874,7 +1202,6 @@ def run_all_guides_benchmark(
     # In lydydxhxpyyh1 R3 C2 (Harvey), the screenshot shows two node icons: full_atk_m and atk_m
     formations_lyd_gt = json.loads(json.dumps(formations_gt))
     for f in formations_lyd_gt:
-        f["pet"] = None
         if f["key"] == "demonic-puppet":
             for h in f["heroes"]:
                 if h["slug"] == "harvey":
@@ -942,6 +1269,7 @@ def run_all_guides_benchmark(
         "metrics": {
             "teams_assembled": len(teams_f2p),
             "expected_teams": 3,
+            "substitute_teams_count": 0,
             "hero_correct": h_ok3,
             "hero_total": 15,
             "hero_accuracy": h_ok3 / 15.0,
@@ -962,9 +1290,14 @@ def run_all_guides_benchmark(
     out_path.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     for k, v in results.items():
         m = v["metrics"]
+        sub_str = (
+            f" | Substitute Teams={m['substitute_teams_count']}"
+            if m.get("substitute_teams_count")
+            else ""
+        )
         print(
             f"[{k}] ({v['held_out_fold']}, {v['elapsed_seconds']}s): "
-            f"Teams={m['teams_assembled']}/{m['expected_teams']} | "
+            f"Teams={m['teams_assembled']}/{m['expected_teams']}{sub_str} | "
             f"Heroes={m['hero_correct']}/{m['hero_total']} | "
             f"Collections={m['collection_correct']}/{m['collection_total']} | "
             f"Collection Nodes={m['collection_node_correct']}/{m['collection_node_total']} | "

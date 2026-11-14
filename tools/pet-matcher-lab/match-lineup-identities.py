@@ -695,11 +695,39 @@ def build_type_tensors(candidate_assets, cache_root=None):
                 }
             )
 
+    seen_pet_base = {
+        c["id"] for c in expanded_assets if c["type"] == "pet" and str(c.get("state", "")).startswith("base")
+    }
+    pet_entries = [
+        {"id": c["id"], "name": c["name"]}
+        for c in candidate_assets
+        if c["type"] == "pet" and c["id"] >= 6007 and c["id"] not in seen_pet_base
+    ]
+    for entry in pet_entries:
+        url = f"{CDN_BASE}/unit_icon_by_id/{entry['id']}.webp"
+        im = get_image(url, cache_root / "pet_base_icon")
+        if im is not None:
+            h_im, w_im = im.shape[:2]
+            sq1 = im[:w_im, :w_im]
+            sq2 = im[max(0, (h_im - w_im) // 2) : max(0, (h_im - w_im) // 2) + w_im, :w_im]
+            for idx_s, sq in enumerate((sq1, sq2)):
+                expanded_assets.append(
+                    {
+                        "type": "pet",
+                        "id": entry["id"],
+                        "name": entry["name"],
+                        "url": url,
+                        "state": f"base_{idx_s}",
+                        "template": normalized_center(sq),
+                        "image": sq,
+                    }
+                )
+
     sz = TENSOR_TEMPLATE_SIZE
     by_type = {}
     for c in expanded_assets:
         im = c["image"]
-        rgb = cv2.resize(im[:, :, :3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32)
+        rgb = cv2.resize(im[:, :, :3], (sz, SZ := sz), interpolation=cv2.INTER_AREA).astype(np.float32)
         alpha = (
             cv2.resize(im[:, :, 3], (sz, sz), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
             if (im.ndim == 3 and im.shape[2] == 4)
@@ -708,6 +736,10 @@ def build_type_tensors(candidate_assets, cache_root=None):
         m2 = np.zeros_like(alpha)
         if c["type"] == "hero":
             m2[8:46, 10:54] = 1.0
+            m_left = np.zeros_like(alpha)
+            m_left[6:56, 6:56] = 1.0
+            m_left[40:64, 40:64] = 0.0
+            by_type.setdefault("hero_left", []).append((c, rgb, (alpha * m_left)[:, :, None]))
         else:
             m2[6:58, 6:58] = 1.0
         mask = alpha * m2
