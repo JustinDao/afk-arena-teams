@@ -264,6 +264,9 @@ describe('SubmitPageComponent', () => {
     expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 1)?.stat).toBe('mp');
     expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 6)?.stat).toBe('skill_level');
     expect(slot0Snapshot?.nodes.find((n) => n.slotIndex === 7)?.stat).toBe('skill_level');
+    expect(slot0Snapshot?.recommendation).toBeDefined();
+    expect(slot0Snapshot?.recommendation?.level).toBe(3);
+    expect(slot0Snapshot?.recommendation?.attackStats).toEqual(['erosion', 'mp']);
 
     // Verify SubmitPageComponent preserves the imported draft formations on init
     const submitFixture = TestBed.createComponent(SubmitPageComponent);

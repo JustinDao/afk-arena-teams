@@ -26,6 +26,7 @@ import {
   CollectionNode,
   CollectionNodeStat,
   CollectionNodeTier,
+  CollectionRecommendationSpec,
   CollectionSnapshot,
   DraftFormation,
   DraftSlot,
@@ -1620,6 +1621,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     nodes: readonly (string | CollectionNode)[] = [],
     heroClass?: string | null,
     preferredName?: string | null,
+    recommendationMode = true,
   ): CollectionSnapshot | null {
     if (collectionId === null && !preferredName) return null;
     const catalogItem =
@@ -1669,9 +1671,21 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     const defenseSlots = [3, 4, 5];
     const flexSlots = [6, 7];
 
+    const attackStats: CollectionNodeStat[] = [];
+    const defenseStats: CollectionNodeStat[] = [];
+
     for (const { stat, tier } of regularItems) {
       const isAttack = ATTACK_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat);
       const isDefense = DEFENSE_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat);
+
+      if (isAttack) {
+        if (!attackStats.includes(stat) && attackStats.length < 5) attackStats.push(stat);
+      } else if (isDefense) {
+        if (!defenseStats.includes(stat) && defenseStats.length < 5) defenseStats.push(stat);
+      } else {
+        if (attackStats.length < 5) attackStats.push(stat);
+        else if (defenseStats.length < 5) defenseStats.push(stat);
+      }
 
       let targetSlot: number | undefined;
       if (isAttack) {
@@ -1698,11 +1712,21 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     }
 
     collectionNodes.sort((a, b) => a.slotIndex - b.slotIndex);
+
+    const recommendation: CollectionRecommendationSpec | undefined = recommendationMode
+      ? {
+          level: Math.max(1, Math.min(3, Math.trunc(level) || 1)),
+          attackStats,
+          defenseStats,
+        }
+      : undefined;
+
     return {
       catalogId: catalogItem.id,
       name: catalogItem.name,
       class: catalogItem.class,
       nodes: collectionNodes,
+      ...(recommendation ? { recommendation } : {}),
     };
   }
 
@@ -1747,6 +1771,11 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       name: catalogItem.name,
       class: catalogItem.class,
       nodes: [],
+      recommendation: {
+        level: 1,
+        attackStats: [],
+        defenseStats: [],
+      },
     };
     this.updateSlotFormation(slotIndex, (s) => ({
       ...s,
@@ -1786,22 +1815,45 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   setSlotCollectionRecommendationMode(slotIndex: number, enabled: boolean): void {
     this.updateSlotFormation(slotIndex, (s) => {
       if (!s.collectionSnapshot) return s;
-      const snapshot: CollectionSnapshot = enabled
-        ? {
+      if (enabled) {
+        const attackStats =
+          s.collectionSnapshot.recommendation?.attackStats ??
+          s.collectionNodes.filter((stat) => ATTACK_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat));
+        const defenseStats =
+          s.collectionSnapshot.recommendation?.defenseStats ??
+          s.collectionNodes.filter((stat) => DEFENSE_COLLECTION_NODE_STATS.includes(stat as CollectionNodeStat));
+        const recommendation: CollectionRecommendationSpec = {
+          level: s.collectionSnapshot.recommendation?.level ?? Math.max(1, Math.min(3, s.collectionLevel || 1)),
+          attackStats,
+          defenseStats,
+        };
+        return {
+          ...s,
+          collectionSnapshot: {
             ...s.collectionSnapshot,
-            nodes: [],
-            recommendation: s.collectionSnapshot.recommendation ?? {
-              level: 1,
-              attackStats: [],
-              defenseStats: [],
-            },
-          }
-        : {
+            recommendation,
+          },
+        };
+      } else {
+        const nodes = s.collectionSnapshot.nodes.length
+          ? s.collectionSnapshot.nodes
+          : (this.buildCollectionSnapshot(
+              s.collectionId,
+              s.collectionLevel,
+              s.collectionNodes,
+              this.classOfHero(s.heroId),
+              s.collectionSnapshot.name,
+              false,
+            )?.nodes ?? []);
+        return {
+          ...s,
+          collectionSnapshot: {
             ...s.collectionSnapshot,
-            nodes: [],
+            nodes,
             recommendation: undefined,
-          };
-      return { ...s, collectionSnapshot: snapshot };
+          },
+        };
+      }
     });
   }
 
@@ -1839,11 +1891,14 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     });
   }
 
-  updateSlotCollectionRecommendation(slotIndex: number, recommendation: any): void {
+  updateSlotCollectionRecommendation(slotIndex: number, recommendation: CollectionRecommendationSpec): void {
     this.updateSlotFormation(slotIndex, (s) => {
       if (!s.collectionSnapshot) return s;
+      const statNodes = [...recommendation.attackStats, ...recommendation.defenseStats];
       return {
         ...s,
+        collectionLevel: recommendation.level,
+        collectionNodes: statNodes,
         collectionSnapshot: {
           ...s.collectionSnapshot,
           recommendation,
