@@ -126,7 +126,10 @@ const NIGHTMARE_SUBSTITUTE_ROWS_PER_ROUND = 10;
           <h2>Image import helper</h2>
           <p>Analyze the whole guide to suggest teams, heroes, pets, collections, and investments. Review every suggestion before exporting; processing stays in this browser.</p>
         </div>
-        <a mat-button class="btn" routerLink="/">Back to lineups</a>
+        <div class="export-actions">
+          <a mat-stroked-button class="btn" routerLink="/submit/from-image">Import directly into Submit form</a>
+          <a mat-button class="btn" routerLink="/">Back to lineups</a>
+        </div>
       </header>
 
       <section class="panel setup">
@@ -137,18 +140,23 @@ const NIGHTMARE_SUBSTITUTE_ROWS_PER_ROUND = 10;
           {{ analyzing() ? 'Analyzing image…' : 'Analyze entire image' }}
         </button>
         <label class="field">Mode
-          <select [value]="mode()" (change)="mode.set(inputValue($event))">
-            <option value="nightmare-corridor">Nightmare Corridor</option>
-            <option value="cursed-realm">Cursed Realm</option>
-            <option value="treasure-scramble">Treasure Scramble</option>
-            <option value="twisted-realm">Twisted Realm</option>
+          <select [value]="mode()" (change)="onModeChange(inputValue($event))">
+            <option value="nightmare-corridor" [selected]="mode() === 'nightmare-corridor'">Nightmare Corridor</option>
+            <option value="cursed-realm" [selected]="mode() === 'cursed-realm'">Cursed Realm</option>
+            <option value="treasure-scramble" [selected]="mode() === 'treasure-scramble'">Treasure Scramble</option>
+            <option value="twisted-realm" [selected]="mode() === 'twisted-realm'">Twisted Realm</option>
           </select>
         </label>
         <label class="field">Seed key
           <input [value]="seedKey()" (input)="seedKey.set(inputValue($event))" placeholder="my-guide-key">
         </label>
-        <label class="field">Target slug
-          <input [value]="target()" (input)="target.set(inputValue($event))" placeholder="infernal-overlord">
+        <label class="field">Target slug ({{ currentModeConfig().targetLabel }})
+          <input [value]="target()" (input)="onTargetChange(inputValue($event))" [placeholder]="defaultTargetSlugForMode(mode())" list="import-helper-targets">
+          <datalist id="import-helper-targets">
+            @for (t of currentModeConfig().targets; track t) {
+              <option [value]="petSlug(t)">{{ t }}</option>
+            }
+          </datalist>
         </label>
         <label class="field">Notes
           <input [value]="notes()" (input)="notes.set(inputValue($event))" placeholder="Guide source or notes">
@@ -336,7 +344,7 @@ const NIGHTMARE_SUBSTITUTE_ROWS_PER_ROUND = 10;
         </section>
       </div>
 
-      @if (substituteSets().length) {
+      @if (substituteSets().length && mode() === 'nightmare-corridor') {
         <section class="panel substitutes-panel">
           <div class="team-heading">
             <div>
@@ -515,11 +523,111 @@ export class ImportHelperPageComponent implements OnDestroy {
   private dragStart: { x: number; y: number } | null = null;
   private nextHeroId = 0;
   private nextTeamId = 2;
+  private userManuallySelectedMode = false;
+  private rawDetectedTeams: ImportTeam[] = [];
   private templateFeatures: Promise<readonly HeroMatch[]> | null = null;
   private petFeatures: Promise<readonly PetMatch[]> | null = null;
 
+  readonly currentModeConfig = computed(() => {
+    const slug = this.mode();
+    return this.store.modes().find((m) => m.slug === slug) ?? this.store.modes()[0];
+  });
+
   ngOnDestroy(): void {
     if (this.imageObjectUrl) URL.revokeObjectURL(this.imageObjectUrl);
+  }
+
+  defaultTargetSlugForMode(modeSlug: string): string {
+    const modeCfg = this.store.modes().find((m) => m.slug === modeSlug);
+    if (!modeCfg || !modeCfg.targets.length) return 'target-slug';
+    if (modeSlug === 'nightmare-corridor' && modeCfg.targets.includes('Infernal Overlord')) {
+      return 'infernal-overlord';
+    }
+    return this.petSlug(modeCfg.targets[0]);
+  }
+
+  onModeChange(modeSlug: string): void {
+    this.saveCurrentTeamsToRaw();
+    this.userManuallySelectedMode = true;
+    this.mode.set(modeSlug);
+    const modeCfg = this.store.modes().find((m) => m.slug === modeSlug);
+    if (modeCfg) {
+      const validSlugs = modeCfg.targets.map((t) => this.petSlug(t));
+      if (!validSlugs.includes(this.target().trim().toLowerCase())) {
+        this.target.set(this.defaultTargetSlugForMode(modeSlug));
+      }
+    }
+    this.syncTeamsToMode(true);
+  }
+
+  onTargetChange(targetVal: string): void {
+    this.saveCurrentTeamsToRaw();
+    this.target.set(targetVal);
+    if (this.mode() === 'nightmare-corridor') {
+      this.syncTeamsToMode(false);
+    }
+  }
+
+  private saveCurrentTeamsToRaw(): void {
+    const current = this.teams();
+    if (!current.length) return;
+    const nextRaw = [...this.rawDetectedTeams];
+    for (let i = 0; i < current.length; i++) {
+      nextRaw[i] = current[i];
+    }
+    this.rawDetectedTeams = nextRaw;
+  }
+
+  private expectedFormationsForCurrentMode(): readonly { readonly key: string; readonly label: string }[] {
+    const modeCfg = this.currentModeConfig();
+    if (modeCfg.variable) {
+      const populatedCount = this.rawDetectedTeams.filter((t) => t.heroes.length > 0).length;
+      const count = populatedCount >= modeCfg.variable.min
+        ? Math.min(modeCfg.variable.max, populatedCount)
+        : (modeCfg.variable.default ?? modeCfg.variable.max);
+      return Array.from({ length: count }, (_, idx) => ({
+        key: `t${idx + 1}`,
+        label: `Team ${idx + 1}`,
+      }));
+    }
+    const targetSlug = this.target().trim().toLowerCase();
+    const matchedTargetName =
+      modeCfg.targets.find((t) => this.petSlug(t) === targetSlug || t.toLowerCase() === targetSlug) ??
+      (modeCfg.slug === 'nightmare-corridor' ? 'Infernal Overlord' : modeCfg.targets[0]);
+    return modeCfg.targetFormations?.[matchedTargetName] ?? modeCfg.formations ?? [{ key: 'team-1', label: 'Team 1' }];
+  }
+
+  private syncTeamsToMode(announce = false): void {
+    const expected = this.expectedFormationsForCurrentMode();
+    const remapped: ImportTeam[] = expected.map((exp, idx) => {
+      const src = this.rawDetectedTeams[idx];
+      if (!src) {
+        return {
+          key: exp.key,
+          label: exp.label,
+          pet: '',
+          petLevel: null,
+          petSuggestions: [],
+          heroes: [],
+        };
+      }
+      return {
+        ...src,
+        key: exp.key,
+        label: exp.label,
+      };
+    });
+    this.nextTeamId = remapped.length + 1;
+    this.teams.set(remapped);
+    if (this.selectedTeam() >= remapped.length) {
+      this.selectedTeam.set(Math.max(0, remapped.length - 1));
+    }
+    if (announce) {
+      const modeName = this.currentModeConfig().name;
+      this.status.set(
+        `Switched mode to ${modeName} (${this.target() || this.defaultTargetSlugForMode(this.mode())}) — ${remapped.length} team(s): ${remapped.map((t) => t.label).join(', ')}.`,
+      );
+    }
   }
 
   loadImage(event: Event): void {
@@ -540,7 +648,8 @@ export class ImportHelperPageComponent implements OnDestroy {
     this.imageUrl.set(this.imageObjectUrl);
     this.imageReady.set(false);
     this.ocrText.set('');
-    this.teams.set([{ key: 'team-1', label: 'Team 1', pet: '', petLevel: null, petSuggestions: [], heroes: [] }]);
+    this.rawDetectedTeams = [];
+    this.syncTeamsToMode(false);
     this.substituteSets.set([]);
     this.selectedSubstituteSet.set(0);
     this.selectedTeam.set(0);
@@ -552,8 +661,11 @@ export class ImportHelperPageComponent implements OnDestroy {
   }
 
   applyModeAlternative(alt: { readonly mode_slug: string; readonly target_slug: string }): void {
+    this.saveCurrentTeamsToRaw();
+    this.userManuallySelectedMode = true;
     this.mode.set(alt.mode_slug);
     this.target.set(alt.target_slug);
+    this.syncTeamsToMode(true);
   }
 
   imageLoadError(): void {
@@ -563,10 +675,10 @@ export class ImportHelperPageComponent implements OnDestroy {
 
   private resolveHeroNameBySlug(slug: string, fallbackName = ''): string {
     const heroEntries = this.heroes();
-    const byExactSlug = heroEntries.find((h) => this.heroSlug(displayHeroName(h)) === slug);
+    const byExactSlug = heroEntries.find((h) => this.petSlug(displayHeroName(h)) === slug);
     if (byExactSlug) return displayHeroName(byExactSlug);
     const stripped = slug.replace(/^highborn-/, '');
-    const byStripped = heroEntries.find((h) => this.heroSlug(displayHeroName(h)) === stripped);
+    const byStripped = heroEntries.find((h) => this.petSlug(displayHeroName(h)) === stripped);
     if (byStripped) return displayHeroName(byStripped);
     if (fallbackName) {
       const byName = heroEntries.find((h) => displayHeroName(h).toLowerCase() === fallbackName.toLowerCase());
@@ -603,8 +715,12 @@ export class ImportHelperPageComponent implements OnDestroy {
         if (!data?.ok || !Array.isArray(data.teams)) continue;
 
         if (data.best_mode) {
-          this.mode.set(data.best_mode.mode_slug || this.mode());
-          this.target.set(data.best_mode.target_slug || this.target());
+          if (!this.userManuallySelectedMode) {
+            this.mode.set(data.best_mode.mode_slug || this.mode());
+            this.target.set(data.best_mode.target_slug || this.target());
+          } else if (!this.target()) {
+            this.target.set(this.defaultTargetSlugForMode(this.mode()));
+          }
           this.matchedModeInfo.set({
             mode_slug: data.best_mode.mode_slug,
             mode_name: data.best_mode.mode_name,
@@ -704,7 +820,13 @@ export class ImportHelperPageComponent implements OnDestroy {
 
           for (const sub of t.substitute_teams ?? []) {
             const subPetName = this.resolvePetNameBySlug(sub.pet, sub.pet_name ?? '');
-            const subPetSug = [...new Set((sub.pet_options ?? [sub.pet]).map((s: string) => this.resolvePetNameBySlug(s, s)).filter(Boolean))];
+            const subPetSug: string[] = [
+              ...new Set<string>(
+                (sub.pet_options ?? [sub.pet])
+                  .map((s: string) => this.resolvePetNameBySlug(s, s))
+                  .filter((v: string) => Boolean(v)),
+              ),
+            ];
             const [sbx = 0, sby = 0, sbw = 300, sbh = 64] = sub.bbox ?? [];
             const subHeroes: SubstituteHeroCandidate[] = (sub.hero_slots ?? []).map((hs: { primary_slug: string; options: string[] }) => {
               const opts = (hs.options ?? [hs.primary_slug]).map((s) => this.resolveHeroNameBySlug(s, s));
@@ -724,7 +846,8 @@ export class ImportHelperPageComponent implements OnDestroy {
         }
 
         if (mappedTeams.length) {
-          this.teams.set(mappedTeams);
+          this.rawDetectedTeams = mappedTeams;
+          this.syncTeamsToMode(false);
           this.substituteSets.set(mappedSubs);
           this.selectedTeam.set(0);
           this.selectedSubstituteSet.set(0);
@@ -751,7 +874,6 @@ export class ImportHelperPageComponent implements OnDestroy {
         return;
       }
       this.status.set('Reading the whole image locally. The OCR worker and language data may download on first use…');
-    try {
       const maxDimension = 2600;
       const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement('canvas');
@@ -1892,7 +2014,7 @@ export class ImportHelperPageComponent implements OnDestroy {
     return displayHeroName(hero);
   }
 
-  private petSlug(name: string): string {
+  petSlug(name: string): string {
     return this.slugify(name);
   }
 

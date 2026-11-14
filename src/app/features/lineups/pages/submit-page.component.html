@@ -3,7 +3,10 @@
   <section class="panel">
     <div class="panel-header">
       <h2>Submit a lineup</h2>
-      <a mat-button class="btn" routerLink="/">Back to lineups</a>
+      <div class="row-wrap">
+        <a mat-stroked-button class="btn import-from-image-link" routerLink="/submit/from-image">Import from image</a>
+        <a mat-button class="btn" routerLink="/">Back to lineups</a>
+      </div>
     </div>
     <div class="seg" role="group" aria-label="Game mode">
       @for (mode of store.modes(); track mode.slug) {

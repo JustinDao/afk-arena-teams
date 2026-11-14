@@ -1308,6 +1308,24 @@ def load_reference_lineups(
             ],
         },
         {
+            "id": "ts-fire-7-teams-meta",
+            "title": "Treasure Scramble — Fire Debuff (7-Team Meta)",
+            "mode_slug": "treasure-scramble",
+            "mode_name": "Treasure Scramble",
+            "target_slug": "fire",
+            "target_name": "Fire",
+            "source": "community-meta",
+            "formations": [
+                make_simple_formation("t1", "Team 1", ["highborn-leviathan", "misfortis", "dracula", "awakened-hybris", "velufira"]),
+                make_simple_formation("t2", "Team 2", ["awakened-maetria", "kikoru-shinomiya", "shalltear-bloodfallen", "flora", "kafka-hibino"]),
+                make_simple_formation("t3", "Team 3", ["awakened-shemira", "harvey", "sung-jinwoo", "awakened-envydiel", "awakened-gavus"]),
+                make_simple_formation("t4", "Team 4", ["saitama", "highborn-skylan", "gorok", "valeri", "awakened-theowyn"]),
+                make_simple_formation("t5", "Team 5", ["awakened-fawkes", "alvida", "awakened-lyca", "lysander", "highborn-haelia"]),
+                make_simple_formation("t6", "Team 6", ["awakened-estrilda", "highborn-odysseus", "highborn-thalassa", "kyno", "highborn-lan"]),
+                make_simple_formation("t7", "Team 7", ["skreg", "athena", "awakened-eluard", "medusa", "highborn-elthara"]),
+            ],
+        },
+        {
             "id": "ts-fire-sample",
             "title": "Treasure Scramble — Fire Debuff",
             "mode_slug": "treasure-scramble",
@@ -1712,7 +1730,10 @@ def infer_mode_and_lineup_matches(
                 struct_score += 0.16
                 reasons.append("Single-round crop could be a Cursed Realm Boss or Shadow Guard formation.")
         elif m_slug == "treasure-scramble":
-            if 2 <= team_count <= 7:
+            if team_count == 7:
+                struct_score += 0.72
+                reasons.append("7-team multi-formation layout exclusively matches Treasure Scramble (up to 7 teams).")
+            elif 2 <= team_count <= 6:
                 struct_score += 0.22
                 reasons.append(f"{team_count}-team multi-formation layout is compatible with Treasure Scramble (2-7 teams).")
         elif m_slug == "twisted-realm":
@@ -1753,6 +1774,17 @@ def infer_mode_and_lineup_matches(
     )
     best_mode = mode_candidates[0]
     mode_alternatives = mode_candidates[1:6]
+
+    # Prioritize reference lineups from the best matching mode
+    mode_matching_lineups = [
+        rl for rl in ranked_lineups if rl["mode_slug"] == best_mode["mode_slug"]
+    ]
+    if mode_matching_lineups:
+        best_lineup = mode_matching_lineups[0]
+        lineup_alternatives = [rl for rl in ranked_lineups if rl["id"] != best_lineup["id"]][:5]
+    else:
+        best_lineup = ranked_lineups[0] if ranked_lineups else None
+        lineup_alternatives = ranked_lineups[1:6]
 
     # Compile actionable review_suggestions (both visual uncertainty and reference diffs)
     review_suggestions = []

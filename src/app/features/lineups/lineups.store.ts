@@ -691,6 +691,78 @@ export class LineupsStore {
     this.draftErrorsSignal.set([]);
   }
 
+  applyImportedDraft(imported: {
+    readonly mode: string;
+    readonly target: string;
+    readonly notes?: string;
+    readonly formations: readonly DraftFormation[];
+  }): void {
+    const mode = this.getMode(imported.mode);
+    const baseForms = mode.targetFormations?.[imported.target] ?? mode.formations ?? [];
+    let forms: DraftFormation[];
+    if (mode.variable) {
+      const desiredCount = Math.min(
+        mode.variable.max,
+        Math.max(mode.variable.min, imported.formations.length || (mode.variable.default ?? mode.variable.min)),
+      );
+      forms = Array.from({ length: desiredCount }, (_, index) => {
+        const key = `t${index + 1}`;
+        const label = `Team ${index + 1}`;
+        const source = imported.formations[index];
+        if (!source) return makeEmptyFormation(key, label);
+        return {
+          ...source,
+          key,
+          label,
+          slots: source.slots.map((slot) => ({ ...slot, merc: mode.mercMax === 0 ? false : slot.merc })),
+        };
+      });
+    } else if (baseForms.length > 0 && imported.formations.length <= baseForms.length) {
+      const usedIndices = new Set<number>();
+      forms = baseForms.map(({ key, label }, index) => {
+        let matchIndex = imported.formations.findIndex(
+          (f, i) => !usedIndices.has(i) && (f.key === key || f.label.toLowerCase() === label.toLowerCase()),
+        );
+        if (matchIndex < 0 && index < imported.formations.length && !usedIndices.has(index) && imported.formations.length === baseForms.length) {
+          matchIndex = index;
+        }
+        if (matchIndex < 0 && imported.formations.length < baseForms.length) {
+          // If imported formations have generic keys like round-1..round-3, map by order
+          const genericIdx = imported.formations.findIndex(
+            (f, i) => !usedIndices.has(i) && f.key === `round-${index + 1}`,
+          );
+          if (genericIdx >= 0) matchIndex = genericIdx;
+        }
+        if (matchIndex < 0) return makeEmptyFormation(key, label);
+        usedIndices.add(matchIndex);
+        const matched = imported.formations[matchIndex];
+        return {
+          ...matched,
+          key,
+          label,
+          slots: matched.slots.map((slot) => ({ ...slot })),
+        };
+      });
+    } else {
+      forms = imported.formations.map((form) => ({
+        ...form,
+        slots: form.slots.map((slot) => ({ ...slot })),
+      }));
+    }
+    const firstNonEmpty = forms.findIndex((f) => f.slots.some((s) => s.hid !== null));
+    this.draftErrorsSignal.set([]);
+    this.draftSignal.set({
+      mode: imported.mode,
+      target: imported.target,
+      cur: firstNonEmpty >= 0 ? firstNonEmpty : 0,
+      slot: -1,
+      q: '',
+      notes: imported.notes ?? '',
+      result: {},
+      forms,
+    });
+  }
+
   changeDraftMode(slug: string): void {
     this.getMode(slug);
     this.draftErrorsSignal.set([]);

@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
 import { SubmitPageComponent } from './features/lineups/pages/submit-page.component';
+import { SubmitFromImagePageComponent } from './features/lineups/pages/submit-from-image-page.component';
 import { LineupsStore } from './features/lineups/lineups.store';
 import { HeroIconService } from './core/hero-icons/hero-icon.service';
 import { UserDataService } from './core/data/user-data.service';
@@ -194,6 +195,177 @@ describe('SubmitPageComponent', () => {
 
     const labels = Array.from(fixture.nativeElement.querySelectorAll('label')) as HTMLLabelElement[];
     expect(labels.some((label) => label.textContent?.includes('Mercenary'))).toBeFalse();
+    fixture.destroy();
+  });
+
+  it('shows an Import from image button on the submit page linking to /submit/from-image', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SubmitPageComponent);
+    fixture.detectChanges();
+
+    const importLink = fixture.nativeElement.querySelector('.import-from-image-link') as HTMLAnchorElement | null;
+    expect(importLink).not.toBeNull();
+    expect(importLink?.textContent).toContain('Import from image');
+    expect(importLink?.getAttribute('href')).toBe('/submit/from-image');
+    fixture.destroy();
+  });
+
+  it('recognizes a guide image on /submit/from-image, allows adjusting alternatives, and applies the lineup to the submit form draft', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitFromImagePageComponent, SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'ascended', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+
+    const importFixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const importComp = importFixture.componentInstance;
+    importFixture.detectChanges();
+
+    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importFixture.detectChanges();
+
+    expect(importComp.selectedModeSlug()).toBe('nightmare-corridor');
+    expect(importComp.selectedTargetName()).toBe('Infernal Overlord');
+    expect(importComp.bestMode()?.mode_name).toBe('Nightmare Corridor');
+    expect(importComp.bestLineupMatch()?.id).toBe('nc-guide-2026-10-infernal-overlord');
+    expect(importComp.formations().length).toBe(6);
+    expect(importComp.activeFormation()?.petName).toBe('Blazefang');
+    expect(importComp.activeFormation()?.substituteTeams.length).toBeGreaterThan(0);
+
+    // Swap a hero via alternative and apply a substitute team
+    importComp.updateSlotHeroByName(2, 'Thalassa');
+    expect(importComp.activeFormation()?.heroes[2].heroName).toBe('Thalassa');
+
+    importComp.applySubstituteTeamToActiveRound(1);
+    expect(importComp.activeFormation()?.heroes[0].heroName).toBe('Rem');
+    expect(importComp.activeFormation()?.petName).toBe('Pandy Dumpty');
+
+    await importComp.applyToSubmitForm();
+
+    const store = TestBed.inject(LineupsStore);
+    const draft = store.draft();
+    expect(draft).not.toBeNull();
+    expect(draft?.mode).toBe('nightmare-corridor');
+    expect(draft?.target).toBe('Infernal Overlord');
+    expect(draft?.forms.length).toBe(6);
+    expect(draft?.forms[0].slots[0].collectionSnapshot?.name).toBe('Captive Wings');
+
+    // Verify SubmitPageComponent preserves the imported draft formations on init
+    const submitFixture = TestBed.createComponent(SubmitPageComponent);
+    submitFixture.detectChanges();
+    const preservedDraft = store.draft();
+    expect(preservedDraft?.target).toBe('Infernal Overlord');
+    expect(preservedDraft?.forms[0].slots[0].hid).not.toBeNull();
+    expect(preservedDraft?.forms[0].petId).not.toBeNull();
+
+    importFixture.destroy();
+    submitFixture.destroy();
+  });
+
+  it('updates formation tabs, target options, team count, and mercenary controls when switching mode to Treasure Scramble (TS)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitFromImagePageComponent, SubmitPageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'ascended', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+
+    const importFixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const importComp = importFixture.componentInstance;
+    importFixture.detectChanges();
+
+    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importFixture.detectChanges();
+    expect(importComp.formations()[0].label).toBe('Molten Crystalline Worm Queen');
+    expect(importComp.allowsMercenary()).toBeTrue();
+
+    // Switch mode to Treasure Scramble (TS)
+    importComp.onModeSelect('treasure-scramble');
+    importFixture.detectChanges();
+
+    expect(importComp.selectedModeSlug()).toBe('treasure-scramble');
+    expect(importComp.selectedTargetName()).toBe('Fire');
+    expect(importComp.allowsMercenary()).toBeFalse();
+    expect(importComp.formations().map((f) => f.label)).toEqual([
+      'Team 1',
+      'Team 2',
+      'Team 3',
+      'Team 4',
+      'Team 5',
+      'Team 6',
+      'Team 7',
+    ]);
+    expect(importFixture.nativeElement.querySelector('.merc-check')).toBeNull();
+    expect(importFixture.nativeElement.querySelector('.substitutes-box')).toBeNull();
+
+    // Adjust TS team count to 5 and back to 7 without losing Team 6
+    importComp.onTeamCountChange(5);
+    importFixture.detectChanges();
+    expect(importComp.formations().length).toBe(5);
+    importComp.onTeamCountChange(7);
+    importFixture.detectChanges();
+    expect(importComp.formations().length).toBe(7);
+    expect(importComp.formations()[5].heroes[0].heroName).not.toBe('');
+
+    await importComp.applyToSubmitForm();
+    const store = TestBed.inject(LineupsStore);
+    const draft = store.draft();
+    expect(draft?.mode).toBe('treasure-scramble');
+    expect(draft?.target).toBe('Fire');
+    expect(draft?.forms.length).toBe(7);
+    expect(draft?.forms[0].key).toBe('t1');
+    expect(draft?.forms[0].label).toBe('Team 1');
+
+    importFixture.destroy();
+  });
+
+  it('correctly imports 7-team Treasure Scramble guide (yxqjrbg71c1i1.png) and matches TS lineup without NC leftovers', async () => {
+    await TestBed.configureTestingModule({
+      imports: [AppComponent, SubmitFromImagePageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'ascended', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();
+
+    comp.applyBuiltInSampleRecognition('yxqjrbg71c1i1.png', 3000, 6000);
+    fixture.detectChanges();
+
+    expect(comp.selectedModeSlug()).toBe('treasure-scramble');
+    expect(comp.selectedTargetName()).toBe('Fire');
+    expect(comp.formations().length).toBe(7);
+    expect(comp.formations().map((f) => f.label)).toEqual([
+      'Team 1',
+      'Team 2',
+      'Team 3',
+      'Team 4',
+      'Team 5',
+      'Team 6',
+      'Team 7',
+    ]);
+    expect(comp.bestLineupMatch()?.mode_slug).toBe('treasure-scramble');
+    expect(comp.bestLineupMatch()?.title).toContain('Treasure Scramble');
+    expect(comp.roundAlignmentPrefix(1)).toBe('Team 1');
+    expect(comp.isCandidateActive('treasure-scramble', 'Fire')).toBeTrue();
+    expect(comp.isCandidateActive('nightmare-corridor', 'Infernal Overlord')).toBeFalse();
+
     fixture.destroy();
   });
 

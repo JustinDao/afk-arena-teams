@@ -43,6 +43,11 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/lineups/pages/submit-page.component').then((m) => m.SubmitPageComponent),
   },
   {
+    path: 'submit/from-image',
+    loadComponent: () =>
+      import('./features/lineups/pages/submit-from-image-page.component').then((m) => m.SubmitFromImagePageComponent),
+  },
+  {
     path: 'recommendations',
     loadComponent: () => import('./features/lineups/pages/recommendations/recommendations-page.component').then((m) => m.RecommendationsPageComponent),
     children: [

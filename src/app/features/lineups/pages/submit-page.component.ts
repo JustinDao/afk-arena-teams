@@ -61,10 +61,10 @@ export class SubmitPageComponent implements OnDestroy {
 
   constructor() {
     if (!this.store.draft()) this.store.openDraft();
+    this.resetSubmissionForm();
     this.submissionForm.controls.target.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((target) => this.store.updateDraftTarget(target));
-    this.resetSubmissionForm();
     void this.store.loadCollections();
   }
 

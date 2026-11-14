@@ -3,7 +3,7 @@ import { defaultAscensionForInvestment, parseInvestment } from './investment';
 import { petIconUrl } from './pet-icon-url';
 
 const heroNames = (
-  'Rowan,Raine,Lyca,Lorsan,Ezizh,Liberta,Palmer,Odysseus,Orthros,Talimar,Tavriel,Gorok,Lavatune,Elthara,Dracula,Hybris,Lysander,Leviathan,Serenmira,Melion,Sion,Laios,Marcille,Velufira,Aurelia,Knox,Lan,Jerome,Misfortis,Awakened Envydiel,Kaelon,Gorren,Haelia,Alvida,Misha,Severin,Awakened Gavus,Albedo,Yennefer,Shuna,Atheus,Veithael,Rimuru,Saitama,Cha Hae-in,Sung Jinwoo,Randle,Brutus,Elijah & Lailah,Skylan,Terrible Tornado,Daemia,Begris,Lucilla,Selene,Adrian & Elyse,Judy Punch,Harvey,Thoran,Skriath,Pippa,Fawkes,Estrilda,Eluard,Safiya,Eironn,Kyno,Trix,Saurus,Mishka,Lucretia,Daimon,Silas,Belinda,Shemira,Thane,Baden,Scarlet,Mehira,Lucius,Rosaline,Arthur,Gwyneth,Ferael,Tasi,Nara,Alna,Hodgkin,Oden,Mortas,Framton,Merlin,Haelus,Desira,Treznor,Mezoth,Astarv,Joan,Rosa,Anasta,Talene'
+  'Rowan,Raine,Lyca,Lorsan,Ezizh,Liberta,Palmer,Odysseus,Orthros,Talimar,Tavriel,Gorok,Lavatune,Elthara,Dracula,Hybris,Lysander,Leviathan,Serenmira,Melion,Sion,Laios,Marcille,Velufira,Aurelia,Knox,Lan,Jerome,Misfortis,Awakened Envydiel,Kaelon,Gorren,Haelia,Alvida,Misha,Severin,Awakened Gavus,Albedo,Yennefer,Shuna,Atheus,Veithael,Rimuru,Saitama,Cha Hae-in,Sung Jinwoo,Randle,Brutus,Elijah & Lailah,Skylan,Terrible Tornado,Daemia,Begris,Lucilla,Selene,Adrian & Elyse,Judy Punch,Harvey,Thoran,Skriath,Pippa,Fawkes,Estrilda,Eluard,Safiya,Eironn,Kyno,Trix,Saurus,Mishka,Lucretia,Daimon,Silas,Belinda,Shemira,Thane,Baden,Scarlet,Mehira,Lucius,Rosaline,Arthur,Gwyneth,Ferael,Tasi,Nara,Alna,Hodgkin,Oden,Mortas,Framton,Merlin,Haelus,Desira,Treznor,Mezoth,Astarv,Joan,Rosa,Anasta,Talene,Tamrus,Thalassa,Vaelis,Lyla,Trishea,Naroko,Crassio,Rem,Emilia,Villanelle,Bronn,Ivan,Lady Simona,Zohra,Kalthin,Hildwin,Eugene,Maetria,Athalia,Solise,Antandra,Eorin,Grezhul,Nevanthi,Khasos,Kaz,Skreg,Warek,Vurk,Ginneas,Flora,Prince of Persia,Kafka Hibino'
 ).split(',');
 const heroesByDisplayName = new Map<string, Omit<Hero, 'id'>>();
 for (const catalogName of heroNames) {
@@ -11,7 +11,7 @@ for (const catalogName of heroNames) {
   const name = catalogName.replace(/^Awakened\s+/, '');
   heroesByDisplayName.set(displayHeroName({ name, isAwakened }), { name, isAwakened });
 }
-for (const name of ['Lyca', 'Pippa', 'Fawkes', 'Estrilda', 'Thoran', 'Skriath', 'Eluard', 'Safiya', 'Eironn', 'Baden', 'Talene', 'Belinda', 'Thane']) {
+for (const name of ['Lyca', 'Pippa', 'Fawkes', 'Estrilda', 'Thoran', 'Skriath', 'Eluard', 'Safiya', 'Eironn', 'Baden', 'Talene', 'Belinda', 'Thane', 'Merlin', 'Shemira', 'Brutus', 'Solise', 'Athalia', 'Lucius', 'Antandra']) {
   const key = displayHeroName({ name, isAwakened: true });
   if (!heroesByDisplayName.has(key)) {
     heroesByDisplayName.set(key, { name, isAwakened: true });
