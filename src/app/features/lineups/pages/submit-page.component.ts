@@ -202,12 +202,16 @@ export class SubmitPageComponent implements OnDestroy {
 
   collectionsForSlot(slotIndex: number) {
     const heroClass = this.classOfSlot(slotIndex);
-    return this.store.collections().filter((collection) => this.sameClass(collection.class, heroClass));
+    const collections = this.store.collections();
+    const filtered = heroClass ? collections.filter((collection) => this.sameClass(collection.class, heroClass)) : [];
+    return filtered.length ? filtered : collections;
   }
 
   catalogForSlot(slotIndex: number) {
     const heroClass = this.classOfSlot(slotIndex);
-    return this.store.collectionCatalog().filter((item) => this.sameClass(item.class, heroClass));
+    const catalog = this.store.collectionCatalog();
+    const filtered = heroClass ? catalog.filter((item) => this.sameClass(item.class, heroClass)) : [];
+    return filtered.length ? filtered : catalog;
   }
 
   startCustomCollection(slotIndex: number): void {

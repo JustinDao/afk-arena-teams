@@ -1307,12 +1307,39 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           const subSlot = sub.heroSlots[sIdx];
           if (!subSlot) return slot;
           const hero = this.resolveHero(subSlot.primaryName);
+          const resolvedName = hero ? displayHeroName(hero) : subSlot.primaryName;
+          const hClass = hero ? this.heroClassFor(hero) : null;
+          let collectionId = slot.collectionId;
+          let collectionLevel = slot.collectionLevel;
+          let collectionNodes = slot.collectionNodes;
+          if (hero && collectionId === null) {
+            const classDefault =
+              (hClass ? this.collections.find((c) => c.class.toLowerCase() === hClass.toLowerCase()) : null) ??
+              this.collections[0];
+            if (classDefault) {
+              collectionId = classDefault.id;
+              collectionLevel = 1;
+              collectionNodes = [];
+            }
+          }
+          const collectionSnapshot =
+            slot.collectionSnapshot ??
+            this.buildCollectionSnapshot(
+              collectionId,
+              collectionLevel,
+              collectionNodes,
+              hClass,
+            );
           return {
             ...slot,
             heroId: hero?.id ?? null,
-            heroName: hero ? displayHeroName(hero) : subSlot.primaryName,
-            slug: this.toSlug(hero ? displayHeroName(hero) : subSlot.primaryName),
+            heroName: resolvedName,
+            slug: this.toSlug(resolvedName),
             guideAlternatives: subSlot.options.slice(1),
+            collectionId,
+            collectionLevel,
+            collectionNodes,
+            collectionSnapshot,
             needsReview: false,
           };
         });
@@ -1342,13 +1369,42 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             const resolvedName = hero ? displayHeroName(hero) : '';
             const hClass = hero ? this.heroClassFor(hero) : null;
             const currentColl = this.collections.find((c) => c.id === s.collectionId);
-            const collValid = !currentColl || !hClass || currentColl.class.toLowerCase() === hClass.toLowerCase();
+            const classMismatch = currentColl && hClass && currentColl.class.toLowerCase() !== hClass.toLowerCase();
+            let collectionId = classMismatch ? null : s.collectionId;
+            let collectionLevel = classMismatch ? 1 : s.collectionLevel;
+            let collectionNodes = classMismatch ? [] : s.collectionNodes;
+            if (hero && collectionId === null) {
+              const classDefault =
+                (hClass ? this.collections.find((c) => c.class.toLowerCase() === hClass.toLowerCase()) : null) ??
+                this.collections[0];
+              if (classDefault) {
+                collectionId = classDefault.id;
+                collectionLevel = 1;
+                collectionNodes = [];
+              }
+            }
+            const collectionSnapshot =
+              (!classMismatch && s.collectionSnapshot) ||
+              this.buildCollectionSnapshot(
+                collectionId,
+                collectionLevel,
+                collectionNodes,
+                hClass,
+              );
+            const ascension = hero
+              ? (defaultAscensionForInvestment(parseInvestment(s.investmentCode)) ??
+                 this.heroIcons.lowestAscensionFor(resolvedName))
+              : null;
             return {
               ...s,
               heroId: hero?.id ?? null,
               heroName: resolvedName,
               slug: hero ? this.toSlug(resolvedName) : '',
-              collectionId: collValid ? s.collectionId : null,
+              collectionId,
+              collectionLevel,
+              collectionNodes,
+              collectionSnapshot,
+              ascension: s.ascension ?? ascension,
               needsReview: false,
             };
           }),
@@ -1366,15 +1422,24 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         i === fIdx
           ? {
               ...f,
-              heroes: f.heroes.map((s, idx) =>
-                idx === slotIndex
-                  ? {
-                      ...s,
-                      collectionId,
-                      collectionLevel: levelOverride ?? s.collectionLevel,
-                    }
-                  : s,
-              ),
+              heroes: f.heroes.map((s, idx) => {
+                if (idx !== slotIndex) return s;
+                const hero = s.heroId !== null ? this.heroFor(s.heroId) : null;
+                const hClass = hero ? this.heroClassFor(hero) : null;
+                const collectionLevel = levelOverride ?? s.collectionLevel;
+                const collectionSnapshot = this.buildCollectionSnapshot(
+                  collectionId,
+                  collectionLevel,
+                  s.collectionNodes,
+                  hClass,
+                );
+                return {
+                  ...s,
+                  collectionId,
+                  collectionLevel,
+                  collectionSnapshot,
+                };
+              }),
             }
           : f,
       ),
@@ -1542,6 +1607,38 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     );
   }
 
+  buildCollectionSnapshot(
+    collectionId: number | null,
+    level = 1,
+    nodes: readonly string[] = [],
+    heroClass?: string | null,
+    preferredName?: string | null,
+  ): CollectionSnapshot | null {
+    if (collectionId === null && !preferredName) return null;
+    const catalogItem =
+      (preferredName ? this.collections.find((c) => c.name.toLowerCase() === preferredName.toLowerCase()) : null) ??
+      (collectionId !== null ? this.collections.find((c) => c.id === collectionId) : null) ??
+      (collectionId !== null ? this.store.collectionCatalog().find((c) => c.id === collectionId) : null) ??
+      (heroClass ? this.collections.find((c) => c.class.toLowerCase() === heroClass.toLowerCase()) : null) ??
+      this.collections[0];
+    if (!catalogItem) return null;
+
+    const collectionNodes: CollectionNode[] = [];
+    let slotCounter = 0;
+    for (let lvlIdx = 0; lvlIdx < Math.max(0, level - 1); lvlIdx++) {
+      collectionNodes.push({ slotIndex: slotCounter++, stat: 'skill_level', tier: 'mythic' });
+    }
+    for (const stat of nodes) {
+      collectionNodes.push({ slotIndex: slotCounter++, stat, tier: 'mythic' });
+    }
+    return {
+      catalogId: catalogItem.id,
+      name: catalogItem.name,
+      class: catalogItem.class,
+      nodes: collectionNodes,
+    };
+  }
+
   defaultCatalogIdForHero(heroId: number | null): number {
     const list = this.catalogForHero(heroId);
     return list.length ? list[0].id : (this.store.collectionCatalog()[0]?.id ?? 1);
@@ -1559,12 +1656,16 @@ export class SubmitFromImagePageComponent implements OnDestroy {
 
   collectionsForHero(heroId: number | null) {
     const heroClass = this.classOfHero(heroId);
-    return this.store.collections().filter((collection) => this.sameClass(collection.class, heroClass));
+    const collections = this.store.collections();
+    const filtered = heroClass ? collections.filter((c) => this.sameClass(c.class, heroClass)) : [];
+    return filtered.length ? filtered : collections;
   }
 
-  catalogForHero(heroId: number | null) {
+  catalogForHero(heroId: number | null): readonly CollectionCatalogItem[] {
     const heroClass = this.classOfHero(heroId);
-    return this.store.collectionCatalog().filter((item) => this.sameClass(item.class, heroClass));
+    const catalog = this.store.collectionCatalog().length ? this.store.collectionCatalog() : this.collections;
+    const filtered = heroClass ? catalog.filter((item) => this.sameClass(item.class, heroClass)) : [];
+    return filtered.length ? filtered : catalog;
   }
 
   startCustomCollection(slotIndex: number): void {
@@ -1740,33 +1841,17 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           defaultAscensionForInvestment(parsedInv) ??
           (hero ? this.heroIcons.lowestAscensionFor(displayHeroName(hero)) : 'ascended');
 
-        let collectionSnapshot: CollectionSnapshot | null = slot.collectionSnapshot ?? null;
-        if (!collectionSnapshot && slot.collectionId !== null) {
-          const catalogItem = this.collections.find((c) => c.id === slot.collectionId) ?? this.store.collectionCatalog().find((c) => c.id === slot.collectionId);
-          if (catalogItem) {
-            const nodes: CollectionNode[] = [];
-            let slotCounter = 0;
-            for (let lvlIdx = 0; lvlIdx < Math.max(0, slot.collectionLevel - 1); lvlIdx++) {
-              nodes.push({ slotIndex: slotCounter++, stat: 'skill_level', tier: 'mythic' });
-            }
-            for (const stat of slot.collectionNodes) {
-              nodes.push({ slotIndex: slotCounter++, stat, tier: 'mythic' });
-            }
-            collectionSnapshot = {
-              catalogId: catalogItem.id,
-              name: catalogItem.name,
-              class: catalogItem.class,
-              nodes,
-            };
-          }
-        }
+        const heroClass = hero ? this.heroClassFor(hero) : null;
+        const collectionSnapshot: CollectionSnapshot | null =
+          slot.collectionSnapshot ??
+          this.buildCollectionSnapshot(slot.collectionId, slot.collectionLevel, slot.collectionNodes, heroClass);
 
         return {
           hid: slot.heroId,
           merc: slot.merc,
           inv: slot.investmentCode,
           ascension,
-          collectionId: slot.collectionId ? String(slot.collectionId) : '',
+          collectionId: '',
           collectionSnapshot,
         };
       });
@@ -1973,10 +2058,24 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             typeof coll?.name === 'string'
               ? this.collections.find((c) => c.name.toLowerCase() === coll.name.toLowerCase())
               : undefined;
-          const collectionId =
+          let collectionId =
             byCollName?.id ?? (typeof coll?.catalog === 'number' ? coll.catalog : null);
           const collectionLevel = typeof coll?.level === 'number' ? coll.level : 1;
           const collectionNodes: string[] = (coll?.nodes ?? []).map((n: { stat: string }) => n.stat);
+          const hClass = hero ? this.heroClassFor(hero) : null;
+          if (collectionId === null && hero) {
+            const classDefault =
+              (hClass ? this.collections.find((c) => c.class.toLowerCase() === hClass.toLowerCase()) : null) ??
+              this.collections[0];
+            if (classDefault) collectionId = classDefault.id;
+          }
+          const collectionSnapshot = this.buildCollectionSnapshot(
+            collectionId,
+            collectionLevel,
+            collectionNodes,
+            hClass,
+            coll?.name,
+          );
           const collectionAlternatives = (coll?.visual_alternatives ?? []).map(
             (c: { id: number; name: string; level?: number }) => ({
               id: c.id,
@@ -2006,6 +2105,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             collectionNodes,
             collectionAlternatives,
             nodeAlternatives,
+            collectionSnapshot,
             investmentCode: '',
             merc: false,
           };
