@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { AscensionRank, CollectionCatalogItem, CollectionInventoryItem, CollectionRecommendation, CollectionRecommendationSpec, CollectionNode, CollectionNodeStat, CollectionNodeTier, displayHeroName, Formation, GameReferenceData, HeroRecommendation, ModeConfig, Pet, PetRecommendation, PetRosterEntry, RecommendationCategory, RecommendationSettings, RosterEntry, Submission } from '../../features/lineups/models';
 import { heroAttributeFromValue } from '../../features/lineups/hero-classification';
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment, rosterInvestment } from '../../features/lineups/investment';
+import { petIconUrl } from '../../features/lineups/pet-icon-url';
 import {
   ATTACK_COLLECTION_NODE_STATS,
   COLLECTION_CATALOG,
@@ -253,7 +254,9 @@ export class UserDataService {
             label: formation.slot_label,
             beast: formation.pets?.name ?? formation.beast ?? '',
             petId: formation.pet_id,
-            petIconUrl: formation.pets?.icon_url ?? null,
+            petIconUrl: formation.pet_id === null
+              ? formation.pets?.icon_url ?? null
+              : petIconUrl(formation.pet_id),
             petLevel: formation.pet_level,
             timeSeconds: formation.result_time_seconds,
             heroes: formation.formation_heroes
@@ -377,7 +380,7 @@ export class UserDataService {
       id: pet.id,
       name: pet.name,
       kind: pet.pet_type,
-      iconUrl: pet.icon_url,
+      iconUrl: petIconUrl(pet.id),
     }));
     return { modes, heroes, pets };
   }

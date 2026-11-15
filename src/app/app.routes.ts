@@ -35,8 +35,18 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/lineups/pages/lineup-detail-page.component').then((m) => m.LineupDetailPageComponent),
   },
   {
+    path: 'import-helper',
+    redirectTo: 'submit/from-image',
+    pathMatch: 'full',
+  },
+  {
     path: 'submit',
     loadComponent: () => import('./features/lineups/pages/submit-page.component').then((m) => m.SubmitPageComponent),
+  },
+  {
+    path: 'submit/from-image',
+    loadComponent: () =>
+      import('./features/lineups/pages/submit-from-image-page.component').then((m) => m.SubmitFromImagePageComponent),
   },
   {
     path: 'recommendations',

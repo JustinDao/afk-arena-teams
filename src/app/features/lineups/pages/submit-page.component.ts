@@ -11,8 +11,10 @@ import { AddHeroModalComponent } from '../components/add-hero-modal/add-hero-mod
 import { AddPetModalComponent, DraftPetSelection } from '../components/add-pet-modal/add-pet-modal.component';
 import { CollectionBuildEditorComponent } from '../components/collection-build-editor/collection-build-editor.component';
 import { CollectionRecommendationEditorComponent } from '../components/collection-recommendation-editor/collection-recommendation-editor.component';
+import { FormationBoardComponent, FormationBoardPet, FormationBoardSlot } from '../components/formation-board/formation-board.component';
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { defaultAscensionForInvestment } from '../investment';
+import { COLLECTION_NODE_STATS } from '../collection-catalog';
 import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
 import { LineupsStore } from '../lineups.store';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
@@ -26,6 +28,7 @@ import { LineupViewPreferencesService } from '../lineup-view-preferences.service
     CdkTrapFocus,
     CollectionBuildEditorComponent,
     CollectionRecommendationEditorComponent,
+    FormationBoardComponent,
     HeroIconComponent,
     HeroInvestmentEditorComponent,
     MatButtonModule,
@@ -41,6 +44,7 @@ export class SubmitPageComponent implements OnDestroy {
   readonly store = inject(LineupsStore);
   readonly lineupView = inject(LineupViewPreferencesService);
   readonly auth = inject(AuthService);
+  readonly nodeStatsCatalog = COLLECTION_NODE_STATS;
   private readonly heroIcons = inject(HeroIconService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -49,6 +53,37 @@ export class SubmitPageComponent implements OnDestroy {
   );
   readonly editingSlot = signal<{ readonly index: number } | null>(null);
   readonly petModalOpen = signal(false);
+
+  readonly boardSlots = computed<readonly FormationBoardSlot[]>(() => {
+    const draft = this.store.draft();
+    if (!draft) return [];
+    return draft.forms[draft.cur].slots.map((slot, index) => {
+      const heroId = slot.hid;
+      const heroName = heroId !== null ? this.store.heroName(heroId) : '';
+      return {
+        heroId,
+        heroName,
+        iconUrl: heroId !== null ? this.store.heroIconUrl(heroId) : null,
+        hue: heroId !== null ? this.store.hue(heroName) : 200,
+        ascension: this.ascensionOf(index),
+        investment: this.store.draftInvestment(index),
+      };
+    });
+  });
+
+  readonly boardPet = computed<FormationBoardPet | null>(() => {
+    const draft = this.store.draft();
+    if (!draft) return null;
+    const form = draft.forms[draft.cur];
+    if (form.petId === null) return null;
+    const pet = this.petFor(form.petId);
+    return {
+      id: form.petId,
+      name: pet.name,
+      iconUrl: pet.iconUrl ?? null,
+      level: form.petLevel,
+    };
+  });
 
   readonly submissionForm = new FormGroup({
     target: new FormControl('', { nonNullable: true }),
@@ -61,10 +96,10 @@ export class SubmitPageComponent implements OnDestroy {
 
   constructor() {
     if (!this.store.draft()) this.store.openDraft();
+    this.resetSubmissionForm();
     this.submissionForm.controls.target.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((target) => this.store.updateDraftTarget(target));
-    this.resetSubmissionForm();
     void this.store.loadCollections();
   }
 
@@ -169,12 +204,16 @@ export class SubmitPageComponent implements OnDestroy {
 
   collectionsForSlot(slotIndex: number) {
     const heroClass = this.classOfSlot(slotIndex);
-    return this.store.collections().filter((collection) => this.sameClass(collection.class, heroClass));
+    const collections = this.store.collections();
+    const filtered = heroClass ? collections.filter((collection) => this.sameClass(collection.class, heroClass)) : [];
+    return filtered.length ? filtered : collections;
   }
 
   catalogForSlot(slotIndex: number) {
     const heroClass = this.classOfSlot(slotIndex);
-    return this.store.collectionCatalog().filter((item) => this.sameClass(item.class, heroClass));
+    const catalog = this.store.collectionCatalog();
+    const filtered = heroClass ? catalog.filter((item) => this.sameClass(item.class, heroClass)) : [];
+    return filtered.length ? filtered : catalog;
   }
 
   startCustomCollection(slotIndex: number): void {

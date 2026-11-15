@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>AFK Arena COCO Icon Annotator</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./coco-annotator.css">
+    <script type="module" src="./coco-annotator.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LOCAL COCO ANNOTATION</p>
+        <h1>AFK Arena Icon Dataset</h1>
+      </div>
+      <span class="local-badge">Stored in this browser</span>
+    </header>
+
+    <main>
+      <p class="intro">
+        Draw one tight box around each complete hero, pet, collection, or other catalog icon.
+        Images stay local; export produces a COCO JSON file with boxes and image metadata.
+      </p>
+
+      <section class="panel" aria-labelledby="source-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">01 · SOURCE IMAGES</p>
+            <h2 id="source-title">Load guide images</h2>
+          </div>
+          <span id="annotation-status" class="status" role="status" aria-live="polite">Loading local annotations…</span>
+        </div>
+        <div class="annotation-toolbar">
+          <label class="file-button">
+            Add images
+            <input id="image-input" type="file" accept="image/*" multiple>
+          </label>
+          <label class="field image-picker">
+            Active image
+            <select id="image-select" disabled>
+              <option value="">Add an image</option>
+            </select>
+          </label>
+          <label class="field source-group-field">
+            Source group
+            <input id="source-group" type="text" maxlength="160" placeholder="Guide or layout identifier" disabled>
+          </label>
+          <label class="field zoom-field">
+            Zoom <output id="zoom-value" for="zoom">100%</output>
+            <input id="zoom" type="range" min="50" max="200" step="25" value="100" disabled>
+          </label>
+        </div>
+        <p class="hint">
+          Keep related pages or repeated layouts in the same source group. Later train/test folds must
+          keep each group intact to prevent layout leakage.
+        </p>
+      </section>
+
+      <section class="panel" aria-labelledby="boxes-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">02 · BOX LABELS</p>
+            <h2 id="boxes-title">Annotate every target icon</h2>
+          </div>
+          <span id="box-count" class="status">0 boxes</span>
+        </div>
+        <div class="annotation-workspace">
+          <div class="annotation-image-area" id="image-area">
+            <canvas id="annotation-canvas" aria-label="Guide image with icon bounding boxes" hidden></canvas>
+            <p id="image-empty" class="empty-state">Add a guide image, then drag a tight rectangle around one icon.</p>
+          </div>
+          <aside class="annotation-sidebar">
+            <h3>Annotation rules</h3>
+            <ul class="annotation-rules">
+              <li>Use one class: <code>game_icon</code>.</li>
+              <li>Include the complete icon frame; exclude adjacent badges, text, and neighboring icons.</li>
+              <li>Annotate every target icon in each image. Unboxed icons become background during training.</li>
+              <li>Text and unrelated artwork need no boxes; they are hard background examples.</li>
+            </ul>
+            <div class="annotation-actions">
+              <button id="delete-box" class="secondary" type="button" disabled>Delete selected box</button>
+              <button id="clear-boxes" class="text-button" type="button" disabled>Clear boxes on image</button>
+              <button id="remove-image" class="text-button" type="button" disabled>Remove image from local set</button>
+            </div>
+            <h3>Boxes on this image</h3>
+            <ol id="annotation-list" class="annotation-list" aria-label="Bounding boxes"></ol>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel export-panel" aria-labelledby="export-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">03 · STANDARD DATASET</p>
+            <h2 id="export-title">Export COCO annotations</h2>
+          </div>
+          <button id="export-coco" class="primary" type="button" disabled>Export COCO JSON</button>
+        </div>
+        <p class="muted">
+          The export contains original image file names, dimensions, source groups, and COCO bounding
+          boxes. Image pixels are not embedded. Keep the original images alongside the JSON.
+        </p>
+        <details id="preview-details" hidden>
+          <summary>Inspect exported COCO JSON</summary>
+          <textarea id="coco-preview" readonly aria-label="Exported COCO JSON"></textarea>
+        </details>
+      </section>
+    </main>
+
+    <footer>COCO bounding-box dataset helper · local browser storage only</footer>
+  </body>
+</html>
