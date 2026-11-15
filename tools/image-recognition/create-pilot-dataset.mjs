@@ -37,7 +37,7 @@ const records = [
   },
   {
     id: 'nc-round-1',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nc-round-1.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nc-round-1.png',
     width: 225,
     height: 485,
     sourceGroup: 'f2p-weekly-nc-guide',
@@ -50,7 +50,7 @@ const records = [
   },
   {
     id: 'nc-round-2',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nc-round-2.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nc-round-2.png',
     width: 225,
     height: 490,
     sourceGroup: 'f2p-weekly-nc-guide',
@@ -64,7 +64,7 @@ const records = [
   },
   {
     id: 'nc-round-3',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nc-round-3.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nc-round-3.png',
     width: 225,
     height: 486,
     sourceGroup: 'f2p-weekly-nc-guide',
@@ -78,7 +78,7 @@ const records = [
   },
   {
     id: 'nightmare-round-1',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-1.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-1.png',
     width: 1200,
     height: 1050,
     sourceGroup: 'lydydxhxpyyh1',
@@ -92,7 +92,7 @@ const records = [
   },
   {
     id: 'nightmare-round-2',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-2.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-2.png',
     width: 1200,
     height: 800,
     sourceGroup: 'lydydxhxpyyh1',
@@ -106,7 +106,7 @@ const records = [
   },
   {
     id: 'nightmare-round-3',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-3.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-3.png',
     width: 1200,
     height: 760,
     sourceGroup: 'lydydxhxpyyh1',
@@ -120,7 +120,7 @@ const records = [
   },
   {
     id: 'nightmare-round-4',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-4.png',
     width: 1200,
     height: 950,
     sourceGroup: 'lydydxhxpyyh1',
@@ -134,7 +134,7 @@ const records = [
   },
   {
     id: 'nightmare-round-5',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-5.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-5.png',
     width: 1200,
     height: 800,
     sourceGroup: 'lydydxhxpyyh1',
@@ -148,7 +148,7 @@ const records = [
   },
   {
     id: 'nightmare-round-6',
-    fileName: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-6.png',
+    fileName: 'tools/image-recognition/pilot-images/pilot-nightmare-round-6.png',
     width: 1200,
     height: 1040,
     sourceGroup: 'lydydxhxpyyh1',

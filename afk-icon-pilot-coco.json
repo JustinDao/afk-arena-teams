@@ -22,7 +22,7 @@
     },
     {
       "id": 2,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nc-round-1.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nc-round-1.png",
       "width": 225,
       "height": 485,
       "license": 0,
@@ -30,7 +30,7 @@
     },
     {
       "id": 3,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nc-round-2.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nc-round-2.png",
       "width": 225,
       "height": 490,
       "license": 0,
@@ -38,7 +38,7 @@
     },
     {
       "id": 4,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nc-round-3.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nc-round-3.png",
       "width": 225,
       "height": 486,
       "license": 0,
@@ -46,7 +46,7 @@
     },
     {
       "id": 5,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-1.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-1.png",
       "width": 1200,
       "height": 1050,
       "license": 0,
@@ -54,7 +54,7 @@
     },
     {
       "id": 6,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-2.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-2.png",
       "width": 1200,
       "height": 800,
       "license": 0,
@@ -62,7 +62,7 @@
     },
     {
       "id": 7,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-3.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-3.png",
       "width": 1200,
       "height": 760,
       "license": 0,
@@ -70,7 +70,7 @@
     },
     {
       "id": 8,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-4.png",
       "width": 1200,
       "height": 950,
       "license": 0,
@@ -78,7 +78,7 @@
     },
     {
       "id": 9,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-5.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-5.png",
       "width": 1200,
       "height": 800,
       "license": 0,
@@ -86,7 +86,7 @@
     },
     {
       "id": 10,
-      "file_name": "tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-6.png",
+      "file_name": "tools/image-recognition/pilot-images/pilot-nightmare-round-6.png",
       "width": 1200,
       "height": 1040,
       "license": 0,

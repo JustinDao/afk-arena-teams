@@ -22,7 +22,7 @@ Usage:
   # 1. CLI mode on any image:
   python api/recognize-lineup.py afk-nightmare-corridor-infernal-overlord-9.png
   python api/recognize-lineup.py lydydxhxpyyh1.png --json out.json
-  python api/recognize-lineup.py tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png
+  python api/recognize-lineup.py tools/image-recognition/pilot-images/pilot-nightmare-round-4.png
 
   # 2. Local Web UI + API server (also serves Angular /import-helper):
   python api/recognize-lineup.py --serve --port 8174
@@ -41,7 +41,7 @@ import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LAB_DIR = REPO_ROOT / "tools" / "pet-matcher-lab"
+LAB_DIR = REPO_ROOT / "tools" / "image-recognition"
 _STATE = {}
 
 
@@ -238,20 +238,42 @@ def recognize_image_bytes(image_bytes):
     }
 
 
+def _resolve_sample_image(rel_path: str) -> Path | None:
+    if not rel_path:
+        return None
+    raw = Path(rel_path)
+    if raw.is_file():
+        return raw.resolve()
+    for base in [
+        REPO_ROOT,
+        LAB_DIR,
+        LAB_DIR / "sample-images",
+        LAB_DIR / "pilot-images",
+    ]:
+        p = (base / rel_path).resolve()
+        if p.is_file():
+            return p
+        p_name = (base / raw.name).resolve()
+        if p_name.is_file():
+            return p_name
+    return None
+
+
 def _list_sample_images():
     candidates = [
         ("afk-nightmare-corridor-infernal-overlord-9.png", "App Export — 6-Round Nightmare Corridor (2040×2082)"),
         ("lydydxhxpyyh1.png", "Dual-Panel Community Guide — 6 Rounds + 43 Substitute Teams (3000×6000)"),
+        ("yxqjrbg71c1i1.png", "Treasure Scramble — 7-Team Multi-Formation Guide (3000×6000)"),
         ("f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp", "F2P Staggered Guide — 3-Round Nightmare Corridor (1080×1629)"),
-        ("tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-1.png", "Single-Round Crop — Round 1 Worm Queen (1344×707)"),
-        ("tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-3.png", "Single-Round Crop — Round 3 Demonic Puppet (1344×776)"),
-        ("tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-5.png", "Single-Round Crop — Round 5 Mirror Demon (1344×917)"),
-        ("tools/pet-matcher-lab/pilot-images/pilot-nc-round-2.png", "Single-Round Staggered Crop — Round 2 Cindercrow (362×397)"),
+        ("tools/image-recognition/pilot-images/pilot-nightmare-round-1.png", "Single-Round Crop — Round 1 Worm Queen (1344×707)"),
+        ("tools/image-recognition/pilot-images/pilot-nightmare-round-3.png", "Single-Round Crop — Round 3 Demonic Puppet (1344×776)"),
+        ("tools/image-recognition/pilot-images/pilot-nightmare-round-5.png", "Single-Round Crop — Round 5 Mirror Demon (1344×917)"),
+        ("tools/image-recognition/pilot-images/pilot-nc-round-2.png", "Single-Round Staggered Crop — Round 2 Cindercrow (362×397)"),
     ]
     out = []
     for rel, label in candidates:
-        p = REPO_ROOT / rel
-        if p.is_file():
+        p = _resolve_sample_image(rel)
+        if p and p.is_file():
             out.append({"path": rel, "label": label})
     return out
 
@@ -781,8 +803,8 @@ class handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/recognize-sample":
                 payload = json.loads(body.decode("utf-8"))
                 rel_path = payload.get("path", "")
-                target_path = (REPO_ROOT / rel_path).resolve()
-                if not str(target_path).startswith(str(REPO_ROOT)) or not target_path.is_file():
+                target_path = _resolve_sample_image(rel_path)
+                if not target_path or not target_path.is_file():
                     raise ValueError(f"Sample image not found: {rel_path}")
                 result = recognize_image_bytes(target_path.read_bytes())
                 self._send_json(200, result)
@@ -833,13 +855,14 @@ def main():
         server.serve_forever()
         return
 
+    default_img = _resolve_sample_image("afk-nightmare-corridor-infernal-overlord-9.png")
     img_path = (
-        Path(args.image).expanduser().resolve()
+        _resolve_sample_image(args.image)
         if args.image
-        else (REPO_ROOT / "afk-nightmare-corridor-infernal-overlord-9.png").resolve()
+        else default_img
     )
-    if not img_path.is_file():
-        raise FileNotFoundError(f"Image not found: {img_path}")
+    if not img_path or not img_path.is_file():
+        raise FileNotFoundError(f"Image not found: {args.image or 'default sample image'}")
 
     result = recognize_image_bytes(img_path.read_bytes())
     print(format_cli_report(result, image_label=img_path.name))

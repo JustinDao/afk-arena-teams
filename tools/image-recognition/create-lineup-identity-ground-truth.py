@@ -367,7 +367,7 @@ def main():
         "collection_node_annotations": collection_node_annotations,
     }
     output_path = (
-        repo_root / "tools" / "pet-matcher-lab" / "lineup-9-identity-ground-truth.json"
+        repo_root / "tools" / "image-recognition" / "lineup-9-identity-ground-truth.json"
     )
     output_path.write_text(
         json.dumps(output, indent=2, ensure_ascii=False) + "\n",

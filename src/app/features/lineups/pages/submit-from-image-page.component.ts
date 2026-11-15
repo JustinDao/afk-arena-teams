@@ -152,12 +152,12 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
   },
   {
     id: 'crop-round-4',
-    path: 'tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png',
+    path: 'tools/image-recognition/pilot-images/pilot-nightmare-round-4.png',
     label: 'Single-Round Crop — Round 4 Ashen Prophet',
   },
   {
     id: 'crop-nc-round-3',
-    path: 'tools/pet-matcher-lab/pilot-images/pilot-nc-round-3.png',
+    path: 'tools/image-recognition/pilot-images/pilot-nc-round-3.png',
     label: 'Single-Round Staggered Crop — Round 3 Demonic Puppet',
   },
 ];

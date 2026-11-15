@@ -2208,6 +2208,24 @@ def match_ground_truth(predictions, annotations, minimum_iou):
     }
 
 
+def _resolve_image_path(repo_root: Path, name: str) -> Path:
+    raw = Path(name)
+    if raw.is_file():
+        return raw.resolve()
+    for base in [
+        repo_root,
+        repo_root / "tools" / "image-recognition" / "sample-images",
+        repo_root / "tools" / "image-recognition" / "pilot-images",
+    ]:
+        p = (base / name).resolve()
+        if p.is_file():
+            return p
+        p_name = (base / raw.name).resolve()
+        if p_name.is_file():
+            return p_name
+    return (repo_root / "tools" / "image-recognition" / "sample-images" / raw.name).resolve()
+
+
 def run_all_guides_benchmark(
     repo_root,
     lab_dir,
@@ -2228,7 +2246,7 @@ def run_all_guides_benchmark(
     # 1. App Export (held-out fold-3)
     t0 = time.time()
     m3 = YOLO(str(runs_dir / "fold-3/weights/last.pt"))
-    p_app = repo_root / "afk-nightmare-corridor-infernal-overlord-9.png"
+    p_app = _resolve_image_path(repo_root, "afk-nightmare-corridor-infernal-overlord-9.png")
     img_app = cv2.imread(str(p_app))
     teams_app = detect_and_assemble_teams_for_image(
         img_app,
@@ -2265,7 +2283,7 @@ def run_all_guides_benchmark(
     # 2. 6-Round Community Guide (lydydxhxpyyh1, held-out fold-2)
     t0 = time.time()
     m2 = YOLO(str(runs_dir / "fold-2/weights/best.pt"))
-    p_lyd = repo_root / "lydydxhxpyyh1.png"
+    p_lyd = _resolve_image_path(repo_root, "lydydxhxpyyh1.png")
     img_lyd = cv2.imread(str(p_lyd))
     teams_lyd = detect_and_assemble_teams_for_image(
         img_lyd,
@@ -2311,7 +2329,7 @@ def run_all_guides_benchmark(
     # 3. Full F2P Staggered Guide (held-out fold-1)
     t0 = time.time()
     m1 = YOLO(str(runs_dir / "fold-1/weights/best.pt"))
-    p_f2p = repo_root / "f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp"
+    p_f2p = _resolve_image_path(repo_root, "f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp")
     img_f2p = cv2.imread(str(p_f2p))
     teams_f2p = detect_and_assemble_teams_for_image(
         img_f2p,
@@ -2421,7 +2439,7 @@ def parse_args(repo_root, lab_dir):
     parser.add_argument(
         "--image",
         type=Path,
-        default=repo_root / "afk-nightmare-corridor-infernal-overlord-9.png",
+        default=_resolve_image_path(repo_root, "afk-nightmare-corridor-infernal-overlord-9.png"),
         help="Image to detect and match.",
     )
     parser.add_argument(
@@ -2610,7 +2628,7 @@ def main():
     )
     assembled_formations = teams_to_seed_formations(solved_teams)
 
-    known_image_path = (repo_root / "afk-nightmare-corridor-infernal-overlord-9.png").resolve()
+    known_image_path = _resolve_image_path(repo_root, "afk-nightmare-corridor-infernal-overlord-9.png")
     ground_truth_path = lab_dir / "lineup-9-identity-ground-truth.json"
     known_ground_truth = (
         json.loads(ground_truth_path.read_text(encoding="utf-8"))

@@ -135,7 +135,7 @@ def main():
         type=Path,
         default=repo_root
         / "tools"
-        / "pet-matcher-lab"
+        / "image-recognition"
         / "detector-training-resolution-results.json",
     )
     args = parser.parse_args()
@@ -290,7 +290,7 @@ def main():
         )
 
     prior_resolution_path = (
-        repo_root / "tools" / "pet-matcher-lab" / "detector-resolution-results.json"
+        repo_root / "tools" / "image-recognition" / "detector-resolution-results.json"
     )
     prior_resolution = json.loads(prior_resolution_path.read_text(encoding="utf-8"))
     baseline_by_size = {

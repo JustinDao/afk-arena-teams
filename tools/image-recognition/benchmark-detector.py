@@ -78,7 +78,7 @@ def parse_args():
     parser.add_argument(
         "--output",
         type=Path,
-        default=repo_root / "tools" / "pet-matcher-lab" / "detector-benchmark-results.json",
+        default=repo_root / "tools" / "image-recognition" / "detector-benchmark-results.json",
         help="Path for the machine-readable benchmark report.",
     )
     parser.add_argument(

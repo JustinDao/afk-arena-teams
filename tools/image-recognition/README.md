@@ -7,7 +7,7 @@ A dependency-free, local browser workbench for building a labeled pet-crop datas
 Open `index.html` in a modern browser, or serve this directory locally:
 
 ```sh
-python3 -m http.server 8173 --bind 127.0.0.1 --directory tools/pet-matcher-lab
+python3 -m http.server 8173 --bind 127.0.0.1 --directory tools/image-recognition
 ```
 
 Then open `http://localhost:8173`. The local COCO annotator is at `http://localhost:8173/coco-annotator.html`.
@@ -45,7 +45,7 @@ Use the COCO object-detection annotation format and the official `pycocotools` e
 Open [the local COCO icon annotator](./coco-annotator.html) from the lab server to label the available guides. It stores image blobs and boxes in a separate IndexedDB database, keeps a source-group key for grouped folds, and exports COCO JSON; the image pixels are not included in the exported JSON. The pure COCO serializer has dependency-free checks:
 
 ```sh
-node --test tools/pet-matcher-lab/tests/coco-dataset.test.mjs tools/pet-matcher-lab/tests/pilot-dataset.test.mjs
+node --test tools/image-recognition/tests/coco-dataset.test.mjs tools/image-recognition/tests/pilot-dataset.test.mjs
 ```
 
 ### Annotation contract
@@ -69,8 +69,8 @@ The runner converts each training fold to YOLO format, fine-tunes YOLO11n, and e
 
 ```sh
 uv venv --python 3.14 "$HOME/.cache/afk-icon-detector-benchmark/.venv"
-uv pip install --python "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" --torch-backend cpu -r tools/pet-matcher-lab/requirements-detector-benchmark.txt
-"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" tools/pet-matcher-lab/benchmark-detector.py
+uv pip install --python "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" --torch-backend cpu -r tools/image-recognition/requirements-detector-benchmark.txt
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" tools/image-recognition/benchmark-detector.py
 ```
 
 The first run downloads the pretrained `yolo11n.pt` weights. Training data, checkpoints, and logs stay under the cache directory; the machine-readable COCO metrics are written to [`detector-benchmark-results.json`](./detector-benchmark-results.json). The runner fixes the seed at 2026, trains for 10 epochs at 640 pixels, uses a 640-pixel SAHI slice with 20% overlap, and evaluates only each fold's held-out source group.
@@ -132,7 +132,7 @@ To check whether training resolution caused the near-native inference behavior, 
 The app-export screenshot is aligned with lineup ID 9. Its 66 identity labels and expected hero/collection states are reconstructed from the seeded formations and mapped to visual slot order in [`lineup-9-identity-ground-truth.json`](./lineup-9-identity-ground-truth.json). Three hero state labels have screenshot-reviewed overrides because the seed omits ascension or investment details: Rowan is `52_a1_si30.webp` rather than the inferred `52_m_si30.webp`; Awakened Safiya is `165_a1_si30_f9_e60.webp` rather than `165_a.webp`; and Highborn Lan is `199_a1_si40_f9.webp` rather than `199_a_si40_f9.webp`. The source seed remains unchanged, and each override is marked in the generated annotations.
 
 ```sh
-"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" tools/pet-matcher-lab/match-lineup-identities.py
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" tools/image-recognition/match-lineup-identities.py
 ```
 
 For identity retrieval, it evaluates center-crop RGB mean-squared pixel distance after resizing to 96×96. Per-type results were:
@@ -157,7 +157,7 @@ Run the app-held-out YOLO fold, pass each detected crop to the multi-scale inner
 
 ```sh
 "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" \
-  tools/pet-matcher-lab/detect-and-match-lineup.py
+  tools/image-recognition/detect-and-match-lineup.py
 ```
 
 By default this uses the saved fold-3 weights, near-native `imgsz=2080`, confidence `0.996`, and NMS IoU `0.55`. The matcher expands each detected box 1.15× around its center (configurable with `--match-box-scale`), while evaluation continues to use the original detector boxes.
@@ -176,7 +176,7 @@ To run the out-of-fold end-to-end team benchmark across all three guide layouts 
 
 ```sh
 "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" \
-  tools/pet-matcher-lab/detect-and-match-lineup.py --eval-all-guides
+  tools/image-recognition/detect-and-match-lineup.py --eval-all-guides
 ```
 
 | Guide image | Held-out fold | Layout archetype | Teams | Substitute Teams | Heroes | Collections | Collection Node Icons | Pets |
@@ -201,7 +201,7 @@ Per-box predictions, assembled teams, and `seed.sql`-compatible `formations` are
 ```sh
 # CLI report on any full guide or single-round crop:
 "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py afk-nightmare-corridor-infernal-overlord-9.png
-"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py tools/pet-matcher-lab/pilot-images/pilot-nightmare-round-4.png
+"$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py tools/image-recognition/pilot-images/pilot-nightmare-round-4.png
 
 # Launch the interactive Web UI + local API server (also serves Angular /import-helper):
 "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python" api/recognize-lineup.py --serve --port 8174
