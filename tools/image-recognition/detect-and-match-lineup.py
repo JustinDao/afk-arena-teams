@@ -33,6 +33,246 @@ def integer_bbox(xyxy, image_shape):
     return [left, top, right - left, bottom - top]
 
 
+_INV_TEMPLATE_CACHE = None
+
+
+def _load_investment_templates():
+    """Load canonical SI/Furniture/Engraving badge and glyph templates from disk."""
+    global _INV_TEMPLATE_CACHE
+    if _INV_TEMPLATE_CACHE is not None:
+        return _INV_TEMPLATE_CACHE
+
+    tmpl_dir = Path(__file__).resolve().parent / "assets" / "investment-templates"
+    if not tmpl_dir.is_dir():
+        _INV_TEMPLATE_CACHE = {}
+        return _INV_TEMPLATE_CACHE
+
+    si = {}
+    for val in (20, 30, 40):
+        p = tmpl_dir / f"si_{val}.png"
+        if p.is_file():
+            si[val] = cv2.imread(str(p))
+
+    furn = {}
+    for val in (3, 9, 12):
+        p = tmpl_dir / f"furn_{val}.png"
+        if p.is_file():
+            furn[val] = cv2.imread(str(p))
+
+    eng = {}
+    for val in (30, 60):
+        p = tmpl_dir / f"eng_{val}.png"
+        if p.is_file():
+            eng[val] = cv2.imread(str(p))
+
+    glyphs = {}
+    for p in sorted(tmpl_dir.glob("glyph_*.png")):
+        ch = p.stem.split("_", 1)[1]
+        glyphs[ch] = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+
+    h_t, w_t = 32, 34
+    dmask = np.zeros((h_t, w_t), dtype=np.uint8)
+    cv2.fillPoly(
+        dmask,
+        [np.array([[w_t // 2, 4], [w_t - 4, h_t // 2], [w_t // 2, h_t - 4], [4, h_t // 2]])],
+        255,
+    )
+
+    _INV_TEMPLATE_CACHE = {
+        "si": si,
+        "furn": furn,
+        "eng": eng,
+        "glyphs": glyphs,
+        "dmask": dmask,
+    }
+    return _INV_TEMPLATE_CACHE
+
+
+def _white_feature(bgr):
+    b = bgr[:, :, 0].astype(np.float32)
+    g = bgr[:, :, 1].astype(np.float32)
+    r = bgr[:, :, 2].astype(np.float32)
+    lum = 0.114 * b + 0.587 * g + 0.299 * r
+    return np.clip((lum - 165.0) / 90.0, 0.0, 1.0)
+
+
+def _match_investment_badge(region, templates, dmask, min_score=0.45, digit_weight=0.35):
+    if not templates or region.shape[0] < dmask.shape[0] or region.shape[1] < dmask.shape[1]:
+        return 0, 0.0
+    h_t, w_t = dmask.shape
+    best_val, best_score = 0, -1.0
+    for val, tmpl in templates.items():
+        res_bgr = cv2.matchTemplate(region, tmpl, cv2.TM_CCOEFF_NORMED, mask=dmask)
+        res_bgr = np.where(np.isfinite(res_bgr) & (res_bgr <= 1.0), res_bgr, -1.0)
+        _, max_v, _, max_loc = cv2.minMaxLoc(res_bgr)
+        mx, my = max_loc
+        patch = region[my : my + h_t, mx : mx + w_t]
+        wf_p = _white_feature(patch)
+        wf_t = _white_feature(tmpl)
+        if wf_p.std() > 1e-4 and wf_t.std() > 1e-4:
+            mask_bool = dmask > 0
+            pm = wf_p - wf_p.mean()
+            tm = wf_t - wf_t.mean()
+            num = float(np.sum(pm * tm * mask_bool))
+            den = float(np.sqrt(np.sum((pm ** 2) * mask_bool) * np.sum((tm ** 2) * mask_bool))) + 1e-6
+            w_corr = num / den
+        else:
+            w_corr = 0.0
+        combined = (1.0 - digit_weight) * float(max_v) + digit_weight * w_corr
+        if combined > best_score:
+            best_score = combined
+            best_val = val
+    if best_score < min_score:
+        return 0, best_score
+    return best_val, best_score
+
+
+def _extract_below_icon_engraving(img, hbox, glyphs, en_tier=0):
+    """Parse E## engraving text rendered directly below a hero icon."""
+    if "E" not in glyphs:
+        return None
+    x, y, w, bh = hbox
+    if w <= 0 or bh <= 0:
+        return None
+    ty0 = max(0, int(y + 1.15 * bh))
+    ty1 = min(img.shape[0], int(y + 1.54 * bh))
+    tx0 = max(0, int(x - 0.15 * w))
+    tx1 = min(img.shape[1], int(x + 1.15 * w))
+    if ty1 <= ty0 or tx1 <= tx0:
+        return None
+
+    tcrop = img[ty0:ty1, tx0:tx1]
+    if w != 140:
+        scale = 140.0 / float(w)
+        tcrop = cv2.resize(
+            tcrop,
+            (max(1, round(tcrop.shape[1] * scale)), max(1, round(tcrop.shape[0] * scale))),
+            interpolation=cv2.INTER_LINEAR,
+        )
+
+    b, g, r = tcrop[:, :, 0], tcrop[:, :, 1], tcrop[:, :, 2]
+    gray = cv2.cvtColor(tcrop, cv2.COLOR_BGR2GRAY)
+    white = (
+        (r > 190) & (g > 190) & (b > 190) & (np.abs(r.astype(int) - b.astype(int)) < 40)
+    ).astype(np.uint8) * 255
+    n_lbl, _, stats, _ = cv2.connectedComponentsWithStats(white)
+    chars = []
+    for k in range(1, n_lbl):
+        cx, cy, cw, ch, area = stats[k]
+        if 10 <= ch <= 24 and 2 <= cw <= 18 and area >= 15:
+            patch = gray[cy : cy + ch, cx : cx + cw].astype(np.float32)
+            pmin, pmax = float(patch.min()), float(patch.max())
+            if pmax > pmin:
+                patch = (patch - pmin) / (pmax - pmin)
+            else:
+                patch = patch / 255.0
+            glyph = cv2.resize(patch, (16, 28), interpolation=cv2.INTER_CUBIC)
+            chars.append((cx, cy, glyph))
+    if len(chars) < 3:
+        return None
+
+    min_y = min(c[1] for c in chars)
+    line1 = sorted([c for c in chars if abs(c[1] - min_y) <= 8], key=lambda c: c[0])
+    if len(line1) < 3:
+        return None
+
+    def _match_ch(g_img, allowed):
+        gf = g_img.astype(np.float32)
+        if gf.max() > 1.5:
+            gf = gf / 255.0
+        gm = gf - gf.mean()
+        g_norm = float(np.sum(gm ** 2))
+        if g_norm < 1e-6:
+            return None, 0.0
+        best_c, best_s = None, -1.0
+        for ch_key in allowed:
+            tmpl = glyphs.get(ch_key)
+            if tmpl is None:
+                continue
+            tf = tmpl.astype(np.float32) / 255.0
+            tm = tf - tf.mean()
+            den = float(np.sqrt(g_norm * np.sum(tm ** 2))) + 1e-6
+            ncc = float(np.sum(gm * tm)) / den
+            mse = float(np.mean((gf - tf) ** 2))
+            sc = 0.60 * ncc + 0.40 * (1.0 - 2.0 * mse)
+            if sc > best_s:
+                best_s = sc
+                best_c = ch_key
+        return best_c, best_s
+
+    c0, s0 = _match_ch(line1[0][2], ["E"])
+    if c0 != "E" or s0 < 0.55:
+        return None
+    digits = [k for k in glyphs if k.isdigit()]
+    tens_allowed = [d for d in digits if int(d) >= (6 if en_tier >= 60 else 3)]
+    c1, s1 = _match_ch(line1[1][2], tens_allowed or digits)
+    c2, s2 = _match_ch(line1[2][2], digits)
+    if c1 is None or c2 is None or s1 < 0.50 or s2 < 0.50:
+        return None
+    return int(c1 + c2)
+
+
+def detect_hero_investment(img, hbox):
+    """Detect hero SI, furniture, and engraving from bottom badges and below-icon E## text."""
+    tmpls = _load_investment_templates()
+    if not tmpls:
+        return None
+
+    x, y, w, bh = hbox
+    if w <= 0 or bh <= 0:
+        return None
+
+    y0 = max(0, int(y + 0.72 * bh))
+    y1 = min(img.shape[0], int(y + 1.28 * bh))
+    x0 = max(0, int(x - 0.18 * w))
+    x1 = min(img.shape[1], int(x + 1.18 * w))
+    if y1 <= y0 or x1 <= x0:
+        return None
+
+    strip = img[y0:y1, x0:x1]
+    if w != 140:
+        scale = 140.0 / float(w)
+        strip = cv2.resize(
+            strip,
+            (max(1, round(strip.shape[1] * scale)), max(1, round(strip.shape[0] * scale))),
+            interpolation=cv2.INTER_LINEAR,
+        )
+
+    sw = strip.shape[1]
+    if sw < 160:
+        return None
+
+    dmask = tmpls["dmask"]
+    si_val, si_sc = _match_investment_badge(
+        strip[:, : min(82, sw)], tmpls["si"], dmask, min_score=0.45, digit_weight=0.30
+    )
+    fn_val, fn_sc = _match_investment_badge(
+        strip[:, min(54, sw) : min(136, sw)], tmpls["furn"], dmask, min_score=0.44, digit_weight=0.50
+    )
+    en_tier, en_sc = _match_investment_badge(
+        strip[:, min(108, sw) : sw], tmpls["eng"], dmask, min_score=0.45, digit_weight=0.30
+    )
+
+    # Require at least one confident badge so non-badge screenshots don't false-positive.
+    if si_val == 0 and fn_val == 0 and en_tier == 0:
+        return None
+
+    en_override = (
+        _extract_below_icon_engraving(img, hbox, tmpls["glyphs"], en_tier=en_tier)
+        if en_tier > 0
+        else None
+    )
+    eng_val = en_override if en_override is not None else en_tier
+    code = f"{si_val:02d}{fn_val}e{eng_val}"
+    return {
+        "si": si_val,
+        "furn": fn_val,
+        "eng": eng_val,
+        "code": code,
+        "confidence": round(max(si_sc, fn_sc, en_sc), 3),
+    }
+
+
 def expand_bbox(bbox, image_shape, scale):
     image_height, image_width = image_shape[:2]
     x, y, width, height = bbox
@@ -236,7 +476,14 @@ def assemble_row_5_col_team(img, norm_boxes, round_num=1):
     h_w = 140
     c_w = 98
     h_y = int(np.median([b[1] for b in hero_band])) if hero_band else 160
-    c_y = int(np.median([b[1] for b in coll_band])) if coll_band else 400
+    coll_candidates = [
+        b
+        for b in boxes
+        if 80 <= b[2] <= 120 and (h_y + 150) <= b[1] <= (h_y + 340)
+    ]
+    if coll_candidates:
+        coll_band = sorted(coll_candidates, key=lambda b: b[0])
+    c_y = int(np.median([b[1] for b in coll_band])) if coll_band else (h_y + 240)
 
     all_cxs = [b[0] + b[2] / 2.0 for b in hero_band + coll_band]
     best_grid = None
@@ -669,6 +916,8 @@ def solve_teams(
                         "nodes": nodes_found,
                     }
 
+            inv_result = detect_hero_investment(img, hbox)
+
             team_heroes.append(
                 {
                     "slot": s_idx,
@@ -683,6 +932,7 @@ def solve_teams(
                     "top3": h_top3,
                     "visual_alternatives": h_visual_alts,
                     "collection": coll_result,
+                    "investment": inv_result,
                 }
             )
 
@@ -1058,6 +1308,8 @@ def teams_to_seed_formations(solved_teams):
                     slot_counter += 1
                 coll_obj = {"catalog": coll["catalog"], "nodes": nodes_list}
             hero_entry = {"slug": h["slug"], "collection": coll_obj}
+            if h.get("investment") and h["investment"].get("code"):
+                hero_entry["investment"] = h["investment"]["code"]
             if h.get("slot_options") and len(h["slot_options"]) > 1:
                 hero_entry["alternatives"] = h["slot_options"][1:]
             heroes_out.append(hero_entry)

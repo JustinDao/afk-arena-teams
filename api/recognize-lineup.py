@@ -360,9 +360,11 @@ def format_cli_report(result, image_label=""):
                 if len(slot_opts) > 1
                 else ""
             )
+            inv = h.get("investment")
+            inv_str = f" [{inv['code']}]" if inv and inv.get("code") else ""
             rev_flag = " [REVIEW]" if h.get("needs_review") or coll.get("needs_review") else ""
             lines.append(
-                f"    Slot {h['slot'] + 1}: {h['name']:<22} ({h['slug']:<20}) "
+                f"    Slot {h['slot'] + 1}: {h['name']:<22} ({h['slug']:<20}){inv_str:<10} "
                 f"| {c_name:<26}{node_str:<22} "
                 f"| visual alts: {', '.join(h_vis)}{slot_alt_str}{rev_flag}"
             )
