@@ -204,7 +204,7 @@ def main():
     repo_root = Path(__file__).resolve().parents[2]
     seed_sql = (repo_root / "seed.sql").read_text(encoding="utf-8")
     schema_sql = (repo_root / "schema.sql").read_text(encoding="utf-8")
-    dataset_path = repo_root / "afk-icon-pilot-coco.json"
+    dataset_path = repo_root / "tools" / "image-recognition" / "afk-icon-pilot-coco.json"
     dataset = json.loads(dataset_path.read_text(encoding="utf-8"))
     heroes = simple_catalog(schema_sql, "heroes")
     pets = simple_catalog(schema_sql, "pets")
@@ -212,7 +212,11 @@ def main():
     formations = extract_lineup(seed_sql)
 
     image = next(
-        (item for item in dataset["images"] if item["file_name"] == IMAGE_NAME),
+        (
+            item
+            for item in dataset["images"]
+            if item["file_name"] == IMAGE_NAME or item["file_name"].endswith("/" + IMAGE_NAME)
+        ),
         None,
     )
     if image is None:

@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=repo_root / "afk-icon-pilot-coco.json",
+        default=repo_root / "tools" / "image-recognition" / "afk-icon-pilot-coco.json",
         help="COCO annotation JSON (default: repository pilot dataset).",
     )
     parser.add_argument(

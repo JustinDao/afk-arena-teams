@@ -59,7 +59,7 @@ node --test tools/image-recognition/tests/coco-dataset.test.mjs tools/image-reco
 
 ### Current pilot annotations
 
-The initial pilot is in [`afk-icon-pilot-coco.json`](../../afk-icon-pilot-coco.json), with its coordinate source in [`create-pilot-dataset.mjs`](./create-pilot-dataset.mjs) and extracted guide crops in [`pilot-images/`](./pilot-images/). It contains 168 boxes across 10 images and three `source_group` values. The large guides are cropped to their primary lineup recommendations so roster tables, screenshots, and tips are not silently treated as negatives.
+The initial pilot is in [`afk-icon-pilot-coco.json`](./afk-icon-pilot-coco.json), with its coordinate source in [`create-pilot-dataset.mjs`](./create-pilot-dataset.mjs) and extracted guide crops in [`pilot-images/`](./pilot-images/). It contains 168 boxes across 10 images and three `source_group` values. The large guides are cropped to their primary lineup recommendations so roster tables, screenshots, and tips are not silently treated as negatives.
 
 These are best-effort visual labels and should be reviewed before interpreting detector metrics. The app export uses all six displayed lineups; the other two sources use crops of their primary lineup/collection panels. This small, three-source pilot is for workflow validation, not a representative benchmark. Keep all crops from a source guide in the same fold.
 

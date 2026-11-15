@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 const repositoryRoot = new URL('../../../', import.meta.url);
-const dataset = JSON.parse(await readFile(new URL('../../../afk-icon-pilot-coco.json', import.meta.url), 'utf8'));
+const dataset = JSON.parse(await readFile(new URL('../afk-icon-pilot-coco.json', import.meta.url), 'utf8'));
 
 test('pilot COCO dataset references valid PNGs and source-grouped lineup crops', async () => {
   assert.equal(dataset.images.length, 10);

@@ -29,7 +29,7 @@ function appExportBoxes() {
 const records = [
   {
     id: 'infernal-overlord-app-export',
-    fileName: 'afk-nightmare-corridor-infernal-overlord-9.png',
+    fileName: 'tools/image-recognition/sample-images/afk-nightmare-corridor-infernal-overlord-9.png',
     width: 2040,
     height: 2082,
     sourceGroup: 'nightmare-corridor-app-export',
@@ -164,6 +164,6 @@ const records = [
 
 const dataset = createCocoDataset(records);
 await writeFile(
-  new URL('../../afk-icon-pilot-coco.json', import.meta.url),
+  new URL('./afk-icon-pilot-coco.json', import.meta.url),
   `${JSON.stringify(dataset, null, 2)}\n`,
 );
