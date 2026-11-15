@@ -80,6 +80,8 @@
 
 html {
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   scroll-padding-top: env(safe-area-inset-top, 0px);
 }
 
@@ -91,8 +93,10 @@ html {
 
 body {
   min-width: 320px;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0;
+  overflow-x: clip;
   background: var(--app-bg);
   color: var(--app-ink);
   font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -108,6 +112,13 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+button,
+a.btn,
+.tab,
+.chip {
+  touch-action: manipulation;
 }
 
 button:not(.tab):not(.formation-slot):not(.collection-choice):not(.icon-filter-button):not(.hero-pick):not(.hero-box-tile) {
@@ -131,4 +142,15 @@ select {
 :focus-visible {
   outline: 2px solid var(--app-primary);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

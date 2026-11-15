@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, ViewEncap
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from '@supabase/supabase-js';
 import { filter } from 'rxjs';
 import { MODE_PATHS } from './app.routes';
@@ -19,7 +19,7 @@ type ThemeMode = 'system' | 'light' | 'dark';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CdkTrapFocus, MatButtonModule, ReactiveFormsModule, RouterLink, RouterOutlet],
+  imports: [CdkTrapFocus, MatButtonModule, ReactiveFormsModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   encapsulation: ViewEncapsulation.None,

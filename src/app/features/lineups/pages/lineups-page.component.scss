@@ -13,13 +13,104 @@
   display: flex;
   flex-direction: column;
   gap: var(--app-space-3);
-  margin: var(--app-space-4) 0;
+  margin: var(--app-space-4) 0 var(--app-space-3);
+  padding: var(--app-space-3) var(--app-space-4);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-panel);
+}
+
+.toolbar-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+}
+
+.toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-3);
+  flex: 1 1 auto;
+}
+
+.sort-select {
+  margin-left: auto;
+}
+
+.roster-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-3);
+  padding-top: var(--app-space-3);
+  border-top: 1px solid var(--app-line);
+}
+
+.roster-toggle {
+  font-weight: 600;
+}
+
+.roster-hint {
+  color: var(--app-muted);
+  font-size: 0.84rem;
 }
 
 .chip {
   padding: var(--app-space-1) var(--app-space-3);
   border: 1px solid var(--app-line);
   border-radius: 999px;
-  background: var(--app-panel);
+  background: var(--app-bg);
   font-size: 0.85rem;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-2);
+  margin-bottom: var(--app-space-3);
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.clear-filters {
+  font-size: 0.8rem;
+}
+
+.empty-message {
+  margin: 0 0 var(--app-space-3);
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+}
+
+.skeleton-card {
+  height: 176px;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: linear-gradient(
+    90deg,
+    var(--app-panel) 25%,
+    var(--app-panel-variant) 50%,
+    var(--app-panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

@@ -1,5 +1,7 @@
 app-root {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -19,7 +21,8 @@ app-root {
   gap: var(--app-space-3);
   padding: var(--app-space-3) var(--app-space-4);
   border-bottom: 1px solid var(--app-line);
-  background: var(--app-bg);
+  background: color-mix(in srgb, var(--app-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .brand h1,
@@ -43,6 +46,8 @@ h3,
 }
 
 .top-actions,
+.primary-nav,
+.utility-actions,
 .row-wrap {
   display: flex;
   flex-wrap: wrap;
@@ -50,10 +55,22 @@ h3,
   gap: var(--app-space-2);
 }
 
+.utility-actions {
+  padding-left: var(--app-space-2);
+  border-left: 1px solid var(--app-line);
+}
+
 .btn {
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-sm);
   background: var(--app-panel);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.btn.active:not(.primary) {
+  border-color: var(--app-primary);
+  background: color-mix(in srgb, var(--app-primary) 12%, var(--app-panel));
+  color: var(--app-ink);
 }
 
 .btn:hover:not(:disabled),
@@ -74,11 +91,15 @@ h3,
 
 .modes {
   display: flex;
+  max-width: 100%;
+  min-width: 0;
   overflow-y: hidden;
   overflow-x: auto;
   gap: var(--app-space-1);
   padding-inline: var(--app-space-3);
   border-bottom: 1px solid var(--app-line);
+  background: var(--app-panel);
+  scroll-snap-type: x proximity;
   scrollbar-color: var(--app-primary) transparent;
   scrollbar-width: thin;
 }
@@ -94,12 +115,18 @@ h3,
 
 .tab {
   flex: 0 0 auto;
+  scroll-snap-align: start;
   padding: var(--app-space-3) var(--app-space-3) var(--app-space-2);
   border-bottom: 3px solid transparent;
   border-radius: 0;
   color: var(--app-muted);
   font-size: 0.9375rem;
   font-weight: 600;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--app-ink);
 }
 
 .tab[aria-selected='true'] {
@@ -514,6 +541,13 @@ footer {
   background: var(--app-ink);
   color: var(--app-bg);
   font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .utility-actions {
+    padding-left: 0;
+    border-left: 0;
+  }
 }
 
 @media (max-width: 430px) {

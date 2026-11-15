@@ -200,232 +200,128 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
         <div>
           <h2>Import lineup from image</h2>
           <p class="subtitle">
-            Upload a lineup screenshot or guide to detect the best matching mode, boss cycle, formations, heroes, pets, and collections — plus suggested alternatives for every slot.
+            Upload a lineup screenshot or guide to detect the mode, boss cycle, formations, heroes, pets, and collections.
           </p>
         </div>
         <div class="header-actions">
+          @if (hasLoadedWorkspace()) {
+            <button mat-button type="button" class="btn" (click)="resetToUpload()">Change image</button>
+          }
           <a mat-button class="btn" routerLink="/submit">Back to submit form</a>
-          <button
-            mat-flat-button
-            type="button"
-            class="btn primary apply-draft-btn"
-            [disabled]="!hasAnyHero()"
-            (click)="applyToSubmitForm()">
-            Use lineup in submit form
-          </button>
         </div>
       </header>
 
-      <section class="panel upload-bar">
-        <label class="field file-field">
-          <span>Upload screenshot or guide image(s)</span>
-          <input type="file" accept="image/*" multiple (change)="onFileSelected($event)" />
-        </label>
-        <div class="sample-picker">
-          <label class="field">
-            <span>Or test with a sample guide image</span>
-            <select [value]="selectedSamplePath()" (change)="selectedSamplePath.set(inputValue($event))">
-              @for (sample of sampleOptions; track sample.id) {
-                <option [value]="sample.path">{{ sample.label }}</option>
-              }
-            </select>
+      @if (!hasLoadedWorkspace()) {
+        <section class="panel upload-stage">
+          <label class="field file-field upload-dropzone">
+            <span class="upload-title">Upload screenshot or guide image(s)</span>
+            <span class="muted">PNG, JPG, or WebP — supports multi-round guides</span>
+            <input type="file" accept="image/*" multiple (change)="onFileSelected($event)" />
           </label>
-          <button
-            mat-stroked-button
-            type="button"
-            class="btn load-sample-btn"
-            [disabled]="analyzing()"
-            (click)="analyzeSampleGuide(selectedSamplePath())">
-            {{ analyzing() ? 'Analyzing…' : 'Analyze sample guide' }}
-          </button>
-        </div>
-        @if (imageUrl()) {
-          <button
-            mat-flat-button
-            type="button"
-            class="btn primary"
-            [disabled]="analyzing()"
-            (click)="analyzeUploadedImage()">
-            {{ analyzing() ? 'Analyzing…' : 'Re-analyze image' }}
-          </button>
-        }
-        @if (statusMessage()) {
-          <p class="status-banner" role="status">{{ statusMessage() }}</p>
-        }
-      </section>
-
-      <section class="panel match-summary-grid">
-        <div class="summary-card">
-          <div class="summary-head">
-            <h3>1. Game mode &amp; target</h3>
-            @if (bestMode(); as bm) {
-              @if (bm.mode_slug === selectedModeSlug()) {
-                <span class="conf-badge ok">Auto-matched ({{ (bm.confidence * 100).toFixed(1) }}%)</span>
-              } @else {
-                <span class="conf-badge warn">Manual override ({{ currentModeConfig().short }})</span>
-              }
-            }
-          </div>
-          <div class="seg mode-seg-bar" role="group" aria-label="Game mode">
-            @for (m of store.modes(); track m.slug) {
-              <button
-                mat-button
-                type="button"
-                class="seg-btn"
-                [attr.aria-pressed]="m.slug === selectedModeSlug()"
-                (click)="onModeSelect(m.slug)">
-                {{ m.short }} · {{ m.name }}
-              </button>
-            }
-          </div>
-          <p class="rules-text">{{ currentModeConfig().rules }}</p>
-          <div class="mode-target-controls">
-            <label class="field">
-              <span>Game mode</span>
-              <select [value]="selectedModeSlug()" (change)="onModeSelect(inputValue($event))">
-                @for (m of store.modes(); track m.slug) {
-                  <option [value]="m.slug" [selected]="m.slug === selectedModeSlug()">{{ m.name }}</option>
+          <div class="upload-divider" aria-hidden="true"><span>or</span></div>
+          <div class="sample-picker">
+            <label class="field sample-select-field">
+              <span>Test with a sample guide image</span>
+              <select [value]="selectedSamplePath()" (change)="selectedSamplePath.set(inputValue($event))">
+                @for (sample of sampleOptions; track sample.id) {
+                  <option [value]="sample.path">{{ sample.label }}</option>
                 }
               </select>
             </label>
-            <label class="field">
-              <span>{{ currentModeConfig().targetLabel }}</span>
-              <select [value]="selectedTargetName()" (change)="onTargetSelect(inputValue($event))">
-                @for (t of currentModeConfig().targets; track t) {
-                  <option [value]="t" [selected]="t === selectedTargetName()">{{ t }}</option>
-                }
-              </select>
-            </label>
-            @if (currentModeConfig().variable; as variable) {
-              <label class="field">
-                <span>Number of teams ({{ variable.min }}–{{ variable.max }})</span>
-                <select [value]="teamCount()" (change)="onTeamCountChange(numberValue($event))">
-                  @for (cnt of variableTeamCounts(variable); track cnt) {
-                    <option [value]="cnt" [selected]="cnt === teamCount()">{{ cnt }} teams</option>
-                  }
-                </select>
-              </label>
-            }
+            <button
+              mat-flat-button
+              type="button"
+              class="btn primary load-sample-btn"
+              [disabled]="analyzing()"
+              (click)="analyzeSampleGuide(selectedSamplePath())">
+              {{ analyzing() ? 'Analyzing…' : 'Analyze sample guide' }}
+            </button>
           </div>
-          @if (bestMode(); as bm) {
-            @if (bm.reasons?.length && bm.mode_slug === selectedModeSlug()) {
-              <ul class="reason-list">
-                @for (reason of bm.reasons; track reason) {
-                  <li>{{ reason }}</li>
-                }
-              </ul>
-            }
+          @if (statusMessage()) {
+            <p class="status-banner" role="status">{{ statusMessage() }}</p>
           }
-          @if (modeAlternatives().length) {
-            <div class="alt-group">
-              <span class="alt-label">Detected mode / target candidates (click to switch):</span>
-              <div class="chip-row">
-                @if (bestMode(); as bm) {
-                  <button
-                    mat-button
-                    type="button"
-                    class="chip-btn"
-                    [class.active-candidate]="isCandidateActive(bm.mode_slug, bm.target_name)"
-                    (click)="applyModeCandidate(bm)">
-                    [Auto] {{ bm.mode_name }}: {{ bm.target_name }} ({{ (bm.confidence * 100).toFixed(0) }}%)
-                  </button>
-                }
-                @for (alt of modeAlternatives(); track alt.mode_slug + ':' + alt.target_slug) {
-                  <button
-                    mat-button
-                    type="button"
-                    class="chip-btn"
-                    [class.active-candidate]="isCandidateActive(alt.mode_slug, alt.target_name)"
-                    (click)="applyModeCandidate(alt)">
-                    {{ alt.mode_name }}: {{ alt.target_name }} ({{ (alt.confidence * 100).toFixed(0) }}%)
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
-
-        <div class="summary-card">
-          <div class="summary-head">
-            <h3>{{ selectedModeSlug() === 'treasure-scramble' ? '2. Closest matching known lineup & team alignment' : '2. Closest matching known lineup & round alignment' }}</h3>
-            @if (bestLineupMatch(); as bl) {
-              <span class="conf-badge ok">{{ (bl.similarity * 100).toFixed(1) }}% similarity</span>
-            }
-          </div>
-          @if (bestLineupMatch(); as bl) {
-            <p class="lineup-title"><strong>{{ bl.title }}</strong> (<code>{{ bl.id }}</code>)</p>
-            @if (bl.round_alignments?.length) {
-              <div class="round-alignment-list">
-                @for (ra of bl.round_alignments; track ra.image_round) {
-                  <span class="alignment-pill">
-                    {{ roundAlignmentPrefix(ra.image_round) }} → <strong>{{ ra.matched_formation_label }}</strong>
-                    ({{ ra.hero_overlap_count }}/5 heroes{{ ra.pet_matched ? ', pet ✓' : '' }})
-                  </span>
-                }
-              </div>
-            }
-          } @else {
-            <p class="muted">Upload or analyze an image to compare against known database lineups.</p>
-          }
-          @if (lineupAlternatives().length) {
-            <div class="alt-group">
-              <span class="alt-label">Other closest database lineups:</span>
-              <div class="chip-row">
-                @for (lAlt of lineupAlternatives(); track lAlt.id) {
-                  <button
-                    mat-button
-                    type="button"
-                    class="chip-btn"
-                    (click)="applyLineupCandidateMode(lAlt)">
-                    {{ lAlt.title }} ({{ (lAlt.similarity * 100).toFixed(0) }}%)
-                  </button>
-                }
-              </div>
-            </div>
-          }
-          @if (reviewSuggestions().length) {
-            <div class="review-box" role="region" aria-label="Suggested corrections">
-              <h4>Suggested corrections / review flags ({{ reviewSuggestions().length }})</h4>
-              <ul>
-                @for (sug of reviewSuggestions(); track $index) {
-                  <li>
-                    <strong>{{ selectedModeSlug() === 'treasure-scramble' ? 'Team ' + sug.round : 'Round ' + sug.round }} ({{ sug.formation_label }}) {{ sug.field }}:</strong>
-                    {{ sug.reason }}
-                  </li>
-                }
-              </ul>
-            </div>
-          }
-        </div>
-      </section>
-
-      <div class="workspace-grid">
-        <section class="panel preview-panel">
-          <h3>Uploaded image</h3>
-          @if (imageUrl(); as url) {
-            <div class="image-frame">
-              <img
-                #uploadedImg
-                [src]="url"
-                alt="Uploaded lineup guide"
-                (load)="onImageElementLoaded()" />
-            </div>
-          } @else {
-            <div class="empty-preview">
-              Choose a screenshot above or click <strong>Analyze sample guide</strong> to inspect and customize the extracted teams.
-            </div>
-          }
-          <label class="field notes-field">
-            <span>Lineup notes (copied to submit form)</span>
-            <textarea
-              rows="3"
-              [value]="notes()"
-              (input)="notes.set(inputValue($event))"
-              placeholder="Optional notes, kill times, or substitution tips…"></textarea>
-          </label>
         </section>
+      } @else {
+        <div class="workspace-grid">
+          <section class="panel preview-panel">
+            <div class="preview-head">
+              <h3>Uploaded image</h3>
+              @if (imageUrl()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="btn"
+                  [disabled]="analyzing()"
+                  (click)="analyzeUploadedImage()">
+                  {{ analyzing() ? 'Analyzing…' : 'Re-analyze' }}
+                </button>
+              }
+            </div>
+            @if (imageUrl(); as url) {
+              <div class="image-frame">
+                <img
+                  #uploadedImg
+                  [src]="url"
+                  alt="Uploaded lineup guide"
+                  (load)="onImageElementLoaded()" />
+              </div>
+            } @else {
+              <div class="empty-preview">
+                Sample guide analyzed. Use <strong>Change image</strong> above to upload your own screenshot.
+              </div>
+            }
+            @if (statusMessage()) {
+              <p class="status-banner" role="status">{{ statusMessage() }}</p>
+            }
+          </section>
 
-        <section class="panel editor-panel">
+          <section class="panel editor-panel">
+            <div class="editor-mode-bar" aria-label="Game mode and target">
+              <div class="mode-bar-main">
+                <div class="mode-bar-left">
+                  <div class="seg mode-seg-bar" role="group" aria-label="Game mode">
+                    @for (m of store.modes(); track m.slug) {
+                      <button
+                        mat-button
+                        type="button"
+                        class="seg-btn"
+                        [attr.aria-pressed]="m.slug === selectedModeSlug()"
+                        (click)="onModeSelect(m.slug)">
+                        {{ m.short }}
+                      </button>
+                    }
+                  </div>
+                  @if (bestMode(); as bm) {
+                    @if (bm.mode_slug === selectedModeSlug()) {
+                      <span class="conf-badge ok">Auto ({{ (bm.confidence * 100).toFixed(0) }}%)</span>
+                    } @else {
+                      <span class="conf-badge warn">Manual ({{ currentModeConfig().short }})</span>
+                    }
+                  }
+                </div>
+                <div class="mode-target-controls">
+                  <label class="field target-field">
+                    <span>{{ currentModeConfig().targetLabel }}</span>
+                    <select [value]="selectedTargetName()" (change)="onTargetSelect(inputValue($event))">
+                      @for (t of currentModeConfig().targets; track t) {
+                        <option [value]="t" [selected]="t === selectedTargetName()">{{ t }}</option>
+                      }
+                    </select>
+                  </label>
+                  @if (currentModeConfig().variable; as variable) {
+                    <label class="field teams-field">
+                      <span>Teams ({{ variable.min }}–{{ variable.max }})</span>
+                      <select [value]="teamCount()" (change)="onTeamCountChange(numberValue($event))">
+                        @for (cnt of variableTeamCounts(variable); track cnt) {
+                          <option [value]="cnt" [selected]="cnt === teamCount()">{{ cnt }} teams</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                </div>
+              </div>
+              <p class="rules-text" [title]="currentModeConfig().rules">{{ currentModeConfig().rules }}</p>
+            </div>
           @if (detectedLineupSets().length > 1) {
             <div class="alt-group lineup-sets-bar" role="group" aria-label="Detected lineup sets">
               <span class="alt-label">Detected lineups in image ({{ detectedLineupSets().length }}):</span>
@@ -548,12 +444,21 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
             }
           }
 
+          <label class="field notes-field">
+            <span>Lineup notes (copied to submit form)</span>
+            <textarea
+              rows="2"
+              [value]="notes()"
+              (input)="notes.set(inputValue($event))"
+              placeholder="Optional notes, kill times, or substitution tips…"></textarea>
+          </label>
+
           <div class="footer-actions">
             <a mat-button class="btn" routerLink="/submit">Cancel</a>
             <button
               mat-flat-button
               type="button"
-              class="btn primary"
+              class="btn primary apply-draft-btn"
               [disabled]="!hasAnyHero()"
               (click)="applyToSubmitForm()">
               Use lineup in submit form
@@ -561,6 +466,119 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
           </div>
         </section>
       </div>
+
+      @if (bestMode() || bestLineupMatch() || modeAlternatives().length || lineupAlternatives().length || reviewSuggestions().length) {
+        <details class="panel details-panel" [open]="reviewSuggestions().length > 0">
+          <summary class="details-summary">
+            <span class="details-title">Detection &amp; database match details</span>
+            <span class="details-badges">
+              @if (bestLineupMatch(); as bl) {
+                <span class="conf-badge ok">{{ bl.title }} ({{ (bl.similarity * 100).toFixed(1) }}%)</span>
+              }
+              @if (reviewSuggestions().length) {
+                <span class="conf-badge warn">{{ reviewSuggestions().length }} review flag{{ reviewSuggestions().length === 1 ? '' : 's' }}</span>
+              }
+            </span>
+          </summary>
+          <div class="match-summary-grid details-grid">
+            <div class="summary-card">
+              <div class="summary-head">
+                <h3>Detected mode candidates</h3>
+              </div>
+              @if (bestMode(); as bm) {
+                @if (bm.reasons?.length) {
+                  <ul class="reason-list">
+                    @for (reason of bm.reasons; track reason) {
+                      <li>{{ reason }}</li>
+                    }
+                  </ul>
+                }
+              }
+              @if (modeAlternatives().length) {
+                <div class="alt-group">
+                  <span class="alt-label">Detected mode / target candidates (click to switch):</span>
+                  <div class="chip-row">
+                    @if (bestMode(); as bm) {
+                      <button
+                        mat-button
+                        type="button"
+                        class="chip-btn"
+                        [class.active-candidate]="isCandidateActive(bm.mode_slug, bm.target_name)"
+                        (click)="applyModeCandidate(bm)">
+                        [Auto] {{ bm.mode_name }}: {{ bm.target_name }} ({{ (bm.confidence * 100).toFixed(0) }}%)
+                      </button>
+                    }
+                    @for (alt of modeAlternatives(); track alt.mode_slug + ':' + alt.target_slug) {
+                      <button
+                        mat-button
+                        type="button"
+                        class="chip-btn"
+                        [class.active-candidate]="isCandidateActive(alt.mode_slug, alt.target_name)"
+                        (click)="applyModeCandidate(alt)">
+                        {{ alt.mode_name }}: {{ alt.target_name }} ({{ (alt.confidence * 100).toFixed(0) }}%)
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (bestLineupMatch() || lineupAlternatives().length || reviewSuggestions().length) {
+              <div class="summary-card">
+                <div class="summary-head">
+                  <h3>{{ selectedModeSlug() === 'treasure-scramble' ? 'Closest known lineup & team alignment' : 'Closest known lineup & round alignment' }}</h3>
+                  @if (bestLineupMatch(); as bl) {
+                    <span class="conf-badge ok">{{ (bl.similarity * 100).toFixed(1) }}% similarity</span>
+                  }
+                </div>
+                @if (bestLineupMatch(); as bl) {
+                  <p class="lineup-title"><strong>{{ bl.title }}</strong> (<code>{{ bl.id }}</code>)</p>
+                  @if (bl.round_alignments?.length) {
+                    <div class="round-alignment-list">
+                      @for (ra of bl.round_alignments; track ra.image_round) {
+                        <span class="alignment-pill">
+                          {{ roundAlignmentPrefix(ra.image_round) }} → <strong>{{ ra.matched_formation_label }}</strong>
+                          ({{ ra.hero_overlap_count }}/5 heroes{{ ra.pet_matched ? ', pet ✓' : '' }})
+                        </span>
+                      }
+                    </div>
+                  }
+                }
+                @if (lineupAlternatives().length) {
+                  <div class="alt-group">
+                    <span class="alt-label">Other closest database lineups:</span>
+                    <div class="chip-row">
+                      @for (lAlt of lineupAlternatives(); track lAlt.id) {
+                        <button
+                          mat-button
+                          type="button"
+                          class="chip-btn"
+                          (click)="applyLineupCandidateMode(lAlt)">
+                          {{ lAlt.title }} ({{ (lAlt.similarity * 100).toFixed(0) }}%)
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+                @if (reviewSuggestions().length) {
+                  <div class="review-box" role="region" aria-label="Suggested corrections">
+                    <h4>Suggested corrections / review flags ({{ reviewSuggestions().length }})</h4>
+                    <ul>
+                      @for (sug of reviewSuggestions(); track $index) {
+                        <li>
+                          <strong>{{ selectedModeSlug() === 'treasure-scramble' ? 'Team ' + sug.round : 'Round ' + sug.round }} ({{ sug.formation_label }}) {{ sug.field }}:</strong>
+                          {{ sug.reason }}
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </details>
+      }
+      }
     </main>
 
     @if (petModalOpen()) {
@@ -736,165 +754,509 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     }
   `,
   styles: `
-    .import-submit-page { max-width: 1440px; margin: 0 auto; padding: var(--app-space-3, 16px); }
-    .panel { padding: var(--app-space-3, 16px); margin-bottom: var(--app-space-3, 16px); border: 1px solid var(--app-line, #2a3241); border-radius: var(--app-radius, 12px); background: var(--app-panel, #151a23); }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-    .page-header h2 { margin: 0 0 4px; }
-    .subtitle, .muted { color: var(--app-muted, #94a3b8); font-size: 0.9rem; margin: 0; }
-    .header-actions, .footer-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .footer-actions { justify-content: flex-end; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--app-line, #2a3241); }
-    .upload-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
-    .sample-picker { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex: 1; }
-    .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
-    .status-banner { width: 100%; margin: 4px 0 0; color: var(--app-muted, #94a3b8); font-size: 0.88rem; }
-    .match-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .summary-card { padding: 12px; border: 1px solid var(--app-line, #2a3241); border-radius: 10px; background: rgba(255, 255, 255, 0.02); }
-    .summary-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .summary-head h3 { margin: 0; font-size: 1rem; }
-    .mode-seg-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .import-submit-page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: var(--app-space-4);
+    }
+    .panel {
+      padding: var(--app-space-4);
+      margin-bottom: var(--app-space-4);
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius-lg);
+      background: var(--app-panel);
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--app-space-4);
+      flex-wrap: wrap;
+    }
+    .page-header h2 {
+      margin: 0 0 var(--app-space-1);
+    }
+    .subtitle,
+    .muted {
+      color: var(--app-muted);
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    .header-actions,
+    .footer-actions {
+      display: flex;
+      gap: var(--app-space-2);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .footer-actions {
+      justify-content: flex-end;
+      margin-top: var(--app-space-4);
+      padding-top: var(--app-space-3);
+      border-top: 1px solid var(--app-line);
+    }
+    .upload-stage {
+      max-width: 680px;
+      margin: var(--app-space-7) auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--app-space-4);
+    }
+    .upload-dropzone {
+      padding: var(--app-space-7) var(--app-space-4);
+      border: 1.5px dashed var(--app-line);
+      border-radius: var(--app-radius);
+      background: var(--app-bg);
+      align-items: center;
+      text-align: center;
+      gap: var(--app-space-2);
+    }
+    .upload-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .upload-dropzone input[type='file'] {
+      margin-top: var(--app-space-2);
+      max-width: 100%;
+    }
+    .upload-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--app-space-3);
+      color: var(--app-muted);
+      font-size: 0.85rem;
+    }
+    .upload-divider::before,
+    .upload-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--app-line);
+    }
+    .sample-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--app-space-2);
+      align-items: flex-end;
+    }
+    .sample-select-field {
+      flex: 1 1 240px;
+      margin: 0;
+    }
+    .load-sample-btn {
+      height: var(--app-control-height);
+      min-height: var(--app-control-height);
+      border-radius: var(--app-radius-sm);
+    }
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--app-space-2);
+      margin-bottom: var(--app-space-3);
+    }
+    .preview-head h3 {
+      margin: 0;
+    }
+    .editor-mode-bar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--app-space-2);
+      padding-bottom: var(--app-space-3);
+      margin-bottom: var(--app-space-3);
+      border-bottom: 1px solid var(--app-line);
+    }
+    .notes-field {
+      margin-top: var(--app-space-4);
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--app-space-1);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .status-banner {
+      width: 100%;
+      margin: 0;
+      padding: var(--app-space-2) var(--app-space-3);
+      border-radius: var(--app-radius-sm);
+      background: var(--app-panel-variant);
+      color: var(--app-ink);
+      font-size: 0.88rem;
+    }
+    .match-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--app-space-4);
+    }
+    .match-summary-grid.single-card {
+      grid-template-columns: 1fr;
+    }
+    .summary-card {
+      padding: var(--app-space-3);
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius);
+      background: var(--app-bg);
+    }
+    .summary-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--app-space-2);
+      flex-wrap: wrap;
+      margin-bottom: var(--app-space-3);
+    }
+    .summary-head h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .mode-bar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--app-space-2);
+    }
+    .mode-bar-main {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--app-space-3);
+    }
+    .mode-bar-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--app-space-2);
+    }
+    .mode-seg-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0;
+      border: 0;
+      background: transparent;
+    }
     .seg-btn {
-      border: 1px solid var(--app-line, #2a3241);
-      border-radius: 8px;
-      font-size: 0.82rem;
-      padding: 6px 12px;
-      color: var(--app-ink, #f1f5f9) !important;
-      background: var(--app-panel, #1e293b);
+      height: auto;
+      min-height: 36px;
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius-sm);
+      font-size: 0.84rem;
+      padding: var(--app-space-1) var(--app-space-3);
+      color: var(--app-ink);
+      background: var(--app-bg);
       cursor: pointer;
     }
     .seg-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--app-primary);
     }
-    .seg-btn[aria-pressed="true"] {
-      border-color: #facc15 !important;
-      font-weight: 700;
-      background: rgba(250, 204, 21, 0.16) !important;
-      color: #fef08a !important;
+    .seg-btn[aria-pressed='true'] {
+      border-color: var(--app-primary);
+      font-weight: 600;
+      background: var(--app-primary);
+      color: var(--app-on-primary);
     }
-    .rules-text { margin: 0 0 10px; font-size: 0.82rem; color: var(--app-muted, #94a3b8); }
+    .rules-text {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--app-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .mode-target-controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: var(--app-space-3);
+    }
+    .target-field {
+      min-width: 200px;
+      margin: 0;
+    }
+    .teams-field {
+      min-width: 120px;
+      margin: 0;
     }
     .mode-target-controls .field select {
       min-width: 0;
       width: 100%;
     }
-    .inline-team-count { flex-direction: row; align-items: center; gap: 6px; margin-left: auto; }
-    .reason-list { margin: 0 0 10px; padding-left: 18px; font-size: 0.84rem; color: var(--app-muted, #94a3b8); }
-    .lineup-title { margin: 0 0 8px; font-size: 0.95rem; }
-    .round-alignment-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .details-panel {
+      margin-top: var(--app-space-4);
+    }
+    .details-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--app-space-2);
+      cursor: pointer;
+      font-weight: 600;
+      list-style: none;
+    }
+    .details-summary::-webkit-details-marker {
+      display: none;
+    }
+    .details-title::before {
+      content: '▸ ';
+      display: inline-block;
+      transition: transform 140ms ease;
+    }
+    .details-panel[open] .details-title::before {
+      transform: rotate(90deg);
+    }
+    .details-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--app-space-2);
+    }
+    .details-grid {
+      margin-top: var(--app-space-3);
+    }
+    .inline-team-count {
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .reason-list {
+      margin: var(--app-space-2) 0;
+      padding-left: 18px;
+      font-size: 0.84rem;
+      color: var(--app-muted);
+    }
+    .lineup-title {
+      margin: 0 0 var(--app-space-2);
+      font-size: 0.95rem;
+    }
+    .round-alignment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: var(--app-space-3);
+    }
     .alignment-pill {
       font-size: 0.8rem;
       padding: 4px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--app-line, #2a3241);
-      background: rgba(255, 255, 255, 0.03);
-      color: var(--app-ink, #f1f5f9);
+      border-radius: var(--app-radius-sm);
+      border: 1px solid var(--app-line);
+      background: var(--app-panel);
+      color: var(--app-ink);
+      font-variant-numeric: tabular-nums;
     }
-    .alignment-pill strong { color: #93c5fd; }
-    .review-box { margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid #f97316; background: rgba(249, 115, 22, 0.08); font-size: 0.84rem; }
-    .review-box h4 { margin: 0 0 6px; color: #fdba74; font-size: 0.88rem; }
-    .review-box ul { margin: 0; padding-left: 18px; }
-    .workspace-grid { display: grid; grid-template-columns: minmax(260px, 0.95fr) minmax(420px, 1.45fr); gap: 16px; align-items: start; }
-    .preview-panel { position: sticky; top: 12px; }
-    .preview-panel h3 { margin-top: 0; }
-    .image-frame { max-height: 70vh; overflow: auto; border: 1px solid var(--app-line, #2a3241); border-radius: 8px; margin-bottom: 12px; }
-    .image-frame img { display: block; max-width: 100%; height: auto; }
-    .empty-preview { min-height: 200px; display: grid; place-items: center; padding: 16px; border: 1px dashed var(--app-line, #2a3241); border-radius: 8px; color: var(--app-muted, #94a3b8); text-align: center; margin-bottom: 12px; }
-    .formation-tabs-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-    .tab-btn {
-      border: 1px solid var(--app-line, #2a3241);
-      border-bottom: none;
-      border-radius: 8px 8px 0 0;
-      padding: 6px 14px;
+    .alignment-pill strong {
+      color: var(--app-primary);
+    }
+    .review-box {
+      margin-top: var(--app-space-3);
+      padding: var(--app-space-3);
+      border-radius: var(--app-radius-sm);
+      border: 1px solid var(--app-warning);
+      background: color-mix(in srgb, var(--app-warning) 10%, transparent);
       font-size: 0.84rem;
-      color: var(--app-ink, #f1f5f9) !important;
-      background: var(--app-panel, #1e293b);
+    }
+    .review-box h4 {
+      margin: 0 0 6px;
+      color: var(--app-warning);
+      font-size: 0.88rem;
+    }
+    .review-box ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.95fr) minmax(420px, 1.45fr);
+      gap: var(--app-space-4);
+      align-items: start;
+    }
+    .preview-panel {
+      position: sticky;
+      top: 84px;
+    }
+    .preview-panel h3 {
+      margin: 0 0 var(--app-space-3);
+    }
+    .image-frame {
+      max-height: 65vh;
+      overflow: auto;
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius-sm);
+      background: var(--app-bg);
+      margin-bottom: var(--app-space-3);
+    }
+    .image-frame img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    .empty-preview {
+      min-height: 200px;
+      display: grid;
+      place-items: center;
+      padding: var(--app-space-4);
+      border: 1px dashed var(--app-line);
+      border-radius: var(--app-radius-sm);
+      background: var(--app-bg);
+      color: var(--app-muted);
+      text-align: center;
+      margin-bottom: var(--app-space-3);
+    }
+    .formation-tabs-bar {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      align-items: center;
+      min-height: 46px;
+      gap: 6px;
+      padding-bottom: var(--app-space-2);
+      border-bottom: 1px solid var(--app-line);
+      margin-bottom: var(--app-space-3);
+      scrollbar-width: thin;
+    }
+    .tab-btn {
+      flex: 0 0 auto;
+      height: auto;
+      min-height: 34px;
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius-sm);
+      padding: var(--app-space-1) var(--app-space-3);
+      font-size: 0.84rem;
+      color: var(--app-ink);
+      background: var(--app-bg);
       cursor: pointer;
+      white-space: nowrap;
     }
     .tab-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--app-primary);
     }
-    .tab-btn[aria-pressed="true"] {
-      border-color: #facc15 !important;
-      border-bottom: 2px solid #facc15 !important;
-      font-weight: 700;
-      background: rgba(250, 204, 21, 0.16) !important;
-      color: #fef08a !important;
+    .tab-btn[aria-pressed='true'] {
+      border-color: var(--app-primary);
+      font-weight: 600;
+      background: var(--app-primary);
+      color: var(--app-on-primary);
     }
-    .tab-btn small { margin-left: 6px; opacity: 0.75; }
-    .load-sample-btn {
-      color: var(--app-ink, #f1f5f9) !important;
-      border-color: var(--app-line, #2a3241) !important;
+    .tab-btn small {
+      margin-left: 6px;
+      opacity: 0.8;
+      font-variant-numeric: tabular-nums;
     }
-    .round-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--app-line, #2a3241); margin-bottom: 12px; }
-    .pet-editor-box { flex: 1; min-width: 260px; }
-    .pet-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
-    .pet-level-input input { width: 72px; }
-    .substitutes-box { padding: 12px; border: 1px solid var(--app-line, #2a3241); border-radius: 10px; margin-bottom: 14px; background: rgba(234, 179, 8, 0.05); }
-    .sub-head { display: flex; flex-direction: column; gap: 8px; }
-    .sub-head h4 { margin: 0; font-size: 0.92rem; }
-    .sub-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .sub-controls select { flex: 1; min-width: 220px; }
-    .slots-list { display: flex; flex-direction: column; gap: 12px; }
-    .slot-card { padding: 12px; border: 1px solid var(--app-line, #2a3241); border-radius: 10px; background: rgba(255, 255, 255, 0.015); }
-    .slot-card.needs-review { border-color: #f97316; }
-    .slot-identity { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-    .slot-badge { font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--app-line, #2a3241); }
-    .hero-select-field { flex: 1; min-width: 180px; }
-    .slot-Collection-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
-    .inv-input input { width: 96px; }
-    .merc-check { display: flex; align-items: center; gap: 4px; font-size: 0.84rem; padding-bottom: 6px; }
-    .node-editor-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-    .alternatives-drawer { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--app-line, #2a3241); }
-    .alt-group { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-    .alt-label { font-size: 0.78rem; color: var(--app-muted, #94a3b8); }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .round-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--app-space-4);
+      flex-wrap: wrap;
+      padding-bottom: var(--app-space-3);
+      border-bottom: 1px solid var(--app-line);
+      margin-bottom: var(--app-space-3);
+    }
+    .round-label-field {
+      flex: 1 1 280px;
+      max-width: 480px;
+    }
+    .substitutes-box {
+      padding: var(--app-space-3);
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius);
+      margin-top: var(--app-space-3);
+      background: var(--app-panel-variant);
+    }
+    .sub-head {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sub-head h4 {
+      margin: 0;
+      font-size: 0.92rem;
+    }
+    .sub-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .sub-controls select {
+      flex: 1;
+      min-width: 220px;
+    }
+    .alt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: var(--app-space-2);
+    }
+    .alt-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--app-muted);
+    }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
     .chip-btn {
-      min-height: 28px;
-      padding: 3px 10px;
-      font-size: 0.78rem;
-      border: 1px solid var(--app-line, #2a3241);
-      border-radius: 6px;
-      color: var(--app-ink, #f1f5f9) !important;
-      background: rgba(255, 255, 255, 0.04);
+      height: auto;
+      min-height: 30px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border: 1px solid var(--app-line);
+      border-radius: 999px;
+      color: var(--app-ink);
+      background: var(--app-bg);
       cursor: pointer;
     }
     .chip-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.3);
+      border-color: var(--app-primary);
     }
     .chip-btn.active-candidate,
-    .chip-btn[aria-pressed="true"] {
-      border-color: #facc15 !important;
-      background: rgba(250, 204, 21, 0.18) !important;
-      color: #fef08a !important;
-      font-weight: 700;
-    }
-    .lineup-sets-bar {
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      border: 1px solid var(--app-line, #2a3241);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.02);
+    .chip-btn[aria-pressed='true'] {
+      border-color: var(--app-primary);
+      background: var(--app-primary);
+      color: var(--app-on-primary);
+      font-weight: 600;
     }
     .chip-btn.guide-sub {
-      border-color: #eab308;
-      color: #fef08a !important;
+      border-color: var(--app-warning);
     }
-    .chip-btn.active-node {
-      border-color: #22c55e;
-      background: rgba(34, 197, 94, 0.16) !important;
-      color: #86efac !important;
+    .lineup-sets-bar {
+      padding: var(--app-space-3);
+      margin-bottom: var(--app-space-3);
+      border: 1px solid var(--app-line);
+      border-radius: var(--app-radius);
+      background: var(--app-bg);
     }
-    .conf-badge { font-size: 0.76rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--app-line, #2a3241); }
-    .conf-badge.ok { border-color: #22c55e; color: #86efac; }
-    .conf-badge.warn { border-color: #f97316; color: #fdba74; }
+    .conf-badge {
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--app-line);
+      font-variant-numeric: tabular-nums;
+    }
+    .conf-badge.ok {
+      border-color: var(--app-success);
+      background: color-mix(in srgb, var(--app-success) 14%, transparent);
+      color: var(--app-success);
+    }
+    .conf-badge.warn {
+      border-color: var(--app-warning);
+      background: color-mix(in srgb, var(--app-warning) 14%, transparent);
+      color: var(--app-warning);
+    }
     @media (max-width: 960px) {
-      .match-summary-grid, .workspace-grid { grid-template-columns: 1fr; }
-      .preview-panel { position: static; }
+      .match-summary-grid,
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+      .preview-panel {
+        position: static;
+      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -947,6 +1309,24 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   readonly hasAnyHero = computed(() =>
     this.formations().some((f) => f.heroes.some((h) => h.heroId !== null)),
   );
+
+  readonly hasLoadedWorkspace = computed(
+    () => Boolean(this.imageUrl() || this.bestMode() || this.bestLineupMatch() || this.hasAnyHero()),
+  );
+
+  resetToUpload(): void {
+    this.imageUrl.set(null);
+    this.uploadedDataUrls.set([]);
+    this.bestMode.set(null);
+    this.bestLineupMatch.set(null);
+    this.modeAlternatives.set([]);
+    this.lineupAlternatives.set([]);
+    this.reviewSuggestions.set([]);
+    this.statusMessage.set('');
+    this.formations.set([]);
+    this.editingSlot.set(null);
+    this.petModalOpen.set(false);
+  }
 
   readonly auth = inject(AuthService);
   readonly editingSlot = signal<{ readonly index: number } | null>(null);
@@ -1118,11 +1498,14 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     try {
       const endpoints = ['/api/recognize-sample', 'http://127.0.0.1:8174/api/recognize-sample'];
       for (const url of endpoints) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2500);
         try {
           const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path: samplePath }),
+            signal: controller.signal,
           });
           if (res.ok) {
             const data = await res.json();
@@ -1133,6 +1516,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           }
         } catch {
           // Try next endpoint or built-in sample profile
+        } finally {
+          clearTimeout(timer);
         }
       }
       this.applyBuiltInSampleRecognition(samplePath);
@@ -1161,11 +1546,14 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             : { image_base64: dataUrl };
         const endpoints = ['/api/recognize-lineup', 'http://127.0.0.1:8174/api/recognize-lineup'];
         for (const url of endpoints) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4000);
           try {
             const res = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(reqBody),
+              signal: controller.signal,
             });
             if (res.ok) {
               const data = await res.json();
@@ -1176,6 +1564,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             }
           } catch {
             // Try next endpoint or built-in fallback
+          } finally {
+            clearTimeout(timer);
           }
         }
       }

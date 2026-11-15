@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LineupCardComponent } from '../components/lineup-card/lineup-card.component';
 import { LineupsStore } from '../lineups.store';
+import { countLabel } from '../plural';
 
 @Component({
   selector: 'app-lineups-page',
@@ -16,6 +17,7 @@ import { LineupsStore } from '../lineups.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LineupsPageComponent {
+  readonly countLabel = countLabel;
   readonly store = inject(LineupsStore);
   readonly auth = inject(AuthService);
 
@@ -47,5 +49,14 @@ export class LineupsPageComponent {
   setTarget(event: Event): void {
     const select = event.target;
     if (select instanceof HTMLSelectElement) this.store.setTarget(select.value || null);
+  }
+
+  hasActiveFilters(): boolean {
+    return this.store.target() !== null || this.store.teamCount() !== null;
+  }
+
+  clearFilters(): void {
+    this.store.setTarget(null);
+    this.store.setTeamCount(null);
   }
 }

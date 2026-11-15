@@ -2,83 +2,101 @@
   <section class="head">
     <h2>{{ store.activeMode().name }}</h2>
     <p>{{ store.activeMode().rules }}</p>
-    @if (auth.configured && !store.backendReady()) {
-      <p>Loading community lineups…</p>
-    }
   </section>
 
   <section class="toolbar">
-    @if (store.mode() === 'nightmare-corridor') {
-      <label class="check target-select">
-        {{ store.activeMode().targetLabel }}
-        <select [value]="store.target() ?? ''" (change)="setTarget($event)">
-          <option value="">{{ store.activeMode().targetAll }}</option>
-          @for (target of store.activeMode().targets; track target) {
-            <option [value]="target">{{ target }}</option>
-          }
-        </select>
-      </label>
-    } @else {
-      <div class="row-wrap" role="group" [attr.aria-label]="store.activeMode().targetLabel">
-        <button mat-button class="chip" [attr.aria-pressed]="!store.target()" (click)="store.setTarget(null)">
-          {{ store.activeMode().targetAll }}
-        </button>
-        @for (target of store.activeMode().targets; track $index) {
-          <button mat-button class="chip" [attr.aria-pressed]="store.target() === target" (click)="store.setTarget(target)">
-            {{ target }}
-          </button>
-        }
-      </div>
-    }
-
-    @if (store.activeMode().variable; as variable) {
-      <div class="row-wrap" role="group" aria-label="Number of teams">
-        <span class="muted">Teams</span>
-        <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === null" (click)="store.setTeamCount(null)">All</button>
-        @for (count of teamCounts(variable); track count) {
-          <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === count" (click)="store.setTeamCount(count)">{{ count }}</button>
-        }
-      </div>
-    }
-
-    <div class="row-wrap">
-      @if (store.rosterCount()) {
-        <label class="check">
-          <input type="checkbox" [checked]="store.useRoster()" (change)="store.setUseRoster(checkboxValue($event))">
-          Match my roster
-        </label>
-        <div class="seg" role="group" aria-label="Match mode">
-          <button mat-button [attr.aria-pressed]="store.match() === 'strict'" (click)="store.setMatch('strict')">I own every hero</button>
-          <button mat-button [attr.aria-pressed]="store.match() === 'partial'" (click)="store.setMatch('partial')">Show near misses</button>
-        </div>
-        @if (store.activeMode().variable || (store.activeMode().formations?.length ?? 0) > 1) {
-          <div class="seg" role="group" aria-label="Scope">
-            <button mat-button [attr.aria-pressed]="store.scope() === 'all'" (click)="store.setScope('all')">Whole loadout</button>
-            <button mat-button [attr.aria-pressed]="store.scope() === 'slot'" (click)="store.setScope('slot')">Any single slot</button>
+    <div class="toolbar-top">
+      <div class="toolbar-filters">
+        @if (store.mode() === 'nightmare-corridor') {
+          <label class="check target-select">
+            {{ store.activeMode().targetLabel }}
+            <select [value]="store.target() ?? ''" (change)="setTarget($event)">
+              <option value="">{{ store.activeMode().targetAll }}</option>
+              @for (target of store.activeMode().targets; track target) {
+                <option [value]="target">{{ target }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <div class="row-wrap" role="group" [attr.aria-label]="store.activeMode().targetLabel">
+            <button mat-button class="chip" [attr.aria-pressed]="!store.target()" (click)="store.setTarget(null)">
+              {{ store.activeMode().targetAll }}
+            </button>
+            @for (target of store.activeMode().targets; track $index) {
+              <button mat-button class="chip" [attr.aria-pressed]="store.target() === target" (click)="store.setTarget(target)">
+                {{ target }}
+              </button>
+            }
           </div>
         }
-        <label class="check">
-          <input type="checkbox" [checked]="store.checkInvestment()" (change)="store.setCheckInvestment(checkboxValue($event))">
-          Check hero level, investments and pet level
-        </label>
-      } @else {
-        @if (auth.user()) {
-          <a mat-button class="btn" routerLink="/roster/heroes">Add the heroes you own to filter lineups</a>
+
+        @if (store.activeMode().variable; as variable) {
+          <div class="row-wrap" role="group" aria-label="Number of teams">
+            <span class="muted">Teams</span>
+            <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === null" (click)="store.setTeamCount(null)">All</button>
+            @for (count of teamCounts(variable); track count) {
+              <button mat-button class="chip" [attr.aria-pressed]="store.teamCount() === count" (click)="store.setTeamCount(count)">{{ count }}</button>
+            }
+          </div>
         }
-      }
-      <label class="check">Sort
-      <select [value]="store.sort()" (change)="store.setSort(selectValue($event))">
+      </div>
+
+      <label class="check sort-select">
+        Sort
+        <select [value]="store.sort()" (change)="store.setSort(selectValue($event))">
           <option value="votes">Most upvoted</option>
           <option value="fewest">Fewest missing</option>
           <option value="new">Newest</option>
         </select>
       </label>
     </div>
+
+    <div class="roster-filter-row">
+      @if (store.rosterCount()) {
+        <label class="check roster-toggle">
+          <input type="checkbox" [checked]="store.useRoster()" (change)="store.setUseRoster(checkboxValue($event))">
+          Match my roster
+        </label>
+        @if (store.useRoster()) {
+          <div class="seg" role="group" aria-label="Match mode">
+            <button mat-button [attr.aria-pressed]="store.match() === 'strict'" (click)="store.setMatch('strict')">I own every hero</button>
+            <button mat-button [attr.aria-pressed]="store.match() === 'partial'" (click)="store.setMatch('partial')">Show near misses</button>
+          </div>
+          @if (store.activeMode().variable || (store.activeMode().formations?.length ?? 0) > 1) {
+            <div class="seg" role="group" aria-label="Scope">
+              <button mat-button [attr.aria-pressed]="store.scope() === 'all'" (click)="store.setScope('all')">Whole loadout</button>
+              <button mat-button [attr.aria-pressed]="store.scope() === 'slot'" (click)="store.setScope('slot')">Any single slot</button>
+            </div>
+          }
+          <label class="check">
+            <input type="checkbox" [checked]="store.checkInvestment()" (change)="store.setCheckInvestment(checkboxValue($event))">
+            Check hero level, investments &amp; pet level
+          </label>
+        } @else {
+          <span class="roster-hint">Enable to filter lineups against your saved heroes and pets</span>
+        }
+      } @else {
+        <a mat-button class="btn" routerLink="/roster/heroes">Add your heroes to filter lineups</a>
+      }
+    </div>
   </section>
 
-  <section aria-live="polite" aria-label="Lineups">
+  @if (!auth.configured || store.backendReady()) {
+    <div class="results-bar">
+      <span class="results-count">{{ countLabel(store.visibleSubmissions().length, 'lineup') }}</span>
+      @if (hasActiveFilters()) {
+        <button mat-button type="button" class="btn clear-filters" (click)="clearFilters()">Clear filters</button>
+      }
+    </div>
+  }
+
+  <section aria-live="polite" aria-label="Lineups" [attr.aria-busy]="auth.configured && !store.backendReady()">
     @if (auth.configured && !store.backendReady()) {
-      <div class="empty">Loading community lineups…</div>
+      <div class="skeleton-list" role="status" aria-label="Loading community lineups">
+        <div class="skeleton-card" aria-hidden="true"></div>
+        <div class="skeleton-card" aria-hidden="true"></div>
+        <div class="skeleton-card" aria-hidden="true"></div>
+      </div>
     } @else if (store.visibleSubmissions().length) {
       @for (row of store.visibleSubmissions(); track row.submission.id) {
         <app-lineup-card
@@ -93,9 +111,14 @@
     } @else {
       <div class="empty">
         @if (store.rosterCount() && store.useRoster() && store.match() === 'strict') {
-          No lineup here is fully covered by your roster. Switch to near misses to see what you are closest to.
+          <p class="empty-message">No lineup here is fully covered by your roster. Switch to near misses to see what you are closest to.</p>
+          <button mat-flat-button type="button" class="btn primary" (click)="store.setMatch('partial')">Show near misses</button>
+        } @else if (hasActiveFilters()) {
+          <p class="empty-message">No lineups match the current filters.</p>
+          <button mat-flat-button type="button" class="btn primary" (click)="clearFilters()">Clear filters</button>
         } @else {
-          No lineups for this selection yet. Be the first to submit one.
+          <p class="empty-message">No lineups for this selection yet. Be the first to submit one.</p>
+          <a mat-flat-button class="btn primary" routerLink="/submit">Submit a lineup</a>
         }
       </div>
     }

@@ -1,0 +1,107 @@
+{
+  "version": 2,
+  "skills": {
+    "accessibility": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/accessibility/SKILL.md",
+      "computedHash": "3e94910ae9c8ff030ff0ae27f97dd9c731909b74803115c3918c8828fc20be04"
+    },
+    "blindspots": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/blindspots/SKILL.md",
+      "computedHash": "efaefcfddd2b1277f87a6d585d30b583dd5039a22943c1489a01058771944c60"
+    },
+    "challenge": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/challenge/SKILL.md",
+      "computedHash": "aaa68e345f97bdf9fa160022d0b21a5419bf9bea09b499bb6b8082c246fe1cd7"
+    },
+    "clear": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clear/SKILL.md",
+      "computedHash": "92488b2ae94ef2d01a165f773fcbcb29bb9817af0c6655008183eb2e1643e626"
+    },
+    "content": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/content/SKILL.md",
+      "computedHash": "6ec8e2ff6769c8f83fd519cf151194f2d644a1c92729d6c098d67c580c1ef6c8"
+    },
+    "critique": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/critique/SKILL.md",
+      "computedHash": "869bda4e5ebf94b2ca25d890a23cb8e965c4e84800c43669823fbf0eb552c0d6"
+    },
+    "decision": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/decision/SKILL.md",
+      "computedHash": "234eaa200dd7fa2936bfc2b5fb09c97cd874d98bffb429f64ad9010ef5a0c5f8"
+    },
+    "frame": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/frame/SKILL.md",
+      "computedHash": "428922392ba2ed2d66adf012a1c3e708ecca51ad423a24acbd7f942bc672cc10"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
+    },
+    "handoff": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/handoff/SKILL.md",
+      "computedHash": "7169f6894d0a540e820760687edd8b82b3a6a3515c0b5a6cb5b1f59fb8b2e225"
+    },
+    "pr": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pr/SKILL.md",
+      "computedHash": "fd979f486926e311be32f55dbe5cfb4ac818258bcecdfb9d46574aaa14c1e0db"
+    },
+    "ripple": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ripple/SKILL.md",
+      "computedHash": "6d0396bfa27450345966259c68b23d119024fd70ba504e71835cb900ddc2656f"
+    },
+    "setup-ux": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/setup-ux/SKILL.md",
+      "computedHash": "0a80437a15181c1fa5b978f939dc5f7f268f1419540fb912c21e8f42e2423ae8"
+    },
+    "state-sweep": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/state-sweep/SKILL.md",
+      "computedHash": "8de98812f676666ff69bab3a3fe1db3ab7ae5c58f869f74c180753d9dd60e844"
+    },
+    "system-fit": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/system-fit/SKILL.md",
+      "computedHash": "4bfba4da5879ba7bc0d71ea3df125f8d15a7ef5c0ff563f7ee423aaa9d95279e"
+    },
+    "user-grounding": {
+      "source": "Tranz007/ux-skills",
+      "sourceType": "github",
+      "skillPath": "skills/user-grounding/SKILL.md",
+      "computedHash": "af4564d1ed47c6a5d75c83dd27dcc3dc468c557dc7ee4d3721a35f07e6c11a2b"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "4f68ae07187fb0d1fb78c88b503d089da4cf5a9d9625d1f2e425b1590bf96d92"
+    }
+  }
+}

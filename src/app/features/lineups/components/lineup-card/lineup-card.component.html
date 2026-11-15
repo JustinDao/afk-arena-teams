@@ -1,7 +1,14 @@
 <article class="card" [class.full]="row().active && row().gap === 0" [class.part]="row().active && row().gap > 0">
   <div class="card-header">
     <div>
-      <h3>{{ row().submission.target }}</h3>
+      <div class="card-title-row">
+        <h3>{{ row().submission.target }}</h3>
+        @if (row().active && row().gap === 0) {
+          <span class="status-badge ready">Ready to run</span>
+        } @else if (row().active && row().gap > 0) {
+          <span class="status-badge short">{{ countLabel(row().gap, 'item') }} short</span>
+        }
+      </div>
       <span class="result">{{ resultLabel(row().submission) }}</span>
     </div>
     @if (!hideActions()) {
