@@ -11,8 +11,11 @@ if (!existsSync(envPath) && existsSync(envExamplePath)) {
   console.log('[dev-start] Created src/environments/environment.ts from environment.example.ts');
 }
 
-const venvPython = join(homedir(), '.cache', 'afk-icon-detector-benchmark', '.venv', 'bin', 'python');
-const pythonBin = existsSync(venvPython) ? venvPython : 'python3';
+const isWin = process.platform === 'win32';
+const venvPython = isWin
+  ? join(homedir(), '.cache', 'afk-icon-detector-benchmark', '.venv', 'Scripts', 'python.exe')
+  : join(homedir(), '.cache', 'afk-icon-detector-benchmark', '.venv', 'bin', 'python');
+const pythonBin = existsSync(venvPython) ? venvPython : (isWin ? 'python' : 'python3');
 
 let apiProc = null;
 const hasCv2 = spawnSync(pythonBin, ['-c', 'import cv2'], { stdio: 'ignore' }).status === 0;

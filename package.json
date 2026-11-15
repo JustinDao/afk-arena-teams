@@ -6,6 +6,7 @@
     "start": "node scripts/dev-start.mjs",
     "start:ui": "ng serve",
     "start:api": "$HOME/.cache/afk-icon-detector-benchmark/.venv/bin/python api/recognize-lineup.py --serve --port 8174",
+    "setup:api": "node scripts/setup-api.mjs",
     "build": "ng build",
     "test": "ng test",
     "test:ci": "ng test --watch=false --browsers=ChromeHeadless",

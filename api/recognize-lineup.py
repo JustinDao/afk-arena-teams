@@ -83,17 +83,19 @@ def _load_pipeline():
     try:
         from ultralytics import YOLO
 
+        weights_dir = LAB_DIR / "weights"
         runs_dir = (
             Path.home()
             / ".cache/afk-icon-detector-benchmark/run-20261108T031214Z-1901092/runs"
         )
-        fold_paths = {
-            "fold-1": runs_dir / "fold-1/weights/best.pt",
-            "fold-2": runs_dir / "fold-2/weights/best.pt",
-            "fold-3": runs_dir / "fold-3/weights/last.pt",
+        fold_candidates = {
+            "fold-1": [weights_dir / "fold-1.pt", runs_dir / "fold-1/weights/best.pt"],
+            "fold-2": [weights_dir / "fold-2.pt", runs_dir / "fold-2/weights/best.pt"],
+            "fold-3": [weights_dir / "fold-3.pt", runs_dir / "fold-3/weights/last.pt"],
         }
-        for fk, fp in fold_paths.items():
-            if fp.is_file():
+        for fk, candidates in fold_candidates.items():
+            fp = next((p for p in candidates if p.is_file()), None)
+            if fp is not None:
                 models[fk] = YOLO(str(fp))
 
         detector_report_path = LAB_DIR / "detector-resolution-results.json"
