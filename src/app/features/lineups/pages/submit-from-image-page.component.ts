@@ -922,11 +922,25 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   readonly activeBoardSlots = computed<readonly FormationBoardSlot[]>(() => {
     const form = this.activeFormation();
     if (!form) return [];
+    const collectionsEnabled = this.currentModeConfig().collectionsEnabled;
     return form.heroes.map((slot) => {
       const heroId = slot.heroId;
       const heroName = slot.heroName;
       const parsedInv = parseInvestment(slot.investmentCode);
       const ascension = this.ascensionOfSlot(slot);
+      const hero = heroId !== null ? this.heroFor(heroId) : null;
+      const collection =
+        heroId !== null && collectionsEnabled
+          ? (slot.collectionSnapshot ??
+              (slot.collectionId !== null
+                ? this.buildCollectionSnapshot(
+                    slot.collectionId,
+                    slot.collectionLevel,
+                    slot.collectionNodes,
+                    hero ? this.heroClassFor(hero) : null,
+                  )
+                : null))
+          : null;
       return {
         heroId,
         heroName,
@@ -934,6 +948,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         hue: heroId !== null ? this.store.hue(heroName) : 200,
         ascension,
         investment: parsedInv,
+        collection,
         needsReview: slot.needsReview,
       };
     });

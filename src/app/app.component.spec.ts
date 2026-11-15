@@ -435,6 +435,42 @@ describe('SubmitPageComponent', () => {
     fixture.destroy();
   });
 
+  it('displays hero collections on the formation board in both manual submit and image import forms', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SubmitPageComponent, SubmitFromImagePageComponent],
+      providers: [
+        provideRouter(APP_ROUTES),
+        { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'ascended', factionFor: () => null, classFor: () => null } },
+        { provide: UserDataService, useValue: { configured: false } },
+      ],
+    }).compileComponents();
+
+    // 1. Image import form shows collections on the board when recognized
+    const importFixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const importComp = importFixture.componentInstance;
+    importFixture.detectChanges();
+    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importFixture.detectChanges();
+
+    const importCollectionSlots = importFixture.nativeElement.querySelectorAll('.formation-slot.has-collection');
+    expect(importCollectionSlots.length).toBeGreaterThan(0);
+    expect(importCollectionSlots[0].querySelector('.collection-tag .collection-icon')).not.toBeNull();
+
+    // 2. Applying to manual submit form displays the same collections on its formation board
+    await importComp.applyToSubmitForm();
+    importFixture.destroy();
+
+    const submitFixture = TestBed.createComponent(SubmitPageComponent);
+    submitFixture.detectChanges();
+
+    const submitCollectionSlots = submitFixture.nativeElement.querySelectorAll('.formation-slot.has-collection');
+    expect(submitCollectionSlots.length).toBeGreaterThan(0);
+    expect(submitCollectionSlots[0].querySelector('.collection-tag .collection-icon')).not.toBeNull();
+    expect(submitCollectionSlots[0].querySelectorAll('.collection-tag .collection-node-icon').length).toBeGreaterThan(0);
+
+    submitFixture.destroy();
+  });
+
   describe('AppComponent account form', () => {
     it('blocks short passwords with a clear minimum-length validation', async () => {
       await TestBed.configureTestingModule({

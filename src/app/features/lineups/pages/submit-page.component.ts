@@ -57,9 +57,18 @@ export class SubmitPageComponent implements OnDestroy {
   readonly boardSlots = computed<readonly FormationBoardSlot[]>(() => {
     const draft = this.store.draft();
     if (!draft) return [];
+    const collectionsEnabled = this.modeFor(draft.mode).collectionsEnabled;
+    const rosterCollections = this.store.collections();
     return draft.forms[draft.cur].slots.map((slot, index) => {
       const heroId = slot.hid;
       const heroName = heroId !== null ? this.store.heroName(heroId) : '';
+      const collection =
+        heroId !== null && collectionsEnabled
+          ? (slot.collectionSnapshot ??
+              (slot.collectionId
+                ? (rosterCollections.find((c) => c.id === slot.collectionId) ?? null)
+                : null))
+          : null;
       return {
         heroId,
         heroName,
@@ -67,6 +76,7 @@ export class SubmitPageComponent implements OnDestroy {
         hue: heroId !== null ? this.store.hue(heroName) : 200,
         ascension: this.ascensionOf(index),
         investment: this.store.draftInvestment(index),
+        collection,
       };
     });
   });
