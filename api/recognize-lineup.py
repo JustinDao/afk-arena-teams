@@ -155,47 +155,113 @@ def _opencv_fallback_boxes(img):
     return boxes, scores
 
 
-def recognize_image_bytes(image_bytes):
+def recognize_multiple_images(image_bytes_list):
     t0 = time.time()
-    arr = np.frombuffer(image_bytes, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("Could not decode input image bytes.")
+    if not image_bytes_list:
+        raise ValueError("No input images provided.")
+    imgs = []
+    for raw_b in image_bytes_list:
+        arr = np.frombuffer(raw_b, dtype=np.uint8)
+        im = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if im is None:
+            raise ValueError("Could not decode input image bytes.")
+        imgs.append(im)
 
     state = _load_pipeline()
     det = state["det"]
     matcher = state["matcher"]
-    model, fold_name = _select_model_for_image(img, state)
 
-    if model is not None:
-        solved_teams = det.detect_and_assemble_teams_for_image(
-            img,
-            model,
-            matcher,
-            state["type_tensors"],
-            state["node_assets"],
-            state["hero_meta"],
-            state["pet_meta"],
-            state["collections_catalog"],
+    lookup_imgs = [im for im in imgs if det.is_hero_lookup_sheet_image(im)]
+    formation_imgs = [im for im in imgs if not det.is_hero_lookup_sheet_image(im)]
+    if not formation_imgs and lookup_imgs:
+        formation_imgs = lookup_imgs
+        lookup_imgs = []
+
+    lookup_map = {}
+    for l_im in lookup_imgs:
+        lookup_map.update(
+            det.extract_hero_lookup_sheet(
+                l_im,
+                matcher,
+                state["type_tensors"],
+                state["hero_meta"],
+                state["collections_catalog"],
+            )
         )
+    allowed_hero_slugs = set(lookup_map.keys()) if lookup_map else None
+
+    all_solved_teams = []
+    fold_names = []
+    primary_img = formation_imgs[0]
+    for f_im in formation_imgs:
+        model, fold_name = _select_model_for_image(f_im, state)
+        fold_names.append(fold_name)
+        if model is not None:
+            part_teams = det.detect_and_assemble_teams_for_image(
+                f_im,
+                model,
+                matcher,
+                state["type_tensors"],
+                state["node_assets"],
+                state["hero_meta"],
+                state["pet_meta"],
+                state["collections_catalog"],
+                allowed_hero_slugs=allowed_hero_slugs,
+            )
+        else:
+            raw_boxes, raw_scores = _opencv_fallback_boxes(f_im)
+            part_teams = det.detect_and_assemble_teams_for_image(
+                f_im,
+                None,
+                matcher,
+                state["type_tensors"],
+                state["node_assets"],
+                state["hero_meta"],
+                state["pet_meta"],
+                state["collections_catalog"],
+                detector_boxes=raw_boxes,
+                detector_scores=raw_scores,
+                allowed_hero_slugs=allowed_hero_slugs,
+            )
+        has_multi_sets = any("set_index" in t for t in part_teams)
+        if not has_multi_sets and all_solved_teams:
+            offset = len(all_solved_teams)
+            for t in part_teams:
+                t["round"] = offset + t["round"]
+        all_solved_teams.extend(part_teams)
+
+    if lookup_map:
+        for t in all_solved_teams:
+            for h in t.get("heroes", []):
+                lkp = lookup_map.get(h["slug"])
+                if lkp:
+                    if lkp.get("investment") is not None:
+                        h["investment"] = lkp["investment"]
+                    if lkp.get("collection") is not None:
+                        h["collection"] = lkp["collection"]
+
+    set_indices = sorted({t.get("set_index", 0) for t in all_solved_teams})
+    lineup_sets = None
+    if len(set_indices) > 1:
+        lineup_sets = []
+        for s_idx in set_indices:
+            s_teams = [t for t in all_solved_teams if t.get("set_index", 0) == s_idx]
+            s_label = s_teams[0].get("set_label") or f"Set {s_idx + 1}"
+            lineup_sets.append(
+                {
+                    "index": s_idx,
+                    "label": s_label,
+                    "teams": s_teams,
+                    "formations": det.teams_to_seed_formations(s_teams),
+                }
+            )
+        solved_teams = lineup_sets[0]["teams"]
     else:
-        raw_boxes, raw_scores = _opencv_fallback_boxes(img)
-        solved_teams = det.detect_and_assemble_teams_for_image(
-            img,
-            None,
-            matcher,
-            state["type_tensors"],
-            state["node_assets"],
-            state["hero_meta"],
-            state["pet_meta"],
-            state["collections_catalog"],
-            detector_boxes=raw_boxes,
-            detector_scores=raw_scores,
-        )
+        solved_teams = all_solved_teams
 
     inference = det.infer_mode_and_lineup_matches(
         solved_teams,
-        img.shape,
+        primary_img.shape,
         state["hero_meta"],
         state["pet_meta"],
         state["collections_catalog"],
@@ -220,11 +286,16 @@ def recognize_image_bytes(image_bytes):
         "formations": formations,
     }
 
-    return {
+    resp = {
         "ok": True,
         "elapsed_seconds": round(time.time() - t0, 3),
-        "detector_fold": fold_name,
-        "image_shape": {"width": int(img.shape[1]), "height": int(img.shape[0])},
+        "detector_fold": "+".join(dict.fromkeys(str(f) for f in fold_names)),
+        "image_shape": {
+            "width": int(primary_img.shape[1]),
+            "height": int(primary_img.shape[0]),
+        },
+        "image_count": len(imgs),
+        "lookup_hero_count": len(lookup_map),
         "team_count": len(solved_teams),
         "substitute_team_count": sub_count,
         "best_mode": best_mode,
@@ -236,6 +307,13 @@ def recognize_image_bytes(image_bytes):
         "formations": formations,
         "seed_payload": seed_payload,
     }
+    if lineup_sets is not None:
+        resp["lineup_sets"] = lineup_sets
+    return resp
+
+
+def recognize_image_bytes(image_bytes):
+    return recognize_multiple_images([image_bytes])
 
 
 def _resolve_sample_image(rel_path: str) -> Path | None:
@@ -264,6 +342,9 @@ def _list_sample_images():
         ("afk-nightmare-corridor-infernal-overlord-9.png", "App Export — 6-Round Nightmare Corridor (2040×2082)"),
         ("lydydxhxpyyh1.png", "Dual-Panel Community Guide — 6 Rounds + 43 Substitute Teams (3000×6000)"),
         ("yxqjrbg71c1i1.png", "Treasure Scramble — 7-Team Multi-Formation Guide (3000×6000)"),
+        ("5am63ydnvk1i1.png,rziiahgnvk1i1.png", "Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (2× 1228×2014)"),
+        ("h03e45jpfk1i1.png,96yli4jpfk1i1.png", "TS 7-Team + Hero Investment/Collection Lookup Sheet (800×1800 + 2600×1750)"),
+        ("5w6pegdl2o1i1.png", "Multi-Lineup Grid — 3 Separate 6-Round NC Lineups in One Image (3888×5955)"),
         ("f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp", "F2P Staggered Guide — 3-Round Nightmare Corridor (1080×1629)"),
         ("tools/image-recognition/pilot-images/pilot-nightmare-round-1.png", "Single-Round Crop — Round 1 Worm Queen (1344×707)"),
         ("tools/image-recognition/pilot-images/pilot-nightmare-round-3.png", "Single-Round Crop — Round 3 Demonic Puppet (1344×776)"),
@@ -272,8 +353,9 @@ def _list_sample_images():
     ]
     out = []
     for rel, label in candidates:
-        p = _resolve_sample_image(rel)
-        if p and p.is_file():
+        parts = [x.strip() for x in rel.split(",") if x.strip()]
+        resolved = [_resolve_sample_image(pt) for pt in parts]
+        if resolved and all(p and p.is_file() for p in resolved):
             out.append({"path": rel, "label": label})
     return out
 
@@ -804,24 +886,40 @@ class handler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/recognize-sample":
                 payload = json.loads(body.decode("utf-8"))
-                rel_path = payload.get("path", "")
-                target_path = _resolve_sample_image(rel_path)
-                if not target_path or not target_path.is_file():
-                    raise ValueError(f"Sample image not found: {rel_path}")
-                result = recognize_image_bytes(target_path.read_bytes())
+                raw_paths = payload.get("paths")
+                if not raw_paths:
+                    rel_path = payload.get("path", "")
+                    raw_paths = [x.strip() for x in rel_path.split(",") if x.strip()]
+                target_bytes = []
+                for rp in raw_paths:
+                    target_path = _resolve_sample_image(rp)
+                    if not target_path or not target_path.is_file():
+                        raise ValueError(f"Sample image not found: {rp}")
+                    target_bytes.append(target_path.read_bytes())
+                result = recognize_multiple_images(target_bytes)
                 self._send_json(200, result)
                 return
 
             if "application/json" in content_type:
                 payload = json.loads(body.decode("utf-8"))
-                b64_str = payload.get("image_base64") or payload.get("image") or ""
-                if "," in b64_str:
-                    b64_str = b64_str.split(",", 1)[1]
-                image_bytes = base64.b64decode(b64_str)
+                b64_list = payload.get("images_base64") or payload.get("images")
+                if isinstance(b64_list, list) and len(b64_list) > 0:
+                    image_bytes_list = []
+                    for item in b64_list:
+                        s = item or ""
+                        if "," in s:
+                            s = s.split(",", 1)[1]
+                        image_bytes_list.append(base64.b64decode(s))
+                    result = recognize_multiple_images(image_bytes_list)
+                else:
+                    b64_str = payload.get("image_base64") or payload.get("image") or ""
+                    if "," in b64_str:
+                        b64_str = b64_str.split(",", 1)[1]
+                    image_bytes = base64.b64decode(b64_str)
+                    result = recognize_image_bytes(image_bytes)
             else:
-                image_bytes = body
+                result = recognize_image_bytes(body)
 
-            result = recognize_image_bytes(image_bytes)
             self._send_json(200, result)
         except Exception as exc:
             self._send_json(400, {"ok": False, "error": str(exc)})
@@ -829,12 +927,12 @@ class handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Determine the best matching mode, target, lineup, and slot/team alternatives for an AFK Arena image."
+        description="Determine the best matching mode, target, lineup, and slot/team alternatives for one or more AFK Arena images."
     )
     parser.add_argument(
         "image",
-        nargs="?",
-        help="Path to an image file to analyze (omit when using --serve).",
+        nargs="*",
+        help="Path(s) to image file(s) to analyze (omit when using --serve).",
     )
     parser.add_argument(
         "--json",
@@ -857,17 +955,24 @@ def main():
         server.serve_forever()
         return
 
-    default_img = _resolve_sample_image("afk-nightmare-corridor-infernal-overlord-9.png")
-    img_path = (
-        _resolve_sample_image(args.image)
-        if args.image
-        else default_img
-    )
-    if not img_path or not img_path.is_file():
-        raise FileNotFoundError(f"Image not found: {args.image or 'default sample image'}")
+    raw_args = []
+    for item in args.image or []:
+        raw_args.extend(x.strip() for x in item.split(",") if x.strip())
+    if not raw_args:
+        raw_args = ["afk-nightmare-corridor-infernal-overlord-9.png"]
 
-    result = recognize_image_bytes(img_path.read_bytes())
-    print(format_cli_report(result, image_label=img_path.name))
+    img_paths = []
+    for ra in raw_args:
+        p = _resolve_sample_image(ra)
+        if not p or not p.is_file():
+            raise FileNotFoundError(f"Image not found: {ra}")
+        img_paths.append(p)
+
+    result = recognize_multiple_images([p.read_bytes() for p in img_paths])
+    label_str = " + ".join(p.name for p in img_paths)
+    if result.get("lineup_sets"):
+        label_str += f" ({len(result['lineup_sets'])} lineup sets)"
+    print(format_cli_report(result, image_label=label_str))
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

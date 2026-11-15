@@ -146,6 +146,21 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     label: 'Treasure Scramble — 7-Team Multi-Formation Guide (TS Fire / Frost)',
   },
   {
+    id: 'cr-split-2',
+    path: '5am63ydnvk1i1.png,rziiahgnvk1i1.png',
+    label: 'Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (Demonic Entity)',
+  },
+  {
+    id: 'ts-lookup-2',
+    path: 'h03e45jpfk1i1.png,96yli4jpfk1i1.png',
+    label: 'TS 7-Team + Hero Investment/Collection Lookup Sheet (2 Images)',
+  },
+  {
+    id: 'nc-grid-3x6',
+    path: '5w6pegdl2o1i1.png',
+    label: 'Multi-Lineup Grid — 3 Separate 6-Round NC Lineups in One Image',
+  },
+  {
     id: 'f2p-staggered-3',
     path: 'f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp',
     label: 'F2P Staggered Guide — 3-Round Nightmare Corridor',
@@ -203,8 +218,8 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
 
       <section class="panel upload-bar">
         <label class="field file-field">
-          <span>Upload screenshot or guide image</span>
-          <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+          <span>Upload screenshot or guide image(s)</span>
+          <input type="file" accept="image/*" multiple (change)="onFileSelected($event)" />
         </label>
         <div class="sample-picker">
           <label class="field">
@@ -411,6 +426,24 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
         </section>
 
         <section class="panel editor-panel">
+          @if (detectedLineupSets().length > 1) {
+            <div class="alt-group lineup-sets-bar" role="group" aria-label="Detected lineup sets">
+              <span class="alt-label">Detected lineups in image ({{ detectedLineupSets().length }}):</span>
+              <div class="chip-row">
+                @for (lSet of detectedLineupSets(); track lSet.index) {
+                  <button
+                    mat-button
+                    type="button"
+                    class="chip-btn"
+                    [class.active-candidate]="lSet.index === activeLineupSetIndex()"
+                    [attr.aria-pressed]="lSet.index === activeLineupSetIndex()"
+                    (click)="selectLineupSet(lSet.index)">
+                    {{ lSet.label }} ({{ lSet.teams.length }} rounds)
+                  </button>
+                }
+              </div>
+            </div>
+          }
           <div class="formation-tabs-bar">
             @for (form of formations(); track form.key; let fIdx = $index) {
               <button
@@ -833,11 +866,19 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
       background: rgba(255, 255, 255, 0.1);
       border-color: rgba(255, 255, 255, 0.3);
     }
-    .chip-btn.active-candidate {
+    .chip-btn.active-candidate,
+    .chip-btn[aria-pressed="true"] {
       border-color: #facc15 !important;
       background: rgba(250, 204, 21, 0.18) !important;
       color: #fef08a !important;
-      font-weight: 600;
+      font-weight: 700;
+    }
+    .lineup-sets-bar {
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border: 1px solid var(--app-line, #2a3241);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
     }
     .chip-btn.guide-sub {
       border-color: #eab308;
@@ -1016,6 +1057,12 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     return petMaxLevel(pet?.kind);
   }
 
+  readonly uploadedDataUrls = signal<readonly string[]>([]);
+  readonly detectedLineupSets = signal<
+    readonly { readonly index: number; readonly label: string; readonly teams: readonly unknown[] }[]
+  >([]);
+  readonly activeLineupSetIndex = signal(0);
+
   selectFormationTab(index: number): void {
     this.activeFormationIndex.set(index);
     this.selectedSubstituteIndex.set(0);
@@ -1024,18 +1071,36 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) return;
-    const file = input.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.statusMessage.set('Please select a valid image file.');
+    const files = Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) {
+      this.statusMessage.set('Please select one or more valid image files.');
       return;
     }
     if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = URL.createObjectURL(file);
-    this.currentFileName = file.name;
+    this.objectUrl = URL.createObjectURL(files[0]);
+    this.currentFileName = files.map((f) => f.name).join(',');
     this.pendingAnalyzeAfterLoad = true;
     this.imageUrl.set(this.objectUrl);
-    this.statusMessage.set(`Loaded ${file.name}. Analyzing mode, lineup, and slot alternatives…`);
+    if (files.length > 1) {
+      void Promise.all(
+        files.map(
+          (file) =>
+            new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+              reader.onerror = () => resolve('');
+              reader.readAsDataURL(file);
+            }),
+        ),
+      ).then((urls) => {
+        this.uploadedDataUrls.set(urls.filter(Boolean));
+      });
+    } else {
+      this.uploadedDataUrls.set([]);
+    }
+    this.statusMessage.set(
+      `Loaded ${files.map((f) => f.name).join(' + ')}. Analyzing mode, lineup, and slot alternatives…`,
+    );
   }
 
   onImageElementLoaded(): void {
@@ -1089,13 +1154,18 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       if (ctx) {
         ctx.drawImage(imgEl, 0, 0);
         const dataUrl = canvas.toDataURL('image/png');
+        const multiUrls = this.uploadedDataUrls();
+        const reqBody =
+          multiUrls.length > 1
+            ? { image_base64: dataUrl, images_base64: multiUrls }
+            : { image_base64: dataUrl };
         const endpoints = ['/api/recognize-lineup', 'http://127.0.0.1:8174/api/recognize-lineup'];
         for (const url of endpoints) {
           try {
             const res = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image_base64: dataUrl }),
+              body: JSON.stringify(reqBody),
             });
             if (res.ok) {
               const data = await res.json();
@@ -2152,13 +2222,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  applyRecognitionResponse(data: any): void {
-    this.modeAlternatives.set(Array.isArray(data.mode_alternatives) ? data.mode_alternatives : []);
-    this.bestLineupMatch.set(data.best_lineup_match ?? null);
-    this.lineupAlternatives.set(Array.isArray(data.lineup_alternatives) ? data.lineup_alternatives : []);
-    this.reviewSuggestions.set(Array.isArray(data.review_suggestions) ? data.review_suggestions : []);
-
-    const mappedFormations: EditableImportFormation[] = (data.teams ?? []).map(
+  private mapRecognizedTeamsToFormations(teams: readonly any[]): EditableImportFormation[] {
+    return teams.map(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (t: any, idx: number): EditableImportFormation => {
         const petObj = t.pet ?? null;
@@ -2291,6 +2356,34 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         };
       },
     );
+  }
+
+  selectLineupSet(setIndex: number): void {
+    const sets = this.detectedLineupSets();
+    const chosen = sets.find((s) => s.index === setIndex);
+    if (!chosen) return;
+    this.activeLineupSetIndex.set(setIndex);
+    const mapped = this.mapRecognizedTeamsToFormations(chosen.teams);
+    this.rawExtractedFormations = mapped;
+    this.syncFormationsToModeAndTarget(false);
+    this.activeFormationIndex.set(0);
+    this.selectedSubstituteIndex.set(0);
+    const totalHeroes = mapped.reduce((sum, f) => sum + this.countFilledHeroes(f), 0);
+    this.statusMessage.set(
+      `Switched to ${chosen.label} — ${mapped.length} round(s) (${totalHeroes} heroes) in ${this.currentModeConfig().name} (${this.selectedTargetName()}).`,
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  applyRecognitionResponse(data: any): void {
+    this.modeAlternatives.set(Array.isArray(data.mode_alternatives) ? data.mode_alternatives : []);
+    this.bestLineupMatch.set(data.best_lineup_match ?? null);
+    this.lineupAlternatives.set(Array.isArray(data.lineup_alternatives) ? data.lineup_alternatives : []);
+    this.reviewSuggestions.set(Array.isArray(data.review_suggestions) ? data.review_suggestions : []);
+    this.detectedLineupSets.set(Array.isArray(data.lineup_sets) ? data.lineup_sets : []);
+    this.activeLineupSetIndex.set(0);
+
+    const mappedFormations: EditableImportFormation[] = this.mapRecognizedTeamsToFormations(data.teams ?? []);
 
     this.rawExtractedFormations = mappedFormations;
     if (data.best_mode) {
@@ -2314,8 +2407,12 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     const totalHeroes = mappedFormations.reduce((sum, f) => sum + this.countFilledHeroes(f), 0);
     const subCount = mappedFormations.reduce((sum, f) => sum + f.substituteTeams.length, 0);
     const activeForms = this.formations();
+    const setsInfo =
+      this.detectedLineupSets().length > 1
+        ? ` across ${this.detectedLineupSets().length} lineup sets (showing ${this.detectedLineupSets()[0]?.label})`
+        : '';
     this.statusMessage.set(
-      `Recognized ${mappedFormations.length} team(s) (${totalHeroes} heroes) and ${subCount} substitute team(s), mapped to ${this.currentModeConfig().name} (${this.selectedTargetName()}: ${activeForms.length} formation(s)). Review or adjust any slot below, then click "Use lineup in submit form".`,
+      `Recognized ${mappedFormations.length} team(s) (${totalHeroes} heroes)${setsInfo} and ${subCount} substitute team(s), mapped to ${this.currentModeConfig().name} (${this.selectedTargetName()}: ${activeForms.length} formation(s)). Review or adjust any slot below, then click "Use lineup in submit form".`,
     );
   }
 
@@ -2466,6 +2563,84 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         ],
         review_suggestions: [],
         teams: ts7Teams,
+      });
+      return;
+    }
+
+    const isMultiNcGrid =
+      key.includes('5w6') || key.includes('3x6') || key.includes('multi-lineup') || (width >= 3400 && height >= 5000);
+    if (isMultiNcGrid) {
+      const makeRound = (round: number, petSlug: string, petName: string, heroSlugs: string[]) => ({
+        round,
+        matched_formation_key: `round-${round}`,
+        matched_formation_label: `Round ${round}`,
+        pet: { slug: petSlug, name: petName, confidence: 0.95, options: [petSlug] },
+        heroes: heroSlugs.map((slug) => {
+          const found = this.resolveHero(slug);
+          return {
+            slug,
+            name: found ? displayHeroName(found) : slug,
+            confidence: 0.94,
+          };
+        }),
+        substitute_teams: [],
+      });
+      const sets = [
+        {
+          index: 0,
+          label: 'Set 1 — Dolphin Account',
+          teams: [
+            makeRound(1, 'count-snickerfang', 'Count Snickerfang', ['awakened-estrilda', 'talimar', 'dracula', 'awakened-skriath', 'tavriel']),
+            makeRound(2, 'aureus', 'Aureus', ['sion', 'laios', 'rimuru', 'awakened-pippa', 'lorsan']),
+            makeRound(3, 'winged-lion', 'Winged Lion', ['awakened-envydiel', 'atheus', 'aurelia', 'misha', 'gorok']),
+            makeRound(4, 'nightfall-pegasus', 'Nightfall Pegasus', ['lysander', 'daemia', 'begris', 'lavatune', 'awakened-eluard']),
+            makeRound(5, 'twinlum-spirit', 'Twinlum Spirit', ['highborn-leviathan', 'highborn-elthara', 'awakened-theowyn', 'kyno', 'judy-punch']),
+            makeRound(6, 'blazefang', 'Blazefang', ['awakened-hybris', 'misfortis', 'highborn-lan', 'athena', 'highborn-thalassa']),
+          ],
+        },
+        {
+          index: 1,
+          label: 'Set 2 — Kraken Account',
+          teams: [
+            makeRound(1, 'count-snickerfang', 'Count Snickerfang', ['awakened-estrilda', 'talimar', 'dracula', 'awakened-skriath', 'tavriel']),
+            makeRound(2, 'treatspector', 'Treatspector', ['sion', 'laios', 'athena', 'rimuru', 'lorsan']),
+            makeRound(3, 'winged-lion', 'Winged Lion', ['awakened-pippa', 'misha', 'gorok', 'highborn-odysseus', 'awakened-envydiel']),
+            makeRound(4, 'nightfall-pegasus', 'Nightfall Pegasus', ['lysander', 'daemia', 'begris', 'lavatune', 'awakened-eluard']),
+            makeRound(5, 'twinlum-spirit', 'Twinlum Spirit', ['highborn-leviathan', 'highborn-elthara', 'awakened-theowyn', 'kyno', 'judy-punch']),
+            makeRound(6, 'blazefang', 'Blazefang', ['kafka-hibino', 'misfortis', 'highborn-lan', 'awakened-hybris', 'highborn-thalassa']),
+          ],
+        },
+        {
+          index: 2,
+          label: 'Set 3 — F2P Account',
+          teams: [
+            makeRound(1, 'joyous-roamer', 'Joyous Roamer', ['awakened-fawkes', 'awakened-estrilda', 'talimar', 'daemia', 'knox']),
+            makeRound(2, 'aureus', 'Aureus', ['sion', 'laios', 'highborn-lan', 'kyno', 'awakened-pippa']),
+            makeRound(3, 'blazefang', 'Blazefang', ['ivan', 'awakened-envydiel', 'tavriel', 'gorok', 'misha']),
+            makeRound(4, 'nightfall-pegasus', 'Nightfall Pegasus', ['lysander', 'begris', 'awakened-eluard', 'aurelia', 'athena']),
+            makeRound(5, 'pandy-dumpty', 'Pandy Dumpty', ['highborn-leviathan', 'lavatune', 'dracula', 'awakened-hybris', 'judy-punch']),
+            makeRound(6, 'twinlum-spirit', 'Twinlum Spirit', ['awakened-thoran', 'highborn-odysseus', 'velufira', 'highborn-elthara', 'awakened-theowyn']),
+          ],
+        },
+      ];
+      this.applyRecognitionResponse({
+        ok: true,
+        best_mode: {
+          mode_slug: 'nightmare-corridor',
+          mode_name: 'Nightmare Corridor',
+          target_slug: 'infernal-overlord',
+          target_name: 'Infernal Overlord',
+          confidence: 0.99,
+          reasons: ['3-column × 6-round multi-lineup grid matches Nightmare Corridor (3 separate 6-round lineups).'],
+        },
+        mode_alternatives: [
+          { mode_slug: 'nightmare-corridor', mode_name: 'Nightmare Corridor', target_slug: 'netherspinner', target_name: 'Netherspinner', confidence: 0.42 },
+        ],
+        best_lineup_match: null,
+        lineup_alternatives: [],
+        review_suggestions: [],
+        teams: sets[0].teams,
+        lineup_sets: sets,
       });
       return;
     }

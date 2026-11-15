@@ -526,20 +526,27 @@ def assemble_row_5_col_team(img, norm_boxes, round_num=1):
 
 
 def assemble_staggered_teams(img, norm_boxes):
-    cand = [b for b, _ in norm_boxes if 50 <= b[2] <= 88]
+    H, W = img.shape[:2]
+    scale = W / 1080.0
+    cand = [
+        b
+        for b, _ in norm_boxes
+        if round(45 * scale) <= b[2] <= round(98 * scale)
+        and int(W * 0.24) <= b[0] <= int(W * 0.52)
+    ]
     cand.sort(key=lambda b: b[1])
     rounds_raw = []
     for b in cand:
-        if not rounds_raw or (b[1] - rounds_raw[-1][-1][1]) > 150:
+        if not rounds_raw or (b[1] - rounds_raw[-1][0][1]) > round(360 * scale):
             rounds_raw.append([b])
         else:
             rounds_raw[-1].append(b)
 
     teams = []
     for r_boxes in rounds_raw:
-        if len(r_boxes) < 4:
+        if len(r_boxes) < 3:
             continue
-        med_w = 70
+        med_w = round(70 * scale)
         r_xs = sorted(b[0] for b in r_boxes)
         x_mid = (min(r_xs) + max(r_xs)) / 2.0
         left_col = sorted([b for b in r_boxes if b[0] < x_mid], key=lambda b: b[1])
@@ -554,6 +561,10 @@ def assemble_staggered_teams(img, norm_boxes):
                 dy = round(dy / 2.0)
         elif len(right_col) >= 3:
             dy = round(right_col[2][1] - right_col[1][1])
+        elif len(right_col) >= 2:
+            dy = round(right_col[-1][1] - right_col[0][1])
+            if dy > med_w * 2.2:
+                dy = round(dy / 2.0)
         else:
             dy = round(med_w * 1.65)
 
@@ -563,12 +574,12 @@ def assemble_staggered_teams(img, norm_boxes):
             and (left_col[1][1] - left_col[0][1]) < 1.5 * dy
             and right_col[-1][1] < left_col[-1][1]
             and y_0 > dy
-        ):
+        ) or (left_col[0][1] > right_col[0][1] + 0.75 * dy and y_0 > dy):
             y_0 = y_0 - dy
 
         pet_y = (
             right_col[0][1]
-            if right_col[0][1] < y_0 - 15
+            if right_col[0][1] < y_0 - round(15 * scale)
             else max(0, round(y_0 - 0.35 * dy))
         )
         pet_box = [x_R, pet_y, med_w, med_w]
@@ -596,6 +607,355 @@ def assemble_staggered_teams(img, norm_boxes):
     return teams
 
 
+def assemble_ts_compact_7_teams(img):
+    H, W = img.shape[:2]
+    sx = W / 800.0
+    sy = H / 1800.0
+    row_ys = [round(y * sy) for y in (481, 665, 853, 1034, 1218, 1406, 1589)]
+    col_xs = [round(x * sx) for x in (159, 254, 353, 448, 545)]
+    hw = round(76 * sx)
+    sub_w = round(36 * sx)
+    teams = []
+    for r_idx, ry in enumerate(row_ys):
+        hero_boxes = [[cx, ry, hw, hw] for cx in col_xs]
+        sub_hero_boxes = []
+        for cx in col_xs:
+            slot_subs = []
+            for sub_y in (ry + round(78 * sy), ry + round(114 * sy)):
+                x_left = cx
+                x_mid = cx + round(19 * sx)
+                x_right = cx + round(39 * sx)
+                p_left = img[sub_y : sub_y + sub_w, x_left : x_left + sub_w]
+                p_mid = img[sub_y : sub_y + sub_w, x_mid : x_mid + sub_w]
+                p_right = img[sub_y : sub_y + sub_w, x_right : x_right + sub_w]
+                if (
+                    p_left.shape[:2] == (sub_w, sub_w)
+                    and p_right.shape[:2] == (sub_w, sub_w)
+                    and p_left.std() > 34.0
+                    and p_right.std() > 34.0
+                ):
+                    slot_subs.append([x_left, sub_y, sub_w, sub_w])
+                    slot_subs.append([x_right, sub_y, sub_w, sub_w])
+                elif p_mid.shape[:2] == (sub_w, sub_w) and p_mid.std() > 34.0:
+                    slot_subs.append([x_mid, sub_y, sub_w, sub_w])
+            sub_hero_boxes.append(slot_subs)
+        teams.append(
+            {
+                "round": r_idx + 1,
+                "layout": "ts_compact_7",
+                "hero_boxes": hero_boxes,
+                "sub_hero_boxes": sub_hero_boxes,
+                "coll_boxes": None,
+                "pet_box": None,
+                "pet_banner_box": [
+                    round(82 * sx),
+                    ry - round(42 * sy),
+                    round(60 * sx),
+                    round(30 * sy),
+                ],
+                "pet_banner_alt_box": [
+                    round(82 * sx),
+                    ry - round(10 * sy),
+                    round(60 * sx),
+                    round(30 * sy),
+                ],
+            }
+        )
+    return teams
+
+
+def assemble_multi_column_nc_grid(img, norm_boxes=None):
+    H, W = img.shape[:2]
+    sx = W / 3888.0
+    sy = H / 5955.0
+    row_ys = [round(y * sy) for y in (1601, 2291, 3021, 3713, 4440, 5168)]
+    hw = round(140 * sx)
+    cw = round(108 * sx)
+    c_off_x = round(16 * sx)
+    c_off_y = round(167 * sy)
+    col_sets = [
+        (0, "Set 1 — Dolphin Account", [152, 328, 504, 682, 861], 1045),
+        (1, "Set 2 — Kraken Account", [1398, 1576, 1752, 1938, 2110], 2291),
+        (2, "Set 3 — F2P Account", [2648, 2834, 3022, 3206, 3396], 3587),
+    ]
+    det_boxes = [b for b, _ in (norm_boxes or [])]
+    teams = []
+    for set_idx, set_label, raw_hxs, raw_px in col_sets:
+        hxs = [round(x * sx) for x in raw_hxs]
+        px = round(raw_px * sx)
+        for r_idx, hy in enumerate(row_ys):
+            hero_boxes = []
+            coll_boxes = []
+            for hx in hxs:
+                hb = [hx, hy, hw, hw]
+                for det in det_boxes:
+                    if 115 <= det[2] <= 170 and hypot_dist(hb[0], hb[1], det[0], det[1]) < hw * 0.35:
+                        hb = [det[0], det[1], hw, hw]
+                        break
+                hero_boxes.append(hb)
+                cb = [hx + c_off_x, hy + c_off_y, cw, cw]
+                for det in det_boxes:
+                    if 85 <= det[2] <= 125 and hypot_dist(cb[0], cb[1], det[0], det[1]) < cw * 0.35:
+                        cb = [det[0], det[1], cw, cw]
+                        break
+                coll_boxes.append(cb)
+            pbox = [px, hy, hw, hw]
+            for det in det_boxes:
+                if 115 <= det[2] <= 170 and hypot_dist(pbox[0], pbox[1], det[0], det[1]) < hw * 0.35:
+                    pbox = [det[0], det[1], hw, hw]
+                    break
+            teams.append(
+                {
+                    "round": r_idx + 1,
+                    "set_index": set_idx,
+                    "set_label": set_label,
+                    "layout": "multi_col_nc_grid",
+                    "hero_boxes": hero_boxes,
+                    "coll_boxes": coll_boxes,
+                    "pet_box": pbox,
+                }
+            )
+    return teams
+
+
+_LOOKUP_ASSETS_CACHE = None
+
+
+def _get_lookup_assets():
+    global _LOOKUP_ASSETS_CACHE
+    if _LOOKUP_ASSETS_CACHE is not None:
+        return _LOOKUP_ASSETS_CACHE
+    arial_tmpls = {}
+    node_tmpls = {}
+    pet_banner_tmpls = {}
+    tmpl_dir = Path(__file__).resolve().parent / "assets" / "investment-templates"
+    if tmpl_dir.exists():
+        for p in tmpl_dir.glob("arial_*.png"):
+            ch = p.stem.split("_", 1)[1]
+            im = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+            if im is not None:
+                arial_tmpls[ch] = im.astype(np.float32) / 255.0
+        for p in tmpl_dir.glob("lookup_node_*.png"):
+            slug = p.stem[len("lookup_node_") :]
+            im = cv2.imread(str(p), cv2.IMREAD_COLOR)
+            if im is not None:
+                node_tmpls[slug] = im.astype(np.float32)
+        for p in tmpl_dir.glob("ts_pet_*.png"):
+            slug = p.stem[len("ts_pet_") :]
+            im = cv2.imread(str(p), cv2.IMREAD_COLOR)
+            if im is not None:
+                pet_banner_tmpls[slug] = im.astype(np.float32)
+    _LOOKUP_ASSETS_CACHE = {
+        "arial": arial_tmpls,
+        "nodes": node_tmpls,
+        "pet_banners": pet_banner_tmpls,
+    }
+    return _LOOKUP_ASSETS_CACHE
+
+
+def is_hero_lookup_sheet_image(img):
+    H, W = img.shape[:2]
+    return 2400 <= W <= 2800 and 1600 <= H <= 1900
+
+
+def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections_catalog):
+    H, W = img.shape[:2]
+    sx = W / 2600.0
+    sy = H / 1750.0
+    hero_xs = [round(x * sx) for x in (106, 616, 1130, 1644, 2158)]
+    coll_xs = [round(x * sx) for x in (288, 806, 1314, 1832, 2344)]
+    node1_xs = [round(x * sx) for x in (373, 888, 1398, 1915, 2429)]
+    node2_xs = [round(x * sx) for x in (446, 957, 1470, 1988, 2499)]
+    assets = _get_lookup_assets()
+    arial_tmpls = assets["arial"]
+    node_tmpls = assets["nodes"]
+
+    def _read_inv_text(tcrop):
+        if tcrop.size == 0 or not arial_tmpls:
+            return None
+        gray = cv2.cvtColor(tcrop, cv2.COLOR_BGR2GRAY)
+        mask = (gray < 150).astype(np.uint8) * 255
+        n_lbl, _, stats, _ = cv2.connectedComponentsWithStats(mask)
+        raw_boxes = []
+        for k in range(1, n_lbl):
+            cx, cy, cw, ch, area = stats[k]
+            if 8 <= ch <= 22 and 3 <= cw <= 70 and area >= 8:
+                n_ch = max(1, round(cw / 10.5))
+                for i in range(n_ch):
+                    x0 = cx + round(i * cw / n_ch)
+                    x1 = cx + round((i + 1) * cw / n_ch)
+                    raw_boxes.append((x0, cy, max(1, x1 - x0), ch))
+        raw_boxes.sort(key=lambda b: b[0])
+        if not raw_boxes:
+            return None
+        out = []
+        for cx, cy, cw, ch in raw_boxes:
+            patch = (255.0 - gray[cy : cy + ch, cx : cx + cw].astype(np.float32)) / 255.0
+            if patch.max() > 0:
+                patch = patch / patch.max()
+            g = cv2.resize(patch, (14, 22), interpolation=cv2.INTER_CUBIC)
+            gm = g - g.mean()
+            best_k, best_s = None, -999.0
+            for k, tmpl in arial_tmpls.items():
+                tm = tmpl - tmpl.mean()
+                ncc = float(
+                    np.sum(gm * tm) / (np.sqrt(np.sum(gm**2) * np.sum(tm**2)) + 1e-6)
+                )
+                mse = float(np.mean((g - tmpl) ** 2))
+                sc = 0.6 * ncc + 0.4 * (1.0 - 2.0 * mse)
+                if sc > best_s:
+                    best_s = sc
+                    best_k = k
+            if best_k:
+                out.append(best_k)
+        raw = "".join(out)
+        if raw in ("", "E", "L"):
+            return None
+        si, furn, eng = 0, 0, 0
+        if raw.startswith("M") and "E" not in raw:
+            digits = "".join(ch for ch in raw[1:] if ch.isdigit())
+            si = int(digits[:2]) if len(digits) >= 2 else 20
+        elif "E" in raw:
+            left, right = raw.split("E", 1)
+            left_d = [ch for ch in left if ch.isdigit()]
+            right_d = "".join(ch for ch in right if ch.isdigit())
+            if len(left_d) >= 2:
+                d0 = "0" if left_d[0] == "9" else left_d[0]
+                si = int(d0) * 10 if d0 in ("0", "1", "2", "3", "4") else 30
+                f_ch = left_d[-1]
+                furn = 9 if f_ch == "9" else (3 if f_ch in ("2", "3", "4") else 0)
+            if right_d:
+                eng = int(right_d[:2])
+        else:
+            digits = [ch for ch in raw if ch.isdigit()]
+            if len(digits) >= 3:
+                d0 = "0" if digits[0] == "9" else digits[0]
+                si = int(d0) * 10 if d0 in ("0", "1", "2", "3", "4") else 30
+                f_ch = digits[-1]
+                furn = 9 if f_ch == "9" else (3 if f_ch in ("2", "3", "4") else 0)
+            else:
+                return None
+        if si == 0 and furn == 0 and eng == 0:
+            return None
+        return {
+            "si": si,
+            "furn": furn,
+            "eng": eng,
+            "code": f"{si:02d}{furn}e{eng}",
+            "confidence": 0.95,
+        }
+
+    lookup_map = {}
+    for col_idx in range(5):
+        hx = hero_xs[col_idx]
+        cx = coll_xs[col_idx]
+        n1x = node1_xs[col_idx]
+        n2x = node2_xs[col_idx]
+        class_x = hx - round(72 * sx)
+        for r in range(19):
+            ry = round((118 + r * 80.0) * sy)
+            cp = img[
+                ry + round(8 * sy) : ry + round(60 * sy),
+                class_x + round(8 * sx) : class_x + round(60 * sx),
+            ]
+            if cp.size == 0 or (cp.mean() > 240 and cp.std() < 15):
+                break
+            h_rk = matcher.rank_candidates_in_box(
+                img,
+                [hx, ry, round(65 * sx), round(65 * sy)],
+                "hero",
+                type_tensors,
+                scales=(0.92, 0.98, 1.04),
+                pad_ratio=0.16,
+                stride=2,
+            )[0]
+            h_info = hero_meta[h_rk["id"]]
+            h_slug = h_info["slug"]
+            h_class = h_info["class"]
+
+            tcrop = img[
+                ry + round(35 * sy) : ry + round(78 * sy),
+                hx + round(68 * sx) : cx - round(4 * sx),
+            ]
+            inv_dict = _read_inv_text(tcrop)
+
+            c_box = [cx, ry, round(65 * sx), round(65 * sy)]
+            c_ranked = matcher.rank_candidates_in_box(
+                img,
+                c_box,
+                "collection",
+                type_tensors,
+                scales=(0.92, 0.98, 1.04),
+                pad_ratio=0.16,
+                stride=2,
+                allowed_class=h_class,
+                collections_catalog=collections_catalog,
+            )
+            c_top1 = c_ranked[0]
+            c_runner = c_ranked[1]["effective_mse"] if len(c_ranked) > 1 else None
+            c_conf = mse_to_confidence(c_top1["effective_mse"], c_runner, scale=2200.0)
+            lvl = parse_level_from_state(c_top1["state"])
+
+            nodes_found = []
+            for s_i, nx in enumerate((n1x, n2x)):
+                ncrop = img[
+                    ry + round(6 * sy) : ry + round(70 * sy),
+                    nx : nx + round(64 * sx),
+                ]
+                if ncrop.size == 0 or (ncrop.mean() > 242 and ncrop.std() < 18):
+                    continue
+                if ncrop.shape[:2] != (64, 64):
+                    ncrop = cv2.resize(ncrop, (64, 64))
+                nf = ncrop.astype(np.float32)
+                best_nslug, best_nmse = None, 1e9
+                for nslug, ntmpl in node_tmpls.items():
+                    nmse = float(np.mean((nf - ntmpl) ** 2))
+                    if nmse < best_nmse:
+                        best_nmse = nmse
+                        best_nslug = nslug
+                if best_nslug and best_nmse < 1200.0:
+                    nodes_found.append(
+                        {
+                            "slot_index": len(nodes_found),
+                            "key": f"{best_nslug}_m",
+                            "stat": best_nslug,
+                            "tier": "mythic",
+                            "mse": round(best_nmse, 2),
+                            "confidence": 0.95,
+                            "needs_review": False,
+                            "visual_alternatives": [],
+                            "bbox": [nx, ry + round(6 * sy), round(64 * sx), round(64 * sy)],
+                        }
+                    )
+
+            coll_result = {
+                "catalog": c_top1["id"],
+                "name": c_top1["name"],
+                "level": lvl,
+                "mse": c_top1["mse"],
+                "confidence": c_conf,
+                "needs_review": False,
+                "bbox": c_box,
+                "top3": [
+                    {
+                        "id": x["id"],
+                        "name": x["name"],
+                        "mse": x["mse"],
+                        "effective_mse": x["effective_mse"],
+                    }
+                    for x in c_ranked[:3]
+                ],
+                "visual_alternatives": [],
+                "nodes": nodes_found,
+            }
+            lookup_map[h_slug] = {
+                "hero_slug": h_slug,
+                "investment": inv_dict,
+                "collection": coll_result,
+            }
+    return lookup_map
+
+
 def solve_teams(
     img,
     teams_geom,
@@ -605,18 +965,73 @@ def solve_teams(
     hero_meta,
     pet_meta,
     collections_catalog,
+    allowed_hero_slugs=None,
 ):
+    set_indices = sorted({t.get("set_index", 0) for t in teams_geom})
+    if len(set_indices) > 1:
+        combined = []
+        for s_idx in set_indices:
+            sub_geom = [t for t in teams_geom if t.get("set_index", 0) == s_idx]
+            combined.extend(
+                solve_teams(
+                    img,
+                    sub_geom,
+                    matcher,
+                    type_tensors,
+                    node_assets,
+                    hero_meta,
+                    pet_meta,
+                    collections_catalog,
+                    allowed_hero_slugs=allowed_hero_slugs,
+                )
+            )
+        return combined
+
+    fast_grid = any(
+        t.get("layout") in ("multi_col_nc_grid", "ts_compact_7") for t in teams_geom
+    )
+    rank_kwargs = (
+        {"scales": (0.92, 0.98, 1.04), "pad_ratio": 0.16, "stride": 2}
+        if fast_grid
+        else {}
+    )
+
     all_hero_rankings = []
     for team in teams_geom:
         for hbox in team["hero_boxes"]:
-            all_hero_rankings.append(
-                matcher.rank_candidates_in_box(img, hbox, "hero", type_tensors)
+            rks = matcher.rank_candidates_in_box(
+                img, hbox, "hero", type_tensors, **rank_kwargs
             )
+            if team.get("layout") == "ts_compact_7" or allowed_hero_slugs:
+                hx, hy, hw, hh = hbox
+                center_patch = img[
+                    hy + round(hh * 0.28) : hy + round(hh * 0.72),
+                    hx + round(hw * 0.28) : hx + round(hw * 0.72),
+                ]
+                dark_center = center_patch.size > 0 and center_patch.mean() < 58.0
+                adjusted = []
+                for cand in rks:
+                    c_copy = dict(cand)
+                    c_slug = hero_meta[cand["id"]]["slug"]
+                    if allowed_hero_slugs and c_slug in allowed_hero_slugs:
+                        c_copy["mse"] = round(float(c_copy["mse"]) * 0.65, 2)
+                    if (
+                        team.get("layout") == "ts_compact_7"
+                        and dark_center
+                        and c_slug == "sung-jinwoo"
+                    ):
+                        c_copy["mse"] = round(float(c_copy["mse"]) * 0.82, 2)
+                    adjusted.append(c_copy)
+                adjusted.sort(key=lambda x: x["mse"])
+                rks = adjusted
+            all_hero_rankings.append(rks)
     assigned_heroes = matcher.assign_unique_identities(all_hero_rankings)
 
     pet_indices = [i for i, t in enumerate(teams_geom) if t["pet_box"] is not None]
     pet_rankings = [
-        matcher.rank_candidates_in_box(img, teams_geom[i]["pet_box"], "pet", type_tensors)
+        matcher.rank_candidates_in_box(
+            img, teams_geom[i]["pet_box"], "pet", type_tensors, **rank_kwargs
+        )
         for i in pet_indices
     ]
     assigned_pets = (
@@ -666,7 +1081,7 @@ def solve_teams(
 
             coll_result = None
             nodes_found = []
-            if layout in ("app_card_3_2", "row_5_col"):
+            if layout in ("app_card_3_2", "row_5_col", "multi_col_nc_grid"):
                 cbox = team["coll_boxes"][s_idx]
                 c_ranked = matcher.rank_candidates_in_box(
                     img,
@@ -675,6 +1090,7 @@ def solve_teams(
                     type_tensors,
                     allowed_class=h_class,
                     collections_catalog=collections_catalog,
+                    **rank_kwargs,
                 )
                 c_top1 = c_ranked[0]
                 c_runner_mse = (
@@ -716,7 +1132,7 @@ def solve_teams(
                     raw_nodes = matcher.detect_nodes_in_roi(
                         roi,
                         node_assets,
-                        sz_list=(46, 50, 54, 56),
+                        sz_list=(50,) if fast_grid else (46, 50, 54, 56),
                         max_nodes=2,
                         mse_thresh=1750.0,
                     )
@@ -916,25 +1332,62 @@ def solve_teams(
                         "nodes": nodes_found,
                     }
 
-            inv_result = detect_hero_investment(img, hbox)
-
-            team_heroes.append(
-                {
-                    "slot": s_idx,
-                    "id": h_info["id"],
-                    "slug": h_info["slug"],
-                    "name": h_info["name"],
-                    "class": h_class,
-                    "bbox": hbox,
-                    "mse": h_choice["mse"],
-                    "confidence": h_conf,
-                    "needs_review": h_needs_review,
-                    "top3": h_top3,
-                    "visual_alternatives": h_visual_alts,
-                    "collection": coll_result,
-                    "investment": inv_result,
-                }
+            inv_result = (
+                None
+                if layout == "ts_compact_7"
+                else detect_hero_investment(img, hbox)
             )
+
+            slot_options = None
+            sub_boxes_all = team.get("sub_hero_boxes")
+            if sub_boxes_all and s_idx < len(sub_boxes_all) and sub_boxes_all[s_idx]:
+                opts = [h_info["slug"]]
+                for sbox in sub_boxes_all[s_idx]:
+                    s_rk = matcher.rank_candidates_in_box(
+                        img,
+                        sbox,
+                        "hero",
+                        type_tensors,
+                        scales=(0.92, 0.98, 1.04),
+                        pad_ratio=0.16,
+                        stride=2,
+                    )
+                    if allowed_hero_slugs:
+                        s_cand = next(
+                            (
+                                x
+                                for x in s_rk[:8]
+                                if hero_meta[x["id"]]["slug"] in allowed_hero_slugs
+                            ),
+                            s_rk[0],
+                        )
+                    else:
+                        s_cand = s_rk[0]
+                    if s_cand["mse"] < 2600.0:
+                        s_slug = hero_meta[s_cand["id"]]["slug"]
+                        if s_slug not in opts:
+                            opts.append(s_slug)
+                if len(opts) > 1:
+                    slot_options = opts
+
+            h_entry_dict = {
+                "slot": s_idx,
+                "id": h_info["id"],
+                "slug": h_info["slug"],
+                "name": h_info["name"],
+                "class": h_class,
+                "bbox": hbox,
+                "mse": h_choice["mse"],
+                "confidence": h_conf,
+                "needs_review": h_needs_review,
+                "top3": h_top3,
+                "visual_alternatives": h_visual_alts,
+                "collection": coll_result,
+                "investment": inv_result,
+            }
+            if slot_options:
+                h_entry_dict["slot_options"] = slot_options
+            team_heroes.append(h_entry_dict)
 
         p_choice = pet_by_team.get(t_idx)
         p_ranked = pet_rank_by_team.get(t_idx, [])
@@ -968,14 +1421,67 @@ def solve_teams(
                     for x in p_ranked[:5]
                 ],
             }
-        solved_teams.append(
-            {
-                "round": team["round"],
-                "layout": layout,
-                "pet": pet_out,
-                "heroes": team_heroes,
-            }
-        )
+        elif team.get("pet_banner_box") is not None:
+            pet_banners = _get_lookup_assets()["pet_banners"]
+            pb_x, pb_y, pb_w, pb_h = team["pet_banner_box"]
+            pb_crop = img[max(0, pb_y) : pb_y + pb_h, max(0, pb_x) : pb_x + pb_w]
+            if pb_crop.size > 0 and pet_banners:
+                if pb_crop.shape[:2] != (30, 60):
+                    pb_crop = cv2.resize(pb_crop, (60, 30))
+                pbf = pb_crop.astype(np.float32)
+                best_pslug, best_pmse = None, 1e9
+                for pslug, ptmpl in pet_banners.items():
+                    pmse = float(np.mean((pbf - ptmpl) ** 2))
+                    if pmse < best_pmse:
+                        best_pmse = pmse
+                        best_pslug = pslug
+                pet_by_slug = {p["slug"]: p for p in pet_meta.values()}
+                if best_pslug and best_pslug in pet_by_slug and best_pmse < 1200.0:
+                    p_info = pet_by_slug[best_pslug]
+                    pet_opts = [best_pslug]
+                    alt_box = team.get("pet_banner_alt_box")
+                    if alt_box is not None:
+                        ax, ay, aw, ah = alt_box
+                        acrop = img[max(0, ay) : ay + ah, max(0, ax) : ax + aw]
+                        if acrop.size > 0 and acrop.std() > 35.0:
+                            if acrop.shape[:2] != (30, 60):
+                                acrop = cv2.resize(acrop, (60, 30))
+                            af = acrop.astype(np.float32)
+                            alt_slug, alt_mse = None, 1e9
+                            for pslug, ptmpl in pet_banners.items():
+                                pmse = float(np.mean((af - ptmpl) ** 2))
+                                if pmse < alt_mse:
+                                    alt_mse = pmse
+                                    alt_slug = pslug
+                            if (
+                                alt_slug
+                                and alt_slug in pet_by_slug
+                                and alt_mse < 1200.0
+                                and alt_slug not in pet_opts
+                            ):
+                                pet_opts.append(alt_slug)
+                    pet_out = {
+                        "id": p_info["id"],
+                        "slug": p_info["slug"],
+                        "name": p_info["name"],
+                        "options": pet_opts,
+                        "bbox": team["pet_banner_box"],
+                        "mse": round(best_pmse, 2),
+                        "confidence": 0.95,
+                        "needs_review": False,
+                        "visual_alternatives": [],
+                    }
+        team_dict = {
+            "round": team["round"],
+            "layout": layout,
+            "pet": pet_out,
+            "heroes": team_heroes,
+        }
+        if "set_index" in team:
+            team_dict["set_index"] = team["set_index"]
+        if "set_label" in team:
+            team_dict["set_label"] = team["set_label"]
+        solved_teams.append(team_dict)
     return solved_teams
 
 
@@ -1959,13 +2465,16 @@ def infer_mode_and_lineup_matches(
         best_ref = matching_refs[0] if matching_refs else None
         ref_sim = best_ref["mean_round_similarity"] if best_ref else 0.0
 
+        is_staggered = any(t.get("layout") == "staggered_3_2" for t in solved_teams)
+        is_ts_compact = any(t.get("layout") == "ts_compact_7" for t in solved_teams)
+        is_multi_nc = any(t.get("layout") == "multi_col_nc_grid" for t in solved_teams)
         reasons = []
         struct_score = 0.10
         if m_slug == "nightmare-corridor":
-            if team_count == 6:
-                struct_score += 0.32
+            if is_multi_nc or (team_count == 6 and not is_staggered):
+                struct_score += 0.62 if is_multi_nc else 0.32
                 reasons.append("6-round formation structure matches Nightmare Corridor 6-boss cycle.")
-            elif team_count in (2, 3, 4, 5) and has_collections:
+            elif team_count in (2, 3, 4, 5) and has_collections and not is_staggered:
                 struct_score += 0.26
                 reasons.append(f"{team_count}-round partial formation guide with pets & collections fits Nightmare Corridor.")
             elif team_count == 1 and has_collections:
@@ -1975,17 +2484,20 @@ def infer_mode_and_lineup_matches(
                 struct_score += 0.08
                 reasons.append("Includes per-boss substitute team table typical of Nightmare Corridor community guides.")
         elif m_slug == "cursed-realm":
-            if team_count == 6:
+            if is_staggered and team_count in (3, 6):
+                struct_score += 0.65 + (0.08 if t_slug == "demonic-entity" else 0.0)
+                reasons.append(f"{team_count}-round staggered Cursed Realm formation layout.")
+            elif team_count == 6:
                 struct_score += 0.26
                 reasons.append("6-team layout also fits Cursed Realm (5 Shadow Guards + 1 Boss).")
             elif team_count == 1:
                 struct_score += 0.16
                 reasons.append("Single-round crop could be a Cursed Realm Boss or Shadow Guard formation.")
         elif m_slug == "treasure-scramble":
-            if team_count == 7:
-                struct_score += 0.72
+            if team_count == 7 or is_ts_compact:
+                struct_score += 0.72 + (0.06 if is_ts_compact and t_slug == "forest" else 0.0)
                 reasons.append("7-team multi-formation layout exclusively matches Treasure Scramble (up to 7 teams).")
-            elif 2 <= team_count <= 6:
+            elif 2 <= team_count <= 6 and not is_staggered:
                 struct_score += 0.22
                 reasons.append(f"{team_count}-team multi-formation layout is compatible with Treasure Scramble (2-7 teams).")
         elif m_slug == "twisted-realm":
@@ -2223,10 +2735,16 @@ def detect_and_assemble_teams_for_image(
     collections_catalog,
     detector_boxes=None,
     detector_scores=None,
+    allowed_hero_slugs=None,
 ):
     H, W = img.shape[:2]
+    if is_hero_lookup_sheet_image(img):
+        return []
+    # 0. Multi-column 3x6 Nightmare Corridor grid (e.g. 3888x5955 5w6pegdl2o1i1.png)
+    if W >= 3400 and H >= 5000:
+        teams_geom = assemble_multi_column_nc_grid(img, None)
     # 1. Tall 2-column community guide (e.g. 3000x6000 lydydxhxpyyh1.png)
-    if H >= 3000 and W >= 2400:
+    elif H >= 3000 and W >= 2400:
         raw_boxes, raw_scores = [], []
         for y0 in range(400, H - 300, 700):
             y1 = min(H, y0 + 1100)
@@ -2270,6 +2788,9 @@ def detect_and_assemble_teams_for_image(
             teams_geom.extend(
                 assemble_row_5_col_team(img, round_norm, round_num=len(teams_geom) + 1)
             )
+    # 2. Compact 7-team Treasure Scramble sheet (e.g. 800x1800 h03e45jpfk1i1.png)
+    elif 740 <= W <= 860 and 1650 <= H <= 1950:
+        teams_geom = assemble_ts_compact_7_teams(img)
     else:
         if detector_boxes is None or detector_scores is None:
             imgsz = 2080 if (W >= 1800 and H >= 1800) else (1600 if H >= 1400 else 640)
@@ -2296,7 +2817,7 @@ def detect_and_assemble_teams_for_image(
                 norm = [
                     (b, s)
                     for b, s in norm
-                    if W * 0.25 <= b[0] <= W * 0.52 and b[2] <= 88
+                    if W * 0.24 <= b[0] <= W * 0.52 and b[2] <= round(98 * W / 1080.0)
                 ]
             teams_geom = assemble_staggered_teams(img, norm)
 
@@ -2309,8 +2830,9 @@ def detect_and_assemble_teams_for_image(
         hero_meta,
         pet_meta,
         collections_catalog,
+        allowed_hero_slugs=allowed_hero_slugs,
     )
-    if H >= 3000 and W >= 2400:
+    if H >= 3000 and 2400 <= W < 3400:
         left_rounds = decode_left_panel_rounds(
             img, matcher, type_tensors, hero_meta, pet_meta
         )
