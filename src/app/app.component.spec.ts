@@ -473,12 +473,24 @@ describe('SubmitPageComponent', () => {
 
   describe('AppComponent account form', () => {
     it('blocks short passwords with a clear minimum-length validation', async () => {
+      const authMock = {
+        error: signal<string | null>(null),
+        user: signal<User | null>(null),
+        ready: signal(true),
+        configured: true,
+        initialize: async () => {},
+        onUserChange: () => () => {},
+        clearError() {
+          this.error.set(null);
+        },
+      };
       await TestBed.configureTestingModule({
         imports: [AppComponent],
         providers: [
           provideRouter(APP_ROUTES),
           { provide: HeroIconService, useValue: { initialize: async () => {}, unitIdFor: () => null, iconUrl: () => '', framedIconUrl: () => '', lowestAscensionFor: () => 'epic', factionFor: () => null, classFor: () => null } },
           { provide: UserDataService, useValue: { configured: false } },
+          { provide: AuthService, useValue: authMock },
         ],
       }).compileComponents();
       const fixture = TestBed.createComponent(AppComponent);
