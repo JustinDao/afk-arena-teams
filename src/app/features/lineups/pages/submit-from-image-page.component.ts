@@ -3194,13 +3194,13 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     for (const h of allHeroes) {
       const disp = displayHeroName(h).toLowerCase();
       const s = this.toSlug(disp);
-      if (disp === cleaned || s === cleaned || h.name.toLowerCase() === cleaned) return h;
+      if (disp === cleaned || s === cleaned || s === cleaned.replace(/-and-/g, '-') || h.name.toLowerCase() === cleaned) return h;
     }
     const withoutHighborn = cleaned.replace(/^highborn-/, '').replace(/\s*\(highborn\)$/i, '');
     for (const h of allHeroes) {
       const disp = displayHeroName(h).toLowerCase();
       const s = this.toSlug(disp);
-      if (disp === withoutHighborn || s === withoutHighborn || h.name.toLowerCase() === withoutHighborn) return h;
+      if (disp === withoutHighborn || s === withoutHighborn || s === withoutHighborn.replace(/-and-/g, '-') || h.name.toLowerCase() === withoutHighborn) return h;
     }
     return null;
   }
@@ -3224,7 +3224,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       .replace(/\(awakened\)/gi, '')
       .replace(/^awakened\s+/i, '')
       .replace(/\(highborn\)/gi, '')
-      .replace(/&/g, 'and')
+      .replace(/&/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');

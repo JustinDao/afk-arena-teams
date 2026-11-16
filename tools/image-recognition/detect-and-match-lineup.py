@@ -1706,16 +1706,38 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
         return "single", [hero_meta[s_rank[0]["id"]]["slug"]]
 
     def decode_pet_cell(x_pet, y0, h):
+        r1_list = matcher.rank_candidates_in_box(
+            left_panel,
+            [x_pet, y0, h, h],
+            "pet",
+            type_tensors,
+            scales=(0.92, 0.98, 1.04),
+            pad_ratio=0.18,
+            stride=2,
+        )
+        r1 = r1_list[0]
+        mse_single = r1["mse"]
+        if mse_single <= 1800:
+            return "single", [pet_meta[r1["id"]]], r1_list[:5]
+
+        gap_patch = left_panel[
+            max(0, y0 - 4) : min(left_panel.shape[0], y0 + h + 4),
+            max(0, x_pet - 16) : max(1, x_pet - 2),
+        ]
+        local_bg = (
+            np.median(gap_patch, axis=(0, 1)) if gap_patch.size > 0 else bg_color
+        )
         roi = left_panel[
             max(0, y0 - 8) : min(left_panel.shape[0], y0 + h + 22), x_pet:868
         ]
-        d = np.max(np.abs(roi.astype(np.float32) - bg_color), axis=2)
+        d = np.max(np.abs(roi.astype(np.float32) - local_bg), axis=2)
         col_active = (d > 30).mean(axis=0)
         active_xs = np.where(col_active > 0.22)[0]
         span_w = int(active_xs[-1]) + 1 if len(active_xs) else h
 
         tr_patch = left_panel[y0 + 3 : y0 + 22, x_pet + h - 20 : x_pet + h + 15]
-        tr_empty = is_bg_region(tr_patch)
+        tr_d = np.max(np.abs(tr_patch.astype(np.float32) - local_bg), axis=2) if tr_patch.size else np.zeros((1, 1))
+        tr_empty = float((tr_d < 26).mean()) > 0.65 if tr_patch.size else True
 
         if span_w >= 150 or (x_pet + span_w) >= 862:
             p_sz = round(h * 0.58)
@@ -1737,7 +1759,8 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 for pb in boxes
             ]
             r3 = [lst[0] for lst in r3_lists]
-            return "split_3", [pet_meta[x["id"]] for x in r3], r3_lists[0][:5]
+            if float(np.mean([x["mse"] for x in r3])) < mse_single * 0.95:
+                return "split_3", [pet_meta[x["id"]] for x in r3], r3_lists[0][:5]
 
         if span_w >= 102 or tr_empty:
             p2_sz = round(h * 0.68)
@@ -1758,18 +1781,9 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 for pb in b2
             ]
             r2 = [lst[0] for lst in r2_lists]
-            return "split_2", [pet_meta[x["id"]] for x in r2], r2_lists[0][:5]
+            if float(np.mean([x["mse"] for x in r2])) < mse_single * 0.95:
+                return "split_2", [pet_meta[x["id"]] for x in r2], r2_lists[0][:5]
 
-        r1_list = matcher.rank_candidates_in_box(
-            left_panel,
-            [x_pet, y0, h, h],
-            "pet",
-            type_tensors,
-            scales=(0.92, 0.98, 1.04),
-            pad_ratio=0.18,
-            stride=2,
-        )
-        r1 = r1_list[0]
         return "single", [pet_meta[r1["id"]]], r1_list[:5]
 
     diff = np.max(np.abs(left_panel[:, 165:760].astype(np.float32) - bg_color), axis=2)
@@ -2967,18 +2981,26 @@ def _get_ocr_engine():
 
 
 def _extract_ts_guide_team_notes(img, solved_teams):
-    """OCR the right-side 'Notes / Tips & Invests' box for each team in tall guides."""
+    """OCR the right-side 'Notes / Tips' box for each team in tall guides."""
     ocr = _get_ocr_engine()
     if ocr is None or not solved_teams:
         return
     H, W = img.shape[:2]
     x0, x1 = round(W * 0.76), W - 10
+    team_hys = []
     for t in solved_teams:
         ys = [h["bbox"][1] for h in t.get("heroes", []) if h.get("bbox")]
-        if not ys:
+        team_hys.append(float(np.median(ys)) if ys else None)
+
+    for idx, t in enumerate(solved_teams):
+        hy = team_hys[idx]
+        if hy is None:
             continue
-        hy = float(np.median(ys))
-        y0, y1 = max(0, round(hy - 320)), min(H, round(hy + 320))
+        next_hy = next((h for h in team_hys[idx + 1 :] if h is not None), None)
+        y0 = max(0, round(hy - 280))
+        y1 = min(H, round(next_hy - 180) if next_hy is not None else round(hy + 700))
+        if y1 <= y0 + 40:
+            continue
         roi = img[y0:y1, x0:x1]
         if roi.size == 0:
             continue
@@ -2988,40 +3010,66 @@ def _extract_ts_guide_team_notes(img, solved_teams):
             continue
         if not res:
             continue
+        roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         items = []
         for box, txt, _sc in res:
+            bxs = [p[0] for p in box]
             bys = [p[1] for p in box]
-            items.append((min(bys), max(bys), txt.strip()))
+            items.append((min(bys), max(bys), min(bxs), txt.strip()))
         items.sort()
         y_start, y_end = None, 1e9
-        for ymin, ymax, txt in items:
+        for ymin, ymax, _xmin, txt in items:
             low = txt.lower()
-            if "tips" in low or "invest" in low:
-                y_start = ymax
-            elif y_start is None and low == "notes":
-                y_start = ymax
+            is_header = (
+                "tips" in low
+                or "invest" in low
+                or low in ("notes", "notes:")
+            )
+            if is_header:
+                if y_start is None or ymin - y_start < 120:
+                    y_start = ymax
+                else:
+                    y_end = min(y_end, ymin)
             elif y_start is not None and (
-                "appearances" in low or "total" in low or (ymax - ymin) >= 48
+                "appearances" in low
+                or "total" in low
+                or (ymin > y_start + 60 and (ymax - ymin) >= 48)
             ):
                 y_end = min(y_end, ymin)
         if y_start is None:
             continue
         body = [
-            (ymin, ymax, txt)
-            for ymin, ymax, txt in items
+            (ymin, ymax, xmin, txt)
+            for ymin, ymax, xmin, txt in items
             if ymin > y_start and ymax < y_end and txt
         ]
         if not body:
             continue
         bullets = []
-        for ymin, ymax, txt in body:
+        for ymin, ymax, xmin, txt in body:
+            clean_txt = txt.lstrip("•·- ").strip() if txt[:1] in ("•", "·", "-") else txt
+            if not clean_txt:
+                continue
             if not bullets:
-                bullets.append([ymin, ymax, txt])
-            elif abs(ymin - bullets[-1][0]) <= 12 or (ymin - bullets[-1][1]) < 10:
+                bullets.append([ymin, ymax, clean_txt])
+                continue
+            if abs(ymin - bullets[-1][0]) <= 12:
                 bullets[-1][1] = max(bullets[-1][1], ymax)
-                bullets[-1][2] += " " + txt
+                bullets[-1][2] += " " + clean_txt
+                continue
+            dot_strip = roi_gray[
+                max(0, round(ymin)) : min(roi_gray.shape[0], round(ymax)),
+                max(0, round(xmin - 30)) : max(0, round(xmin - 3)),
+            ]
+            has_dot = (
+                txt[:1] in ("•", "·")
+                or (dot_strip.size > 0 and int(np.sum(dot_strip > 170)) >= 4)
+            )
+            if has_dot or (ymin - bullets[-1][1]) >= 20:
+                bullets.append([ymin, ymax, clean_txt])
             else:
-                bullets.append([ymin, ymax, txt])
+                bullets[-1][1] = max(bullets[-1][1], ymax)
+                bullets[-1][2] += " " + clean_txt
         t["notes"] = "\n".join("• " + b[2] for b in bullets)
 
 
