@@ -83,7 +83,7 @@ import { CollectionPickerComponent } from '../collection-picker/collection-picke
           </div>
           <p>{{ statSummary() }} · as many as possible</p>
         } @else {
-          <p>Select at least one acceptable Mythic stat to complete this recommendation.</p>
+          <p>No specific Mythic stats required.</p>
         }
       </div>
     </section>

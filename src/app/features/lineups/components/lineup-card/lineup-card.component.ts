@@ -80,7 +80,10 @@ export class LineupCardComponent {
       const defense = collection.recommendation.defenseStats.length
         ? `Defense: ${collection.recommendation.defenseStats.map(collectionNodeLabel).join(' or ')}`
         : '';
-      return `${collection.name}; Level ${level}; ${[attack, defense].filter(Boolean).join('; ')}, as many as possible`;
+      const stats = [attack, defense].filter(Boolean).join('; ');
+      return stats
+        ? `${collection.name}; Level ${level}; ${stats}, as many as possible`
+        : `${collection.name}; Level ${level}`;
     }
     return `${collection.name}; Level ${level}`;
   }

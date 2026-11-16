@@ -320,7 +320,7 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                   }
                 </div>
               </div>
-              <p class="rules-text" [title]="currentModeConfig().rules">{{ currentModeConfig().rules }}</p>
+              <p class="rules-text">{{ currentModeConfig().rules }}</p>
             </div>
           @if (detectedLineupSets().length > 1) {
             <div class="alt-group lineup-sets-bar" role="group" aria-label="Detected lineup sets">
@@ -351,16 +351,6 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                 {{ form.label }}
                 <small>{{ countFilledHeroes(form) }}/5</small>
               </button>
-            }
-            @if (currentModeConfig().variable; as variable) {
-              <label class="field inline-team-count">
-                <span>Teams:</span>
-                <select [value]="teamCount()" (change)="onTeamCountChange(numberValue($event))">
-                  @for (cnt of variableTeamCounts(variable); track cnt) {
-                    <option [value]="cnt" [selected]="cnt === teamCount()">{{ cnt }}</option>
-                  }
-                </select>
-              </label>
             }
           </div>
 
@@ -960,10 +950,8 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     .rules-text {
       margin: 0;
       font-size: 0.82rem;
+      line-height: 1.4;
       color: var(--app-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .mode-target-controls {
       display: flex;
@@ -1014,12 +1002,6 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     }
     .details-grid {
       margin-top: var(--app-space-3);
-    }
-    .inline-team-count {
-      flex-direction: row;
-      align-items: center;
-      gap: 6px;
-      margin-left: auto;
     }
     .reason-list {
       margin: var(--app-space-2) 0;
@@ -1106,15 +1088,13 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     }
     .formation-tabs-bar {
       display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
+      flex-wrap: wrap;
       align-items: center;
       min-height: 46px;
       gap: 6px;
       padding-bottom: var(--app-space-2);
       border-bottom: 1px solid var(--app-line);
       margin-bottom: var(--app-space-3);
-      scrollbar-width: thin;
     }
     .tab-btn {
       flex: 0 0 auto;

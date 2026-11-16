@@ -1315,9 +1315,6 @@ export class LineupsStore {
         ) {
           errors.push('Collection recommendation stats must match their Attack or Defense node group.');
         }
-        if (!recommendation.attackStats.length && !recommendation.defenseStats.length) {
-          errors.push('Choose at least one acceptable Mythic stat for each collection recommendation.');
-        }
       }
     }
     if (mode.uniqueAcross) {

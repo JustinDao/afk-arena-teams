@@ -641,8 +641,7 @@ export class UserDataService {
     if (
       !Number.isInteger(level) || level < 1 || level > 3 ||
       !isValidStatList(attackStats, ATTACK_COLLECTION_NODE_STATS) ||
-      !isValidStatList(defenseStats, DEFENSE_COLLECTION_NODE_STATS) ||
-      (!attackStats.length && !defenseStats.length)
+      !isValidStatList(defenseStats, DEFENSE_COLLECTION_NODE_STATS)
     ) throw new Error('A lineup contains an invalid collection recommendation.');
     return { level, attackStats, defenseStats };
   }
