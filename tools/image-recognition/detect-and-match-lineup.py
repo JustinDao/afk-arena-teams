@@ -3011,12 +3011,33 @@ def _extract_ts_guide_team_notes(img, solved_teams):
         if not res:
             continue
         roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        items = []
+        raw_items = []
         for box, txt, _sc in res:
             bxs = [p[0] for p in box]
             bys = [p[1] for p in box]
-            items.append((min(bys), max(bys), min(bxs), txt.strip()))
-        items.sort()
+            raw_items.append((min(bys), max(bys), min(bxs), txt.strip()))
+        raw_items.sort()
+        # Group same-line OCR fragments and sort each line left-to-right by xmin
+        lines = []
+        for ymin, ymax, xmin, txt in raw_items:
+            if not txt:
+                continue
+            if lines and abs(ymin - lines[-1]["ymin"]) <= 12:
+                lines[-1]["parts"].append((xmin, txt))
+                lines[-1]["ymin"] = min(lines[-1]["ymin"], ymin)
+                lines[-1]["ymax"] = max(lines[-1]["ymax"], ymax)
+                lines[-1]["xmin"] = min(lines[-1]["xmin"], xmin)
+            else:
+                lines.append({"ymin": ymin, "ymax": ymax, "xmin": xmin, "parts": [(xmin, txt)]})
+        items = [
+            (
+                ln["ymin"],
+                ln["ymax"],
+                ln["xmin"],
+                " ".join(t for _x, t in sorted(ln["parts"], key=lambda p: p[0])),
+            )
+            for ln in lines
+        ]
         y_start, y_end = None, 1e9
         for ymin, ymax, _xmin, txt in items:
             low = txt.lower()
