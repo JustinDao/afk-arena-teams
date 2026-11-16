@@ -13,8 +13,14 @@ const venvPython = isWin
 mkdirSync(cacheDir, { recursive: true });
 
 if (!existsSync(venvPython)) {
-  const sysPython = isWin ? 'python' : 'python3';
-  console.log(`[setup:api] Creating Python venv at ${venvDir}...`);
+  const candidates = isWin
+    ? ['python']
+    : ['python3.12', 'python3.11', 'python3.10', 'python3'];
+  const sysPython =
+    candidates.find(
+      (cmd) => spawnSync(cmd, ['-c', 'import lzma, venv'], { stdio: 'ignore' }).status === 0,
+    ) ?? (isWin ? 'python' : 'python3');
+  console.log(`[setup:api] Creating Python venv at ${venvDir} using ${sysPython}...`);
   const res = spawnSync(sysPython, ['-m', 'venv', venvDir], { stdio: 'inherit' });
   if (res.status !== 0) {
     process.exit(res.status ?? 1);

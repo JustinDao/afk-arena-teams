@@ -1499,7 +1499,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       const endpoints = ['/api/recognize-sample', 'http://127.0.0.1:8174/api/recognize-sample'];
       for (const url of endpoints) {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 2500);
+        const timeoutMs = url.startsWith('http') ? 90000 : 2500;
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const res = await fetch(url, {
             method: 'POST',
@@ -1547,7 +1548,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         const endpoints = ['/api/recognize-lineup', 'http://127.0.0.1:8174/api/recognize-lineup'];
         for (const url of endpoints) {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4000);
+          const timeoutMs = url.startsWith('http') ? 90000 : 4000;
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
           try {
             const res = await fetch(url, {
               method: 'POST',

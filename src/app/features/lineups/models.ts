@@ -267,10 +267,11 @@ export const MODES: readonly ModeConfig[] = [
     name: 'Nightmare Corridor',
     targetLabel: 'Cycle anchor (6th boss)',
     targetAll: 'All cycles',
-    targets: ['Netherspinner', 'Infernal Overlord'],
+    targets: ['Netherspinner', 'Infernal Overlord', 'Soulchain Knight'],
     targetSlugs: {
       Netherspinner: 'netherspinner',
       'Infernal Overlord': 'infernal-overlord',
+      'Soulchain Knight': 'soulchain-knight',
     },
     targetFormations: {
       Netherspinner: [
@@ -288,6 +289,14 @@ export const MODES: readonly ModeConfig[] = [
         { key: 'ashen-prophet', label: 'Ashen Prophet' },
         { key: 'mirror-demon', label: 'Mirror Demon' },
         { key: 'infernal-overlord', label: 'Infernal Overlord' },
+      ],
+      'Soulchain Knight': [
+        { key: 'cindercrow-specter', label: 'Cindercrow Specter' },
+        { key: 'demonic-puppet', label: 'Demonic Puppet' },
+        { key: 'ashen-prophet', label: 'Ashen Prophet' },
+        { key: 'mirror-demon', label: 'Mirror Demon' },
+        { key: 'infernal-overlord', label: 'Infernal Overlord' },
+        { key: 'soulchain-knight', label: 'Soulchain Knight' },
       ],
     },
     rules: 'Six teams, one for each boss in the cycle. Select the cycle by its 6th boss. Only Resonating Crystal heroes and up to one mercenary across the lineup.',
