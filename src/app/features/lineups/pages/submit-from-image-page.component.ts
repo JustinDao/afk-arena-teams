@@ -410,7 +410,7 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                 <span>Team notes ({{ form.label }})</span>
                 <textarea
                   rows="3"
-                  [value]="form.notes ?? ''"
+                  [value]="form.notes"
                   placeholder="Optional per-team notes or tips…"
                   (input)="updateTeamNotes(activeFormationIndex(), inputValue($event))"
                 ></textarea>
