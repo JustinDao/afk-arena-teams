@@ -86,6 +86,7 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
     petId: null,
     petLevel: null,
     time: '',
+    notes: '',
     slots: Array.from({ length: 5 }, (): DraftSlot => ({
       hid: null, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
     })),
@@ -892,6 +893,10 @@ export class LineupsStore {
     this.updateDraft((draft) => { draft.forms[draft.cur].petLevel = value; });
   }
 
+  updateDraftTeamNotes(notes: string): void {
+    this.updateDraft((draft) => { draft.forms[draft.cur].notes = notes; });
+  }
+
   updateDraftTime(value: string): void {
     this.updateDraft((draft) => { draft.forms[draft.cur].time = value; });
   }
@@ -954,6 +959,7 @@ export class LineupsStore {
       petId: form.petId,
       petLevel: form.petLevel,
       timeSeconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
+      notes: form.notes?.trim() ?? '',
       heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
         pos,
         hid: slot.hid,
@@ -980,6 +986,7 @@ export class LineupsStore {
             pet_id: form.petId,
             pet_level: form.petLevel,
             time_seconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
+            notes: form.notes?.trim() || null,
             heroes: form.slots.flatMap((slot, position) => slot.hid === null ? [] : [{
               position,
               hero_id: slot.hid,

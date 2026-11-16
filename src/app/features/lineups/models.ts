@@ -123,6 +123,7 @@ export interface Formation {
   readonly petIconUrl?: string | null;
   readonly petLevel: number | null;
   readonly timeSeconds: number | null;
+  readonly notes?: string;
   readonly heroes: readonly HeroPick[];
 }
 
@@ -193,6 +194,7 @@ export interface DraftFormation {
   petId: number | null;
   petLevel: number | null;
   time: string;
+  notes?: string;
   slots: DraftSlot[];
 }
 

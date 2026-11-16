@@ -463,6 +463,10 @@ def format_cli_report(result, image_label=""):
                 lines.append(
                     f"      Sub #{sub['row_index'] - 1}: [{h_summary}] | Pet: {p_summary}"
                 )
+        if t.get("notes"):
+            lines.append("    Notes:")
+            for nline in t["notes"].splitlines():
+                lines.append(f"      {nline}")
             if len(subs) > 3:
                 lines.append(f"      ... and {len(subs) - 3} more substitute teams.")
 

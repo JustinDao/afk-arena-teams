@@ -72,6 +72,14 @@
         (petRemove)="updateDraftPet({ petId: null, level: null })"
       />
 
+      @if (draft.forms.length > 1) {
+        <label class="field">Notes for {{ draft.forms[draft.cur].label }} (optional)
+          <textarea [value]="draft.forms[draft.cur].notes ?? ''" rows="2"
+            placeholder="Per-team tips, subs, or stat priorities…"
+            (input)="store.updateDraftTeamNotes(inputValue($event))"></textarea>
+        </label>
+      }
+
       <section class="result-fields">
         <h3>Result <span class="muted">(optional)</span></h3>
         @if (draft.mode === 'nightmare-corridor') {

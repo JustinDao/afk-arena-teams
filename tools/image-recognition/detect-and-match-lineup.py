@@ -1912,6 +1912,8 @@ def teams_to_seed_formations(solved_teams):
             "pet": team["pet"]["slug"] if team.get("pet") else None,
             "heroes": heroes_out,
         }
+        if team.get("notes"):
+            formation_entry["notes"] = team["notes"]
         if team.get("pet") and team["pet"].get("options") and len(team["pet"]["options"]) > 1:
             formation_entry["pet_options"] = team["pet"]["options"]
         if team.get("substitute_teams"):
@@ -2944,7 +2946,83 @@ def detect_and_assemble_teams_for_image(
                         if len(slot_opts) > 1:
                             h_entry["slot_options"] = slot_opts
                 t["substitute_teams"] = lr["substitute_teams"]
+        _extract_ts_guide_team_notes(img, solved_teams)
     return solved_teams
+
+
+_OCR_ENGINE_CACHE = False
+
+
+def _get_ocr_engine():
+    global _OCR_ENGINE_CACHE
+    if _OCR_ENGINE_CACHE is not False:
+        return _OCR_ENGINE_CACHE
+    try:
+        from rapidocr_onnxruntime import RapidOCR
+
+        _OCR_ENGINE_CACHE = RapidOCR()
+    except Exception:
+        _OCR_ENGINE_CACHE = None
+    return _OCR_ENGINE_CACHE
+
+
+def _extract_ts_guide_team_notes(img, solved_teams):
+    """OCR the right-side 'Notes / Tips & Invests' box for each team in tall guides."""
+    ocr = _get_ocr_engine()
+    if ocr is None or not solved_teams:
+        return
+    H, W = img.shape[:2]
+    x0, x1 = round(W * 0.76), W - 10
+    for t in solved_teams:
+        ys = [h["bbox"][1] for h in t.get("heroes", []) if h.get("bbox")]
+        if not ys:
+            continue
+        hy = float(np.median(ys))
+        y0, y1 = max(0, round(hy - 320)), min(H, round(hy + 320))
+        roi = img[y0:y1, x0:x1]
+        if roi.size == 0:
+            continue
+        try:
+            res, _ = ocr(roi)
+        except Exception:
+            continue
+        if not res:
+            continue
+        items = []
+        for box, txt, _sc in res:
+            bys = [p[1] for p in box]
+            items.append((min(bys), max(bys), txt.strip()))
+        items.sort()
+        y_start, y_end = None, 1e9
+        for ymin, ymax, txt in items:
+            low = txt.lower()
+            if "tips" in low or "invest" in low:
+                y_start = ymax
+            elif y_start is None and low == "notes":
+                y_start = ymax
+            elif y_start is not None and (
+                "appearances" in low or "total" in low or (ymax - ymin) >= 48
+            ):
+                y_end = min(y_end, ymin)
+        if y_start is None:
+            continue
+        body = [
+            (ymin, ymax, txt)
+            for ymin, ymax, txt in items
+            if ymin > y_start and ymax < y_end and txt
+        ]
+        if not body:
+            continue
+        bullets = []
+        for ymin, ymax, txt in body:
+            if not bullets:
+                bullets.append([ymin, ymax, txt])
+            elif abs(ymin - bullets[-1][0]) <= 12 or (ymin - bullets[-1][1]) < 10:
+                bullets[-1][1] = max(bullets[-1][1], ymax)
+                bullets[-1][2] += " " + txt
+            else:
+                bullets.append([ymin, ymax, txt])
+        t["notes"] = "\n".join("• " + b[2] for b in bullets)
 
 
 def evaluate_assembled_teams(solved_teams, formations_gt):

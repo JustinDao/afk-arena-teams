@@ -283,6 +283,20 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.board-note {
+  width: 100%;
+  margin: var(--app-space-1) 0 0;
+  padding: var(--app-space-2);
+  border-left: 2px solid var(--app-line);
+  border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
+  background: var(--app-panel);
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 430px) {
   .hero {
     min-width: 66px;

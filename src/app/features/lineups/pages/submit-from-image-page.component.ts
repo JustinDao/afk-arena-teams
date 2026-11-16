@@ -119,6 +119,7 @@ export interface EditableImportFormation {
   readonly petConfidence: number;
   readonly petGuideOptions: readonly string[];
   readonly petVisualAlternatives: readonly { readonly name: string; readonly slug: string; readonly confidence: number }[];
+  readonly notes?: string;
   readonly heroes: readonly EditableHeroSlot[];
   readonly substituteTeams: readonly EditableSubstituteTeam[];
 }
@@ -402,6 +403,18 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
                   }
                 </div>
               </div>
+            }
+
+            @if (form.notes !== undefined) {
+              <label class="field" style="margin-top: 0.75rem;">
+                <span>Team notes ({{ form.label }})</span>
+                <textarea
+                  rows="3"
+                  [value]="form.notes ?? ''"
+                  placeholder="Optional per-team notes or tips…"
+                  (input)="updateTeamNotes(activeFormationIndex(), inputValue($event))"
+                ></textarea>
+              </label>
             }
 
             @if (form.substituteTeams.length && selectedModeSlug() === 'nightmare-corridor') {
@@ -2445,6 +2458,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         petId: form.petId,
         petLevel: form.petLevel,
         time: '',
+        notes: form.notes ?? '',
         slots,
       };
     });
@@ -2723,10 +2737,17 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           petConfidence: Number(petObj?.confidence ?? 0.9),
           petGuideOptions,
           petVisualAlternatives,
+          notes: typeof t.notes === 'string' ? t.notes : '',
           heroes,
           substituteTeams,
         };
       },
+    );
+  }
+
+  updateTeamNotes(formIndex: number, notes: string): void {
+    this.formations.update((forms) =>
+      forms.map((f, idx) => (idx === formIndex ? { ...f, notes } : f)),
     );
   }
 
