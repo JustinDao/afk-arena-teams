@@ -758,14 +758,67 @@ def is_hero_lookup_sheet_image(img):
     return 2400 <= W <= 2800 and 1600 <= H <= 1900
 
 
+def _detect_lookup_grid(gray, sx, sy):
+    """Detect spreadsheet row and column boundaries in a hero lookup sheet."""
+    H, W = gray.shape[:2]
+    margin_x = round(50 * sx)
+    row_band = gray[:, margin_x : max(margin_x + 1, W - margin_x)]
+    row_frac = np.mean((row_band > 175) & (row_band < 242), axis=1)
+    raw_ys = np.where(row_frac > 0.5)[0]
+    row_groups = []
+    for y in raw_ys:
+        if not row_groups or y - row_groups[-1][-1] > 5:
+            row_groups.append([int(y)])
+        else:
+            row_groups[-1].append(int(y))
+    row_ys = [round(sum(g) / len(g)) for g in row_groups]
+    table_rows = [
+        (row_ys[i], row_ys[i + 1])
+        for i in range(len(row_ys) - 1)
+        if 60 * sy <= (row_ys[i + 1] - row_ys[i]) <= 110 * sy
+    ]
+    if len(table_rows) < 5:
+        table_rows = [
+            (round((112 + r * 80.0) * sy), round((192 + r * 80.0) * sy))
+            for r in range(19)
+        ]
+
+    y_top, y_bot = table_rows[0][0], table_rows[-1][1]
+    col_frac = np.mean((gray[y_top:y_bot, :] > 185) & (gray[y_top:y_bot, :] < 238), axis=0)
+    v_lines = np.where(col_frac > 0.85)[0]
+
+    def _nearest_vline(approx_x):
+        best = min(v_lines, key=lambda x: abs(x - approx_x), default=None)
+        if best is not None and abs(best - approx_x) <= 18 * sx:
+            return int(best)
+        return round(approx_x)
+
+    approx_groups = [
+        (106, 279, 369, 440, 514),
+        (616, 793, 883, 954, 1028),
+        (1130, 1307, 1397, 1468, 1542),
+        (1644, 1821, 1911, 1982, 2056),
+        (2158, 2335, 2425, 2496, 2570),
+    ]
+    col_groups = [
+        {
+            "hx": round(hx0 * sx),
+            "x_coll": _nearest_vline(c0 * sx),
+            "x_n1": _nearest_vline(n1_0 * sx),
+            "x_n2": _nearest_vline(n2_0 * sx),
+            "x_end": _nearest_vline(n2_1 * sx),
+        }
+        for hx0, c0, n1_0, n2_0, n2_1 in approx_groups
+    ]
+    return table_rows, col_groups
+
+
 def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections_catalog):
     H, W = img.shape[:2]
     sx = W / 2600.0
     sy = H / 1750.0
-    hero_xs = [round(x * sx) for x in (106, 616, 1130, 1644, 2158)]
-    coll_xs = [round(x * sx) for x in (288, 806, 1314, 1832, 2344)]
-    node1_xs = [round(x * sx) for x in (373, 888, 1398, 1915, 2429)]
-    node2_xs = [round(x * sx) for x in (446, 957, 1470, 1988, 2499)]
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    table_rows, col_groups = _detect_lookup_grid(gray, sx, sy)
     assets = _get_lookup_assets()
     arial_tmpls = assets["arial"]
     node_tmpls = assets["nodes"]
@@ -846,14 +899,16 @@ def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections
         }
 
     lookup_map = {}
-    for col_idx in range(5):
-        hx = hero_xs[col_idx]
-        cx = coll_xs[col_idx]
-        n1x = node1_xs[col_idx]
-        n2x = node2_xs[col_idx]
+    cell_pad = max(2, round(2 * sx))
+    for grp in col_groups:
+        hx = grp["hx"]
+        x_coll = grp["x_coll"]
+        x_n1 = grp["x_n1"]
+        x_n2 = grp["x_n2"]
+        x_end = grp["x_end"]
         class_x = hx - round(72 * sx)
-        for r in range(19):
-            ry = round((118 + r * 80.0) * sy)
+        for y0, y1 in table_rows:
+            ry = y0 + round(6 * sy)
             cp = img[
                 ry + round(8 * sy) : ry + round(60 * sy),
                 class_x + round(8 * sx) : class_x + round(60 * sx),
@@ -875,11 +930,29 @@ def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections
 
             tcrop = img[
                 ry + round(35 * sy) : ry + round(78 * sy),
-                hx + round(68 * sx) : cx - round(4 * sx),
+                hx + round(68 * sx) : x_coll - round(4 * sx),
             ]
             inv_dict = _read_inv_text(tcrop)
 
-            c_box = [cx, ry, round(65 * sx), round(65 * sy)]
+            cell_gray = gray[y0 + cell_pad : y1 - cell_pad, x_coll + cell_pad : x_n1 - cell_pad]
+            ys_nz, xs_nz = np.where(cell_gray < 240)
+            if ys_nz.size > 0 and xs_nz.size > 0:
+                bx0 = int(xs_nz.min()) + x_coll + cell_pad
+                bx1 = int(xs_nz.max()) + x_coll + cell_pad
+                by0 = int(ys_nz.min()) + y0 + cell_pad
+                by1 = int(ys_nz.max()) + y0 + cell_pad
+                bw = max(bx1 - bx0 + 1, by1 - by0 + 1, round(60 * sx))
+                cx_c = (bx0 + bx1) / 2.0
+                cy_c = (by0 + by1) / 2.0
+                c_box = [
+                    max(0, min(W - bw, round(cx_c - bw / 2.0))),
+                    max(0, min(H - bw, round(cy_c - bw / 2.0))),
+                    bw,
+                    bw,
+                ]
+            else:
+                c_box = [x_coll + cell_pad, y0 + cell_pad, x_n1 - x_coll - 2 * cell_pad, y1 - y0 - 2 * cell_pad]
+
             c_ranked = matcher.rank_candidates_in_box(
                 img,
                 c_box,
@@ -897,22 +970,31 @@ def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections
             lvl = parse_level_from_state(c_top1["state"])
 
             nodes_found = []
-            for s_i, nx in enumerate((n1x, n2x)):
-                ncrop = img[
-                    ry + round(6 * sy) : ry + round(70 * sy),
-                    nx : nx + round(64 * sx),
-                ]
-                if ncrop.size == 0 or (ncrop.mean() > 242 and ncrop.std() < 18):
+            for nx0, nx1 in ((x_n1, x_n2), (x_n2, x_end)):
+                roi = img[y0:y1, nx0:nx1]
+                if roi.size == 0 or (roi.mean() > 242 and roi.std() < 18):
                     continue
-                if ncrop.shape[:2] != (64, 64):
-                    ncrop = cv2.resize(ncrop, (64, 64))
-                nf = ncrop.astype(np.float32)
-                best_nslug, best_nmse = None, 1e9
+                if abs(sx - 1.0) > 0.02 or abs(sy - 1.0) > 0.02:
+                    roi_norm = cv2.resize(
+                        roi,
+                        (max(1, round(roi.shape[1] / sx)), max(1, round(roi.shape[0] / sy))),
+                    )
+                else:
+                    roi_norm = roi
+                if roi_norm.shape[0] < 64 or roi_norm.shape[1] < 64:
+                    continue
+                roi_f = roi_norm.astype(np.float32)
+                best_nslug, best_nmse, best_loc = None, 1e9, (0, 0)
                 for nslug, ntmpl in node_tmpls.items():
-                    nmse = float(np.mean((nf - ntmpl) ** 2))
+                    if roi_f.shape[0] < ntmpl.shape[0] or roi_f.shape[1] < ntmpl.shape[1]:
+                        continue
+                    res = cv2.matchTemplate(roi_f, ntmpl, cv2.TM_SQDIFF)
+                    min_val, _, min_loc, _ = cv2.minMaxLoc(res)
+                    nmse = float(min_val) / (ntmpl.shape[0] * ntmpl.shape[1] * 3.0)
                     if nmse < best_nmse:
                         best_nmse = nmse
                         best_nslug = nslug
+                        best_loc = min_loc
                 if best_nslug and best_nmse < 1200.0:
                     nodes_found.append(
                         {
@@ -924,7 +1006,12 @@ def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections
                             "confidence": 0.95,
                             "needs_review": False,
                             "visual_alternatives": [],
-                            "bbox": [nx, ry + round(6 * sy), round(64 * sx), round(64 * sy)],
+                            "bbox": [
+                                nx0 + round(best_loc[0] * sx),
+                                y0 + round(best_loc[1] * sy),
+                                round(64 * sx),
+                                round(64 * sy),
+                            ],
                         }
                     )
 
