@@ -2539,6 +2539,7 @@ def infer_mode_and_lineup_matches(
 
     # Build Mode & Target candidates combining lineup similarity and structural priors
     mode_catalog = [
+        ("nightmare-corridor", "Nightmare Corridor", "soulchain-knight", "Soulchain Knight", 6),
         ("nightmare-corridor", "Nightmare Corridor", "infernal-overlord", "Infernal Overlord", 6),
         ("nightmare-corridor", "Nightmare Corridor", "netherspinner", "Netherspinner", 6),
         ("cursed-realm", "Cursed Realm", "ice-shemira", "Ice Shemira", 6),

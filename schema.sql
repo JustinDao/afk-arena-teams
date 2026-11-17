@@ -1223,7 +1223,8 @@ insert into heroes (id, slug, name, faction, class, hero_type, role, rarity, is_
   (256, 'kafka-hibino', 'Kafka Hibino', 'Dimensional', 'Tank', 'strength', 'Buffer', 'elite', false),
   (257, 'kikoru-shinomiya', 'Kikoru Shinomiya', 'Dimensional', 'Warrior', 'strength', 'Burst Damage', 'elite', false),
   (186, 'highborn-gwyneth', 'Gwyneth (Highborn)', 'Draconis', 'Tank', 'strength', 'Continuous Damage', 'legendary', false),
-  (258, 'awakened-theowyn', 'Theowyn (Awakened)', 'Graveborn', 'Mage', 'intelligence', 'Buffer', 'legendary', true)
+  (258, 'awakened-theowyn', 'Theowyn (Awakened)', 'Graveborn', 'Mage', 'intelligence', 'Buffer', 'legendary', true),
+  (259, 'greisman', 'Greisman', 'Graveborn', 'Mage', 'intelligence', 'Debuffer', 'elite', false)
 on conflict (id) do update set
   slug = excluded.slug, name = excluded.name, faction = excluded.faction,
   class = excluded.class, hero_type = excluded.hero_type, role = excluded.role, rarity = excluded.rarity,
