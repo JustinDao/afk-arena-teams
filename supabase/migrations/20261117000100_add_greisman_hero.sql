@@ -6,6 +6,6 @@ on conflict (id) do update set
   hero_type = excluded.hero_type, role = excluded.role, rarity = excluded.rarity, is_awakened = excluded.is_awakened;
 
 update heroes
-set rec_category = '4f'
+set rec_category = 'standard-4f'
 where id = 259
   and rec_category is null;
