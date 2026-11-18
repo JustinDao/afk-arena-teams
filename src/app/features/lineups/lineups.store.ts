@@ -34,6 +34,7 @@ import { HEROES, HERO_BY_ID, PETS, SAMPLE_SUBMISSIONS } from './lineup-data';
 import { petIconUrl } from './pet-icon-url';
 import { COLLECTION_CATALOG } from './collection-catalog';
 import { countLabel } from './plural';
+import { formatDamage, formatDuration, parseDamage, parseDuration } from './lineup-display';
 import {
   ATTACK_COLLECTION_NODE_STATS,
   COLLECTION_NODE_STATS,
@@ -58,27 +59,6 @@ function isUnderInvestment(
   );
 }
 
-function parseDamage(value: string): number | null {
-  const match = /^\s*([\d.,]+)\s*([kmbt])?\s*$/i.exec(value);
-  if (!match) return null;
-  const number = Number.parseFloat(match[1].replace(/,/g, ''));
-  if (!Number.isFinite(number)) return null;
-  return number * ({ k: 1e3, m: 1e6, b: 1e9, t: 1e12 }[match[2]?.toLowerCase() ?? ''] ?? 1);
-}
-
-function parseDuration(value: string): number | null {
-  const trimmed = value.trim();
-  const match = /^(\d+):(\d{1,2})$/.exec(trimmed);
-  if (match) {
-    const seconds = Number(match[2]);
-    if (seconds > 59) return null;
-    const duration = Number(match[1]) * 60 + seconds;
-    return duration > 0 ? duration : null;
-  }
-  const duration = /^\d+$/.test(trimmed) ? Number(trimmed) : 0;
-  return duration > 0 ? duration : null;
-}
-
 function makeEmptyFormation(key: string, label: string): DraftFormation {
   return {
     key,
@@ -86,6 +66,7 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
     petId: null,
     petLevel: null,
     time: '',
+    damage: '',
     notes: '',
     slots: Array.from({ length: 5 }, (): DraftSlot => ({
       hid: null, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
@@ -696,6 +677,10 @@ export class LineupsStore {
     readonly mode: string;
     readonly target: string;
     readonly notes?: string;
+    readonly damage?: string;
+    readonly totalTime?: string;
+    readonly placementType?: 'rank' | 'percent';
+    readonly placementValue?: string;
     readonly formations: readonly DraftFormation[];
   }): void {
     const mode = this.getMode(imported.mode);
@@ -759,7 +744,13 @@ export class LineupsStore {
       slot: -1,
       q: '',
       notes: imported.notes ?? '',
-      result: {},
+      result: imported.damage
+        ? { damage: imported.damage }
+        : imported.totalTime
+          ? { totalTime: imported.totalTime }
+          : imported.placementType && imported.placementValue
+            ? { placementType: imported.placementType, placementValue: imported.placementValue }
+            : {},
       forms,
     });
   }
@@ -901,6 +892,10 @@ export class LineupsStore {
     this.updateDraft((draft) => { draft.forms[draft.cur].time = value; });
   }
 
+  updateDraftDamage(value: string): void {
+    this.updateDraft((draft) => { draft.forms[draft.cur].damage = value; });
+  }
+
   setDraftSearch(query: string): void {
     this.updateDraft((draft) => { draft.q = query; });
   }
@@ -920,7 +915,7 @@ export class LineupsStore {
     return forms.some((form) => form.slots.some(({ hid }) => hid === heroId));
   }
 
-  async submitDraft(value: SubmissionFormValue): Promise<void> {
+  async submitDraft(value: SubmissionFormValue & { readonly totalTime?: string }): Promise<void> {
     const draft = this.draftSignal();
     if (!draft) return;
     const mode = this.getMode(draft.mode);
@@ -952,25 +947,48 @@ export class LineupsStore {
       result['placement'] = Number(value.placementValue);
     }
 
-    const forms = draft.forms.map((form) => ({
-      key: form.key,
-      label: form.label,
-      beast: this.petName(form.petId) ?? '',
-      petId: form.petId,
-      petLevel: form.petLevel,
-      timeSeconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
-      notes: form.notes?.trim() ?? '',
-      heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
-        pos,
-        hid: slot.hid,
-        merc: slot.merc,
-        inv: parseInvestment(slot.inv),
-        ascension: slot.ascension,
-        collection: slot.collectionSnapshot ?? (slot.collectionId
-          ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
-          : null),
-      }]),
-    }));
+    const forms = draft.forms.map((form) => {
+      const parsedTime = draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null;
+      const parsedDmg = draft.mode === 'cursed-realm' ? parseDamage(form.damage ?? '') : null;
+      return {
+        key: form.key,
+        label: form.label,
+        beast: this.petName(form.petId) ?? '',
+        petId: form.petId,
+        petLevel: form.petLevel,
+        timeSeconds: parsedTime !== null ? Math.max(1, Math.round(parsedTime)) : null,
+        damage: parsedDmg !== null && parsedDmg > 0 ? parsedDmg : null,
+        notes: form.notes?.trim() ?? '',
+        heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
+          pos,
+          hid: slot.hid,
+          merc: slot.merc,
+          inv: parseInvestment(slot.inv),
+          ascension: slot.ascension,
+          collection: slot.collectionSnapshot ?? (slot.collectionId
+            ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
+            : null),
+        }]),
+      };
+    });
+    if (draft.mode === 'cursed-realm' && result['damage'] === undefined) {
+      const roundDamages = forms.map((f) => f.damage).filter((d): d is number => d !== null && d > 0);
+      if (roundDamages.length > 0) {
+        result['damage'] = roundDamages.reduce((sum, d) => sum + d, 0);
+      }
+    }
+    if (draft.mode === 'nightmare-corridor') {
+      const rawTotal = value.totalTime?.trim();
+      const parsedTotal = rawTotal ? parseDuration(rawTotal) : null;
+      if (parsedTotal !== null && parsedTotal > 0) {
+        result['timeSeconds'] = Math.max(1, Math.round(parsedTotal));
+      } else {
+        const roundTimes = forms.map((f) => f.timeSeconds).filter((t): t is number => t !== null && t > 0);
+        if (roundTimes.length === forms.length && roundTimes.length > 0) {
+          result['timeSeconds'] = roundTimes.reduce((sum, t) => sum + t, 0);
+        }
+      }
+    }
     if (this.data.configured) {
       const modeForSubmission = this.getMode(draft.mode);
       try {
@@ -980,14 +998,15 @@ export class LineupsStore {
           hero_level: heroLevel,
           result,
           notes: value.notes.trim(),
-          formations: draft.forms.map((form) => ({
+          formations: forms.map((form, idx) => ({
             slot_key: form.key,
             slot_label: form.label,
             pet_id: form.petId,
             pet_level: form.petLevel,
-            time_seconds: draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null,
-            notes: form.notes?.trim() || null,
-            heroes: form.slots.flatMap((slot, position) => slot.hid === null ? [] : [{
+            time_seconds: form.timeSeconds,
+            damage: form.damage,
+            notes: form.notes || null,
+            heroes: draft.forms[idx].slots.flatMap((slot, position) => slot.hid === null ? [] : [{
               position,
               hero_id: slot.hid,
               is_merc: slot.merc,
@@ -1121,9 +1140,15 @@ export class LineupsStore {
     const result = submission.result;
     if (submission.mode === 'nightmare-corridor') {
       const reportedTimes = submission.forms.filter(({ timeSeconds }) => timeSeconds !== null).length;
-      if (reportedTimes === 0) return 'Kill times not reported';
+      if (reportedTimes === 0) {
+        if (result['timeSeconds'] !== undefined) {
+          return `${formatDuration(Number(result['timeSeconds']))} total time`;
+        }
+        return 'Kill times not reported';
+      }
       if (reportedTimes < submission.forms.length) return `${reportedTimes} of ${submission.forms.length} kill times reported`;
-      return countLabel(submission.forms.length, 'boss kill time');
+      const total = submission.forms.reduce((sum, f) => sum + (f.timeSeconds ?? 0), 0);
+      return `${countLabel(submission.forms.length, 'boss kill time')} (${formatDuration(total)} total)`;
     }
     if (submission.mode === 'treasure-scramble') {
       if (result['placement'] === undefined) return 'Result not reported';

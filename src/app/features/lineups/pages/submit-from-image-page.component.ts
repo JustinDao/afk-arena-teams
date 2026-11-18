@@ -20,6 +20,7 @@ import { HeroInvestmentEditorComponent } from '../components/hero-investment-edi
 import { defaultAscensionForInvestment, formatInvestment, parseInvestment } from '../investment';
 import { HEROES, PETS } from '../lineup-data';
 import { LineupsStore } from '../lineups.store';
+import { formatDamage, formatDuration, parseDamage, parseDuration } from '../lineup-display';
 import {
   AscensionRank,
   CollectionCatalogItem,
@@ -119,6 +120,8 @@ export interface EditableImportFormation {
   readonly petConfidence: number;
   readonly petGuideOptions: readonly string[];
   readonly petVisualAlternatives: readonly { readonly name: string; readonly slug: string; readonly confidence: number }[];
+  readonly time?: string;
+  readonly damage?: string;
   readonly notes?: string;
   readonly heroes: readonly EditableHeroSlot[];
   readonly substituteTeams: readonly EditableSubstituteTeam[];
@@ -138,32 +141,32 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
   },
   {
     id: 'community-lyd',
-    path: 'lydydxhxpyyh1.png',
+    path: 'nc-mugen-2026-10-infernal-overlord.png',
     label: 'Dual-Panel Community Guide — 6 Rounds + 43 Substitute Teams',
   },
   {
     id: 'ts-7-teams',
-    path: 'yxqjrbg71c1i1.png',
-    label: 'Treasure Scramble — 7-Team Multi-Formation Guide (TS Fire / Frost)',
+    path: 'ts-mugen-2026-11-fog-7t.png',
+    label: 'Treasure Scramble — 7-Team Multi-Formation Guide (TS Fog)',
   },
   {
     id: 'cr-split-2',
-    path: '5am63ydnvk1i1.png,rziiahgnvk1i1.png',
-    label: 'Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (Demonic Entity)',
+    path: 'cr-mcwhare-2026-11-f2p-dark-nemora-p1.png,cr-mcwhare-2026-11-f2p-dark-nemora-p2.png',
+    label: 'Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (Dark Nemora)',
   },
   {
     id: 'ts-lookup-2',
-    path: 'h03e45jpfk1i1.png,96yli4jpfk1i1.png',
+    path: 'ts-noname-2026-11-7t-teams.png,ts-noname-2026-11-7t-lookup.png',
     label: 'TS 7-Team + Hero Investment/Collection Lookup Sheet (2 Images)',
   },
   {
     id: 'nc-grid-3x6',
-    path: '5w6pegdl2o1i1.png',
+    path: 'nc-groody-2026-11-3account-grid.png',
     label: 'Multi-Lineup Grid — 3 Separate 6-Round NC Lineups in One Image',
   },
   {
     id: 'f2p-staggered-3',
-    path: 'f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp',
+    path: 'nc-mcwhare-f2p-3round-staggered.webp',
     label: 'F2P Staggered Guide — 3-Round Nightmare Corridor',
   },
   {
@@ -175,6 +178,51 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     id: 'crop-nc-round-3',
     path: 'tools/image-recognition/pilot-images/pilot-nc-round-3.png',
     label: 'Single-Round Staggered Crop — Round 3 Demonic Puppet',
+  },
+  {
+    id: 'cr-p2w-nemora-2026-11',
+    path: 'cr-mcwhare-2026-11-p2w-dark-nemora-p1.png,cr-mcwhare-2026-11-p2w-dark-nemora-p2.png',
+    label: 'Nov 2026 P2W Weekly CR — Dark Nemora (2 Images)',
+  },
+  {
+    id: 'nc-p2w-soulchain-2026-11',
+    path: 'nc-mcwhare-2026-11-p2w-soulchain-p1.png,nc-mcwhare-2026-11-p2w-soulchain-p2.png',
+    label: 'Nov 2026 P2W Weekly NC — Soulchain Knight (2 Images)',
+  },
+  {
+    id: 'nc-mugen-107-2026-11',
+    path: 'nc-mugen-2026-11-1m07s.png',
+    label: 'Nov 2026 Mugen NC 1:07 Guide — 6 Rounds + Subs',
+  },
+  {
+    id: 'cr-mugen-294b-2026-11',
+    path: 'cr-mugen-2026-11-dark-nemora-294b.png',
+    label: 'Nov 2026 Mugen CR Dark Nemora 294b — 6 Rounds + Subs',
+  },
+  {
+    id: 'cr-groody-nemora-2026-11',
+    path: 'cr-groody-2026-11-dark-nemora-3account-grid.png',
+    label: 'Nov 2026 Groody CR Dark Nemora — 3-Account Grid',
+  },
+  {
+    id: 'ts-swamp-7t-2026-11',
+    path: 'ts-noname-2026-11-fog-7t-teams.png,ts-noname-2026-11-fog-7t-lookup.png',
+    label: 'Nov 2026 TS Fog (Swamp) 7-Team + Lookup Sheet (2 Images)',
+  },
+  {
+    id: 'ts-mugen-fog-6t-2026-11',
+    path: 'ts-mugen-2026-11-fog-6t.png',
+    label: 'Nov 2026 Mugen TS Fog — 6-Team Guide',
+  },
+  {
+    id: 'ts-swamp-6t-2026-11',
+    path: 'ts-noname-2026-11-fog-6t-teams.png,ts-noname-2026-11-fog-6t-lookup.png',
+    label: 'Nov 2026 TS Fog (Swamp) 6-Team + Lookup Sheet (2 Images)',
+  },
+  {
+    id: 'ts-swamp-5t-2026-11',
+    path: 'ts-noname-2026-11-fog-5t-teams.png,ts-noname-2026-11-fog-5t-lookup.png',
+    label: 'Nov 2026 TS Fog (Swamp) 5-Team + Lookup Sheet (2 Images)',
   },
 ];
 
@@ -417,7 +465,7 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
               </label>
             }
 
-            @if (form.substituteTeams.length && selectedModeSlug() === 'nightmare-corridor') {
+            @if (form.substituteTeams.length) {
               <section class="substitutes-box" aria-label="Substitute teams for this round">
                 <div class="sub-head">
                   <div>
@@ -446,6 +494,90 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
               </section>
             }
           }
+
+          <section class="result-fields" style="margin-top: 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+              <h3>Result <span class="muted">(optional)</span></h3>
+              @if (selectedModeSlug() === 'nightmare-corridor' || selectedModeSlug() === 'cursed-realm') {
+                <div class="result-mode-toggle" role="group" aria-label="Result entry mode" style="display: flex; gap: 0.35rem;">
+                  <button mat-stroked-button type="button" [class.active]="resultEntryMode() === 'per-round'" (click)="resultEntryMode.set('per-round')">Per round</button>
+                  <button mat-stroked-button type="button" [class.active]="resultEntryMode() === 'total'" (click)="resultEntryMode.set('total')">Total</button>
+                </div>
+              }
+            </div>
+            @if (selectedModeSlug() === 'nightmare-corridor') {
+              @if (resultEntryMode() === 'per-round') {
+                <label class="field">
+                  <span>Kill time for {{ activeFormation().label || 'round' }} (optional)</span>
+                  <input
+                    [value]="activeFormation().time ?? ''"
+                    placeholder="e.g. 12.6s or 0:13"
+                    (input)="updateTeamTime(activeFormationIndex(), inputValue($event))" />
+                </label>
+                @if (calculatedTotalTime()) {
+                  <p class="muted" style="margin: 0.25rem 0 0;">Calculated total time: <strong>{{ calculatedTotalTime() }}</strong></p>
+                }
+              } @else {
+                <label class="field">
+                  <span>Total kill time across all bosses (optional)</span>
+                  <input
+                    [value]="totalTime()"
+                    placeholder="e.g. 1:07"
+                    (input)="totalTime.set(inputValue($event))" />
+                </label>
+              }
+            } @else if (selectedModeSlug() === 'treasure-scramble') {
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                <label class="field">
+                  <span>Placement type</span>
+                  <select [value]="placementType()" (change)="onPlacementTypeChange(inputValue($event))">
+                    <option value="">Select…</option>
+                    <option value="rank">Rank (1–100)</option>
+                    <option value="percent">Top percentage</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>{{ placementType() === 'rank' ? 'Rank' : placementType() === 'percent' ? 'Top percentage (%)' : 'Placement' }}</span>
+                  <input
+                    type="number"
+                    [value]="placementValue()"
+                    [min]="placementType() === 'rank' ? 1 : 0.01"
+                    max="100"
+                    [step]="placementType() === 'rank' ? 1 : 0.01"
+                    (input)="placementValue.set(inputValue($event))" />
+                </label>
+              </div>
+            } @else if (selectedModeSlug() === 'cursed-realm') {
+              @if (resultEntryMode() === 'per-round') {
+                <label class="field">
+                  <span>Damage for {{ activeFormation().label || 'round' }} (optional)</span>
+                  <input
+                    [value]="activeFormation().damage ?? ''"
+                    placeholder="e.g. 46.3B"
+                    (input)="updateTeamDamage(activeFormationIndex(), inputValue($event))" />
+                </label>
+                @if (calculatedTotalDamage()) {
+                  <p class="muted" style="margin: 0.25rem 0 0;">Calculated total damage: <strong>{{ calculatedTotalDamage() }}</strong></p>
+                }
+              } @else {
+                <label class="field">
+                  <span>Total damage across all six fights</span>
+                  <input
+                    [value]="totalDamage()"
+                    placeholder="e.g. 294B"
+                    (input)="totalDamage.set(inputValue($event))" />
+                </label>
+              }
+            } @else {
+              <label class="field">
+                <span>Damage dealt</span>
+                <input
+                  [value]="totalDamage()"
+                  placeholder="e.g. 1.84B"
+                  (input)="totalDamage.set(inputValue($event))" />
+              </label>
+            }
+          </section>
 
           <label class="field notes-field">
             <span>Lineup notes (copied to submit form)</span>
@@ -1266,6 +1398,23 @@ export class SubmitFromImagePageComponent implements OnDestroy {
   readonly analyzing = signal(false);
   readonly statusMessage = signal('Upload a screenshot or pick a sample guide image to detect the mode, lineup, and alternatives.');
   readonly notes = signal('');
+  readonly totalDamage = signal('');
+  readonly totalTime = signal('');
+  readonly resultEntryMode = signal<'per-round' | 'total'>('per-round');
+  readonly placementType = signal<'' | 'rank' | 'percent'>('');
+  readonly placementValue = signal('');
+  readonly calculatedTotalTime = computed(() => {
+    const times = this.formations()
+      .map((f) => parseDuration(f.time ?? ''))
+      .filter((t): t is number => t !== null && t > 0);
+    return times.length ? formatDuration(times.reduce((sum, t) => sum + t, 0)) : '';
+  });
+  readonly calculatedTotalDamage = computed(() => {
+    const dmgs = this.formations()
+      .map((f) => parseDamage(f.damage ?? ''))
+      .filter((d): d is number => d !== null && d > 0);
+    return dmgs.length ? formatDamage(dmgs.reduce((sum, d) => sum + d, 0)) : '';
+  });
 
   readonly selectedModeSlug = signal('nightmare-corridor');
   readonly selectedTargetName = signal('Infernal Overlord');
@@ -2457,16 +2606,28 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         label: form.label,
         petId: form.petId,
         petLevel: form.petLevel,
-        time: '',
+        time: this.resultEntryMode() === 'per-round' ? (form.time ?? '') : '',
+        damage: this.resultEntryMode() === 'per-round' ? (form.damage ?? '') : '',
         notes: form.notes ?? '',
         slots,
       };
     });
 
+    const effectiveDamage =
+      this.selectedModeSlug() === 'cursed-realm' && this.resultEntryMode() === 'per-round'
+        ? (this.calculatedTotalDamage() || undefined)
+        : (this.totalDamage() || undefined);
+
     this.store.applyImportedDraft({
       mode: this.selectedModeSlug(),
       target: this.selectedTargetName(),
       notes: this.notes(),
+      damage: effectiveDamage,
+      totalTime: this.selectedModeSlug() === 'nightmare-corridor' && this.resultEntryMode() === 'total'
+        ? (this.totalTime() || undefined)
+        : undefined,
+      placementType: this.placementType() || undefined,
+      placementValue: this.placementValue() || undefined,
       formations: draftFormations,
     });
     await this.router.navigateByUrl('/submit');
@@ -2737,6 +2898,8 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           petConfidence: Number(petObj?.confidence ?? 0.9),
           petGuideOptions,
           petVisualAlternatives,
+          time: typeof t.kill_time === 'string' ? t.kill_time : '',
+          damage: typeof t.damage_display === 'string' ? t.damage_display : '',
           notes: typeof t.notes === 'string' ? t.notes : '',
           heroes,
           substituteTeams,
@@ -2749,6 +2912,22 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     this.formations.update((forms) =>
       forms.map((f, idx) => (idx === formIndex ? { ...f, notes } : f)),
     );
+  }
+
+  updateTeamTime(formIndex: number, time: string): void {
+    this.formations.update((forms) =>
+      forms.map((f, idx) => (idx === formIndex ? { ...f, time } : f)),
+    );
+  }
+
+  updateTeamDamage(formIndex: number, damage: string): void {
+    this.formations.update((forms) =>
+      forms.map((f, idx) => (idx === formIndex ? { ...f, damage } : f)),
+    );
+  }
+
+  onPlacementTypeChange(value: string): void {
+    this.placementType.set(value === 'rank' || value === 'percent' ? value : '');
   }
 
   selectLineupSet(setIndex: number): void {
@@ -2769,6 +2948,12 @@ export class SubmitFromImagePageComponent implements OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   applyRecognitionResponse(data: any): void {
+    this.totalDamage.set(typeof data.total_damage_display === 'string' ? data.total_damage_display : '');
+    this.totalTime.set('');
+    const teamsList = Array.isArray(data.teams) ? data.teams : [];
+    const hasRoundDamage = teamsList.some((t: any) => typeof t?.damage_display === 'string' && t.damage_display.trim());
+    const modeSlug = data.best_mode?.mode_slug;
+    this.resultEntryMode.set(modeSlug === 'cursed-realm' && !hasRoundDamage ? 'total' : 'per-round');
     this.modeAlternatives.set(Array.isArray(data.mode_alternatives) ? data.mode_alternatives : []);
     this.bestLineupMatch.set(data.best_lineup_match ?? null);
     this.lineupAlternatives.set(Array.isArray(data.lineup_alternatives) ? data.lineup_alternatives : []);
@@ -3041,7 +3226,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     const isF2p = key.includes('f2p') || key.includes('nc-round') || (width < 1150 && height > 1200);
     const isRound4Crop = key.includes('round-4');
     const isNcRound3Crop = key.includes('nc-round-3');
-    const isLyd = !isYxq && (key.includes('lyd') || (width >= 2400 && height >= 3000));
+    const isLyd = !isYxq && (key.includes('lyd') || key.includes('nc-mugen-2026-10') || (width >= 2400 && height >= 3000));
 
     const full6Rounds = [
       {

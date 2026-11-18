@@ -610,10 +610,18 @@ def assemble_staggered_teams(img, norm_boxes):
 def assemble_ts_compact_7_teams(img):
     H, W = img.shape[:2]
     sx = W / 800.0
-    sy = H / 1800.0
-    row_ys = [round(y * sy) for y in (481, 665, 853, 1034, 1218, 1406, 1589)]
+    sy = sx
+    all_row_ys = [round(y * sy) for y in (481, 665, 853, 1034, 1218, 1406, 1589)]
     col_xs = [round(x * sx) for x in (159, 254, 353, 448, 545)]
     hw = round(76 * sx)
+    row_ys = []
+    for ry in all_row_ys:
+        if ry + hw + round(8 * sy) > H:
+            continue
+        patches = [img[ry : ry + hw, cx : cx + hw] for cx in col_xs]
+        if patches and all(p.shape[:2] == (hw, hw) for p in patches):
+            if float(np.mean([p.std() for p in patches])) > 22.0:
+                row_ys.append(ry)
     sub_w = round(36 * sx)
     teams = []
     for r_idx, ry in enumerate(row_ys):
@@ -2572,8 +2580,20 @@ def infer_mode_and_lineup_matches(
         is_staggered = any(t.get("layout") == "staggered_3_2" for t in solved_teams)
         is_ts_compact = any(t.get("layout") == "ts_compact_7" for t in solved_teams)
         is_multi_nc = any(t.get("layout") == "multi_col_nc_grid" for t in solved_teams)
+        ocr_modes = set()
+        ocr_targets = set()
+        for t in solved_teams:
+            hints = t.get("_ocr_hints") or {}
+            ocr_modes.update(hints.get("modes") or ())
+            ocr_targets.update(hints.get("targets") or ())
         reasons = []
         struct_score = 0.10
+        if m_slug in ocr_modes:
+            struct_score += 0.35
+            reasons.append(f"Header text matched {m_name}.")
+        if t_slug in ocr_targets:
+            struct_score += 0.45
+            reasons.append(f"Header text matched {t_name}.")
         if m_slug == "nightmare-corridor":
             if is_multi_nc or (team_count == 6 and not is_staggered):
                 struct_score += 0.62 if is_multi_nc else 0.32
@@ -2617,8 +2637,9 @@ def infer_mode_and_lineup_matches(
                 f"Matches reference lineup '{best_ref['title']}' ({matched_h}/{total_h} heroes across {len(best_ref['round_alignments'])} round(s), {round(ref_sim * 100, 1)}% round similarity).",
             )
 
+        ocr_bonus = (0.12 if m_slug in ocr_modes else 0.0) + (0.25 if t_slug in ocr_targets else 0.0)
         combined_conf = round(
-            min(0.99, max(0.02, 0.72 * ref_sim + 0.28 * min(1.0, struct_score * 2.4))),
+            min(0.99, max(0.02, 0.72 * ref_sim + 0.28 * min(1.0, struct_score * 2.4) + ocr_bonus)),
             3,
         )
         if not reasons:
@@ -2892,8 +2913,8 @@ def detect_and_assemble_teams_for_image(
             teams_geom.extend(
                 assemble_row_5_col_team(img, round_norm, round_num=len(teams_geom) + 1)
             )
-    # 2. Compact 7-team Treasure Scramble sheet (e.g. 800x1800 h03e45jpfk1i1.png)
-    elif 740 <= W <= 860 and 1650 <= H <= 1950:
+    # 2. Compact 5-to-7-team Treasure Scramble sheet (e.g. 800x1800 h03e45jpfk1i1.png, or 5T/6T)
+    elif 740 <= W <= 860 and 1200 <= H <= 2000:
         teams_geom = assemble_ts_compact_7_teams(img)
     else:
         if detector_boxes is None or detector_scores is None:
@@ -2962,6 +2983,7 @@ def detect_and_assemble_teams_for_image(
                             h_entry["slot_options"] = slot_opts
                 t["substitute_teams"] = lr["substitute_teams"]
         _extract_ts_guide_team_notes(img, solved_teams)
+    _extract_guide_results_and_target_hints(img, solved_teams)
     return solved_teams
 
 
@@ -2979,6 +3001,195 @@ def _get_ocr_engine():
     except Exception:
         _OCR_ENGINE_CACHE = None
     return _OCR_ENGINE_CACHE
+
+
+def _format_damage_short(dmg: int) -> str:
+    if dmg >= 1_000_000_000:
+        return f"{dmg / 1_000_000_000:.2f}B"
+    if dmg >= 1_000_000:
+        return f"{dmg / 1_000_000:.2f}M"
+    return str(dmg)
+
+
+def _extract_guide_results_and_target_hints(img, solved_teams):
+    """OCR header mode/target hints and left-panel NC kill times / CR damage numbers."""
+    ocr = _get_ocr_engine()
+    if ocr is None or not solved_teams:
+        return
+    H, W = img.shape[:2]
+    hints = {"modes": [], "targets": []}
+
+    # 1. Header mode/target hints
+    hdr_h = min(H, 450)
+    try:
+        hdr_res, _ = ocr(img[:hdr_h, :])
+    except Exception:
+        hdr_res = None
+    if hdr_res:
+        hdr_text = " ".join(txt.lower() for _b, txt, _s in hdr_res if txt)
+        if "cursed realm" in hdr_text:
+            hints["modes"].append("cursed-realm")
+        if "nightmare" in hdr_text or "corridor" in hdr_text:
+            hints["modes"].append("nightmare-corridor")
+        if "scramble" in hdr_text or "debuff" in hdr_text:
+            hints["modes"].append("treasure-scramble")
+        if (
+            "demonic ne" in hdr_text
+            or "dark nemora" in hdr_text
+            or "demonic entity" in hdr_text
+            or "nemora" in hdr_text
+            or "nemorr" in hdr_text
+            or "shadow fangs" in hdr_text
+        ):
+            hints["targets"].append("demonic-entity")
+            if "nightmare-corridor" not in hints["modes"] and "cursed-realm" not in hints["modes"]:
+                hints["modes"].append("cursed-realm")
+        if "soulchain" in hdr_text or "conrad" in hdr_text:
+            hints["targets"].append("soulchain-knight")
+            if "nightmare-corridor" not in hints["modes"]:
+                hints["modes"].append("nightmare-corridor")
+        if "infernal overlord" in hdr_text:
+            hints["targets"].append("infernal-overlord")
+        if "netherspinner" in hdr_text:
+            hints["targets"].append("netherspinner")
+        if "burning brute" in hdr_text:
+            hints["targets"].append("burning-brute")
+        if "ice shemira" in hdr_text:
+            hints["targets"].append("ice-shemira")
+        if "grotesque mage" in hdr_text:
+            hints["targets"].append("grotesque-mage")
+        if "swamp" in hdr_text or "factionless" in hdr_text or "fog" in hdr_text:
+            hints["targets"].append("fog")
+        if "forest" in hdr_text:
+            hints["targets"].append("forest")
+        if "frost" in hdr_text:
+            hints["targets"].append("frost")
+        if "fountain" in hdr_text:
+            hints["targets"].append("fountain")
+        if "fire" in hdr_text:
+            hints["targets"].append("fire")
+
+    for t in solved_teams:
+        t["_ocr_hints"] = hints
+
+    # 2. Left-side per-round NC kill times & CR damage numbers
+    is_tall_dual = H >= 3000 and 2400 <= W < 3400
+    is_ts_compact = 740 <= W <= 860 and 1200 <= H <= 2000
+    is_multi_nc = W >= 3200 and H >= 4000
+    if is_tall_dual:
+        for t in solved_teams:
+            pb = (t.get("pet") or {}).get("bbox")
+            if not pb or len(pb) != 4:
+                continue
+            x0 = max(0, round(W * 0.285))
+            x1 = min(W, round(W * 0.355))
+            y0 = max(0, round(pb[1]) - 14)
+            y1 = min(H, round(pb[1] + pb[3]) + 14)
+            if x1 <= x0 + 10 or y1 <= y0 + 10:
+                continue
+            try:
+                res, _ = ocr(img[y0:y1, x0:x1])
+            except Exception:
+                continue
+            if not res:
+                continue
+            for _box, txt, _sc in res:
+                clean = txt.strip()
+                m_dmg = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([bBmM])", clean)
+                if m_dmg:
+                    val = float(m_dmg.group(1))
+                    mult = 1_000_000_000 if m_dmg.group(2).lower() == "b" else 1_000_000
+                    dmg = round(val * mult)
+                    t["damage"] = dmg
+                    t["damage_display"] = _format_damage_short(dmg)
+                    break
+                m_sec = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)\s*s", clean, re.I)
+                if m_sec:
+                    val = float(m_sec.group(1))
+                    if 1 <= val <= 120:
+                        t["kill_time_seconds"] = val
+                        t["kill_time"] = f"{m_sec.group(1)}s"
+                        break
+                m_num = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)", clean)
+                if m_num:
+                    val = float(m_num.group(1))
+                    if "cursed-realm" in hints["modes"] and 1 <= val <= 500:
+                        dmg = round(val * 1_000_000_000)
+                        t["damage"] = dmg
+                        t["damage_display"] = _format_damage_short(dmg)
+                        break
+                    if 1 <= val <= 120:
+                        t["kill_time_seconds"] = val
+                        t["kill_time"] = f"{m_num.group(1)}s"
+                        break
+        return
+    if is_ts_compact or is_multi_nc:
+        return
+
+    left_w = min(W, int(W * 0.44))
+    try:
+        left_res, _ = ocr(img[:, :left_w])
+    except Exception:
+        left_res = None
+    if not left_res:
+        return
+
+    team_hys = []
+    for t in solved_teams:
+        ys = [h["bbox"][1] for h in t.get("heroes", []) if h.get("bbox")]
+        team_hys.append(float(np.median(ys)) if ys else None)
+
+    for idx, t in enumerate(solved_teams):
+        hy = team_hys[idx]
+        if hy is None:
+            continue
+        prev_hy = next((h for h in reversed(team_hys[:idx]) if h is not None), None)
+        next_hy = next((h for h in team_hys[idx + 1 :] if h is not None), None)
+        y0 = max(0, round((prev_hy + hy) / 2) if prev_hy is not None else round(hy - 280))
+        y1 = min(H, round((hy + next_hy) / 2) if next_hy is not None else round(hy + 420))
+
+        band_texts = []
+        for box, txt, _sc in left_res:
+            ymid = sum(p[1] for p in box) / 4.0
+            if y0 <= ymid <= y1 and txt:
+                band_texts.append((ymid, txt.strip()))
+        band_texts.sort(key=lambda item: item[0])
+
+        actual_time = None
+        goal_time = None
+        actual_dmg = None
+        goal_dmg = None
+
+        for _ymid, txt in band_texts:
+            m_killed = re.search(r"killed\s*\d*\s*boss(?:es)?\s*within\s*(\d+(?:\.\d+)?)\s*s", txt, re.I)
+            if m_killed and actual_time is None:
+                actual_time = m_killed.group(1)
+                continue
+            m_goal_s = re.search(r"goal[:\s]*(\d+(?:\.\d+)?)\s*s\b", txt, re.I)
+            if m_goal_s and goal_time is None:
+                goal_time = m_goal_s.group(1)
+                continue
+            m_squad = re.search(r"squad\s*damage[:\s]*([\d,]+)", txt, re.I)
+            if m_squad and actual_dmg is None:
+                digits = m_squad.group(1).replace(",", "")
+                if digits.isdigit():
+                    actual_dmg = int(digits)
+                continue
+            m_goal_dmg = re.search(r"goal[:\s]*(\d+(?:\.\d+)?)\s*([bBmMkK])\b", txt, re.I)
+            if m_goal_dmg and goal_dmg is None:
+                val = float(m_goal_dmg.group(1))
+                unit = m_goal_dmg.group(2).lower()
+                mult = 1_000_000_000 if unit == "b" else (1_000_000 if unit == "m" else 1_000)
+                goal_dmg = round(val * mult)
+
+        chosen_time = actual_time or goal_time
+        if chosen_time is not None:
+            t["kill_time_seconds"] = float(chosen_time)
+            t["kill_time"] = f"{chosen_time}s"
+        chosen_dmg = actual_dmg or goal_dmg
+        if chosen_dmg is not None:
+            t["damage"] = chosen_dmg
+            t["damage_display"] = _format_damage_short(chosen_dmg)
 
 
 def _extract_ts_guide_team_notes(img, solved_teams):
@@ -3292,7 +3503,7 @@ def run_all_guides_benchmark(
     # 2. 6-Round Community Guide (lydydxhxpyyh1, held-out fold-2)
     t0 = time.time()
     m2 = YOLO(str(runs_dir / "fold-2/weights/best.pt"))
-    p_lyd = _resolve_image_path(repo_root, "lydydxhxpyyh1.png")
+    p_lyd = _resolve_image_path(repo_root, "nc-mugen-2026-10-infernal-overlord.png")
     img_lyd = cv2.imread(str(p_lyd))
     teams_lyd = detect_and_assemble_teams_for_image(
         img_lyd,
@@ -3338,7 +3549,7 @@ def run_all_guides_benchmark(
     # 3. Full F2P Staggered Guide (held-out fold-1)
     t0 = time.time()
     m1 = YOLO(str(runs_dir / "fold-1/weights/best.pt"))
-    p_f2p = _resolve_image_path(repo_root, "f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp")
+    p_f2p = _resolve_image_path(repo_root, "nc-mcwhare-f2p-3round-staggered.webp")
     img_f2p = cv2.imread(str(p_f2p))
     teams_f2p = detect_and_assemble_teams_for_image(
         img_f2p,

@@ -288,6 +288,15 @@ def recognize_multiple_images(image_bytes_list):
         "formations": formations,
     }
 
+    for t in all_solved_teams:
+        t.pop("_ocr_hints", None)
+
+    damages = [t["damage"] for t in solved_teams if isinstance(t.get("damage"), (int, float))]
+    total_damage = int(sum(damages)) if damages else None
+    total_damage_display = det._format_damage_short(total_damage) if total_damage is not None else None
+    times = [t["kill_time_seconds"] for t in solved_teams if isinstance(t.get("kill_time_seconds"), (int, float))]
+    total_kill_time = round(sum(times), 2) if times else None
+
     resp = {
         "ok": True,
         "elapsed_seconds": round(time.time() - t0, 3),
@@ -300,6 +309,9 @@ def recognize_multiple_images(image_bytes_list):
         "lookup_hero_count": len(lookup_map),
         "team_count": len(solved_teams),
         "substitute_team_count": sub_count,
+        "total_damage": total_damage,
+        "total_damage_display": total_damage_display,
+        "total_kill_time_seconds": total_kill_time,
         "best_mode": best_mode,
         "mode_alternatives": inference["mode_alternatives"],
         "best_lineup_match": best_lineup,
@@ -342,16 +354,25 @@ def _resolve_sample_image(rel_path: str) -> Path | None:
 def _list_sample_images():
     candidates = [
         ("afk-nightmare-corridor-infernal-overlord-9.png", "App Export — 6-Round Nightmare Corridor (2040×2082)"),
-        ("lydydxhxpyyh1.png", "Dual-Panel Community Guide — 6 Rounds + 43 Substitute Teams (3000×6000)"),
-        ("yxqjrbg71c1i1.png", "Treasure Scramble — 7-Team Multi-Formation Guide (3000×6000)"),
-        ("5am63ydnvk1i1.png,rziiahgnvk1i1.png", "Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (2× 1228×2014)"),
-        ("h03e45jpfk1i1.png,96yli4jpfk1i1.png", "TS 7-Team + Hero Investment/Collection Lookup Sheet (800×1800 + 2600×1750)"),
-        ("5w6pegdl2o1i1.png", "Multi-Lineup Grid — 3 Separate 6-Round NC Lineups in One Image (3888×5955)"),
-        ("f2p-1k-dias-retries-enjoyers-weekly-nc-v0-p843t9w3p7wh1.webp", "F2P Staggered Guide — 3-Round Nightmare Corridor (1080×1629)"),
+        ("nc-mugen-2026-10-infernal-overlord.png", "Dual-Panel Community Guide — 6 Rounds + 43 Substitute Teams (3000×6000)"),
+        ("ts-mugen-2026-11-fog-7t.png", "Treasure Scramble — 7-Team Multi-Formation Guide (3000×6000)"),
+        ("cr-mcwhare-2026-11-f2p-dark-nemora-p1.png,cr-mcwhare-2026-11-f2p-dark-nemora-p2.png", "Split 2-Image Cursed Realm — Rounds 1–3 + Rounds 4–6 (2× 1228×2014)"),
+        ("ts-noname-2026-11-7t-teams.png,ts-noname-2026-11-7t-lookup.png", "TS 7-Team + Hero Investment/Collection Lookup Sheet (800×1800 + 2600×1750)"),
+        ("nc-groody-2026-11-3account-grid.png", "Multi-Lineup Grid — 3 Separate 6-Round NC Lineups in One Image (3888×5955)"),
+        ("nc-mcwhare-f2p-3round-staggered.webp", "F2P Staggered Guide — 3-Round Nightmare Corridor (1080×1629)"),
         ("tools/image-recognition/pilot-images/pilot-nightmare-round-1.png", "Single-Round Crop — Round 1 Worm Queen (1344×707)"),
         ("tools/image-recognition/pilot-images/pilot-nightmare-round-3.png", "Single-Round Crop — Round 3 Demonic Puppet (1344×776)"),
         ("tools/image-recognition/pilot-images/pilot-nightmare-round-5.png", "Single-Round Crop — Round 5 Mirror Demon (1344×917)"),
         ("tools/image-recognition/pilot-images/pilot-nc-round-2.png", "Single-Round Staggered Crop — Round 2 Cindercrow (362×397)"),
+        ("cr-mcwhare-2026-11-p2w-dark-nemora-p1.png,cr-mcwhare-2026-11-p2w-dark-nemora-p2.png", "Nov 2026 P2W Weekly CR — Dark Nemora (2 Images)"),
+        ("nc-mcwhare-2026-11-p2w-soulchain-p1.png,nc-mcwhare-2026-11-p2w-soulchain-p2.png", "Nov 2026 P2W Weekly NC — Soulchain Knight (2 Images)"),
+        ("nc-mugen-2026-11-1m07s.png", "Nov 2026 Mugen NC 1:07 Guide — 6 Rounds + Subs"),
+        ("cr-mugen-2026-11-dark-nemora-294b.png", "Nov 2026 Mugen CR Dark Nemora 294b — 6 Rounds + Subs"),
+        ("cr-groody-2026-11-dark-nemora-3account-grid.png", "Nov 2026 Groody CR Dark Nemora — 3-Account Grid"),
+        ("ts-noname-2026-11-fog-7t-teams.png,ts-noname-2026-11-fog-7t-lookup.png", "Nov 2026 TS Fog (Swamp) 7-Team + Lookup Sheet (2 Images)"),
+        ("ts-mugen-2026-11-fog-6t.png", "Nov 2026 Mugen TS Fog — 6-Team Guide"),
+        ("ts-noname-2026-11-fog-6t-teams.png,ts-noname-2026-11-fog-6t-lookup.png", "Nov 2026 TS Fog (Swamp) 6-Team + Lookup Sheet (2 Images)"),
+        ("ts-noname-2026-11-fog-5t-teams.png,ts-noname-2026-11-fog-5t-lookup.png", "Nov 2026 TS Fog (Swamp) 5-Team + Lookup Sheet (2 Images)"),
     ]
     out = []
     for rel, label in candidates:
@@ -423,8 +444,14 @@ def format_cli_report(result, image_label=""):
         p = t.get("pet") or {}
         p_opts = p.get("options") or ([p.get("slug")] if p.get("slug") else [])
         p_vis = [a["slug"] for a in (p.get("visual_alternatives") or [])[1:4]]
+        result_parts = []
+        if t.get("kill_time"):
+            result_parts.append(f"Time: {t['kill_time']}")
+        if t.get("damage_display"):
+            result_parts.append(f"Damage: {t['damage_display']}")
+        result_str = f" | {' | '.join(result_parts)}" if result_parts else ""
         lines.append(
-            f"\n  [Round {t['round']}: {f_label}] "
+            f"\n  [Round {t['round']}: {f_label}{result_str}] "
             f"Pet: {p.get('name', 'None')} ({' > '.join(p_opts)}) "
             f"[conf={p.get('confidence', 0):.2f} | visual alts: {', '.join(p_vis)}]"
         )

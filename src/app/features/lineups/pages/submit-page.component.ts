@@ -17,6 +17,7 @@ import { defaultAscensionForInvestment } from '../investment';
 import { COLLECTION_NODE_STATS } from '../collection-catalog';
 import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
 import { LineupsStore } from '../lineups.store';
+import { formatDamage, formatDuration, parseDamage, parseDuration } from '../lineup-display';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
 
 @Component({
@@ -99,9 +100,25 @@ export class SubmitPageComponent implements OnDestroy {
     target: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
     damage: new FormControl('', { nonNullable: true }),
+    totalTime: new FormControl('', { nonNullable: true }),
     rcLevel: new FormControl('', { nonNullable: true }),
     placementType: new FormControl<'' | 'rank' | 'percent'>('', { nonNullable: true }),
     placementValue: new FormControl('', { nonNullable: true }),
+  });
+  readonly resultEntryMode = signal<'per-round' | 'total'>('per-round');
+  readonly calculatedTotalTime = computed(() => {
+    const draft = this.store.draft();
+    if (!draft || draft.mode !== 'nightmare-corridor') return '';
+    const times = draft.forms.map((f) => parseDuration(f.time)).filter((t): t is number => t !== null && t > 0);
+    if (!times.length) return '';
+    return formatDuration(times.reduce((sum, t) => sum + t, 0));
+  });
+  readonly calculatedTotalDamage = computed(() => {
+    const draft = this.store.draft();
+    if (!draft || draft.mode !== 'cursed-realm') return '';
+    const dmgs = draft.forms.map((f) => parseDamage(f.damage ?? '')).filter((d): d is number => d !== null && d > 0);
+    if (!dmgs.length) return '';
+    return formatDamage(dmgs.reduce((sum, d) => sum + d, 0));
   });
 
   constructor() {
@@ -243,13 +260,27 @@ export class SubmitPageComponent implements OnDestroy {
   private resetSubmissionForm(): void {
     const draft = this.store.draft();
     if (!draft) return;
+    const hasRoundDamage = draft.mode === 'cursed-realm' && draft.forms.some((f) => Boolean(f.damage?.trim()));
+    const hasTotalTime = draft.mode === 'nightmare-corridor' && typeof draft.result['totalTime'] === 'string' && !draft.forms.some((f) => Boolean(f.time.trim()));
+    if (draft.mode === 'cursed-realm') {
+      this.resultEntryMode.set(hasRoundDamage ? 'per-round' : 'total');
+    } else if (draft.mode === 'nightmare-corridor') {
+      this.resultEntryMode.set(hasTotalTime ? 'total' : 'per-round');
+    }
     this.submissionForm.reset({
       target: draft.target,
       notes: draft.notes,
-      damage: '',
+      damage: typeof draft.result['damage'] === 'string' ? draft.result['damage'] : '',
+      totalTime: typeof draft.result['totalTime'] === 'string' ? draft.result['totalTime'] : '',
       rcLevel: String(this.store.heroLevel() ?? ''),
-      placementType: '',
-      placementValue: '',
+      placementType:
+        draft.result['placementType'] === 'rank' || draft.result['placementType'] === 'percent'
+          ? draft.result['placementType']
+          : '',
+      placementValue:
+        typeof draft.result['placementValue'] === 'string' || typeof draft.result['placementValue'] === 'number'
+          ? String(draft.result['placementValue'])
+          : '',
     });
   }
 }

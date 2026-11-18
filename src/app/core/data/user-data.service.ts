@@ -52,6 +52,7 @@ interface DatabaseSubmissionRow {
     pet_id: number | null;
     pet_level: number | null;
     result_time_seconds: number | null;
+    result_damage?: number | null;
     notes?: string | null;
     pets: { name: string; icon_url: string } | null;
     formation_heroes: {
@@ -222,21 +223,25 @@ export class UserDataService {
 
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
-    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
+    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,result_damage,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
     const selectLegacy = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))';
     let response = await supabase.from('submissions')
       .select(selectWithRecommendations)
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
-    if (response.error && this.isMissingCollectionRecommendationColumn(response.error)) {
-      response = await supabase.from('submissions')
+    let rows: DatabaseSubmissionRow[] = (response.data ?? []) as unknown as DatabaseSubmissionRow[];
+    if (response.error && (this.isMissingCollectionRecommendationColumn(response.error) || response.error.message.includes('result_damage'))) {
+      const legacyResponse = await supabase.from('submissions')
         .select(selectLegacy)
         .order('upvotes', { ascending: false })
         .order('created_at', { ascending: false });
+      if (legacyResponse.error) throw new Error(`Could not load lineups: ${legacyResponse.error.message}`);
+      rows = (legacyResponse.data ?? []) as unknown as DatabaseSubmissionRow[];
+    } else if (response.error) {
+      throw new Error(`Could not load lineups: ${response.error.message}`);
     }
-    if (response.error) throw new Error(`Could not load lineups: ${response.error.message}`);
     const authors = await this.loadSubmissionAuthors();
-    return ((response.data ?? []) as unknown as DatabaseSubmissionRow[]).map((row) => {
+    return rows.map((row) => {
       if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
       return {
         id: row.id,
@@ -260,6 +265,7 @@ export class UserDataService {
               : petIconUrl(formation.pet_id),
             petLevel: formation.pet_level,
             timeSeconds: formation.result_time_seconds,
+            damage: formation.result_damage ?? null,
             notes: formation.notes ?? '',
             heroes: formation.formation_heroes
               .sort((a, b) => a.position - b.position)

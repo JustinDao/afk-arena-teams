@@ -231,7 +231,7 @@ describe('SubmitPageComponent', () => {
     const importComp = importFixture.componentInstance;
     importFixture.detectChanges();
 
-    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importComp.applyBuiltInSampleRecognition('nc-mugen-2026-10-infernal-overlord.png', 1920, 1080);
     importFixture.detectChanges();
 
     expect(importComp.selectedModeSlug()).toBe('nightmare-corridor');
@@ -305,7 +305,7 @@ describe('SubmitPageComponent', () => {
     const comp = fixture.componentInstance;
     fixture.detectChanges();
 
-    comp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    comp.applyBuiltInSampleRecognition('nc-mugen-2026-10-infernal-overlord.png', 1920, 1080);
     fixture.detectChanges();
 
     // 1. Formation board has the 2x3 layout (Front 2 slots, Back 3 slots)
@@ -352,7 +352,7 @@ describe('SubmitPageComponent', () => {
     const importComp = importFixture.componentInstance;
     importFixture.detectChanges();
 
-    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importComp.applyBuiltInSampleRecognition('nc-mugen-2026-10-infernal-overlord.png', 1920, 1080);
     importFixture.detectChanges();
     expect(importComp.formations()[0].label).toBe('Molten Crystalline Worm Queen');
     expect(importComp.allowsMercenary()).toBeTrue();
@@ -374,7 +374,7 @@ describe('SubmitPageComponent', () => {
       'Team 7',
     ]);
     expect(importFixture.nativeElement.querySelector('.merc-check')).toBeNull();
-    expect(importFixture.nativeElement.querySelector('.substitutes-box')).toBeNull();
+    expect(importFixture.nativeElement.querySelector('.substitutes-box')).not.toBeNull();
 
     // Adjust TS team count to 5 and back to 7 without losing Team 6
     importComp.onTeamCountChange(5);
@@ -411,7 +411,7 @@ describe('SubmitPageComponent', () => {
     const comp = fixture.componentInstance;
     fixture.detectChanges();
 
-    comp.applyBuiltInSampleRecognition('yxqjrbg71c1i1.png', 3000, 6000);
+    comp.applyBuiltInSampleRecognition('ts-mugen-2026-11-fog-7t.png', 3000, 6000);
     fixture.detectChanges();
 
     expect(comp.selectedModeSlug()).toBe('treasure-scramble');
@@ -449,7 +449,7 @@ describe('SubmitPageComponent', () => {
     const importFixture = TestBed.createComponent(SubmitFromImagePageComponent);
     const importComp = importFixture.componentInstance;
     importFixture.detectChanges();
-    importComp.applyBuiltInSampleRecognition('lydydxhxpyyh1.png', 1920, 1080);
+    importComp.applyBuiltInSampleRecognition('nc-mugen-2026-10-infernal-overlord.png', 1920, 1080);
     importFixture.detectChanges();
 
     const importCollectionSlots = importFixture.nativeElement.querySelectorAll('.formation-slot.has-collection');

@@ -81,12 +81,29 @@
       }
 
       <section class="result-fields">
-        <h3>Result <span class="muted">(optional)</span></h3>
+        <div class="result-head" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+          <h3>Result <span class="muted">(optional)</span></h3>
+          @if (draft.mode === 'nightmare-corridor' || draft.mode === 'cursed-realm') {
+            <div class="result-mode-toggle" role="group" aria-label="Result entry mode" style="display: flex; gap: 0.35rem;">
+              <button mat-stroked-button type="button" [class.active]="resultEntryMode() === 'per-round'" (click)="resultEntryMode.set('per-round')">Per round</button>
+              <button mat-stroked-button type="button" [class.active]="resultEntryMode() === 'total'" (click)="resultEntryMode.set('total')">Total</button>
+            </div>
+          }
+        </div>
         @if (draft.mode === 'nightmare-corridor') {
-        <label class="field">Kill time for {{ draft.forms[draft.cur].label }} (m:ss, optional)
-          <input [value]="draft.forms[draft.cur].time" placeholder="2:22"
-            (change)="store.updateDraftTime(inputValue($event))">
-        </label>
+          @if (resultEntryMode() === 'per-round') {
+            <label class="field">Kill time for {{ draft.forms[draft.cur].label }} (m:ss or seconds, optional)
+              <input [value]="draft.forms[draft.cur].time" placeholder="e.g. 0:13 or 12.6s"
+                (input)="store.updateDraftTime(inputValue($event))">
+            </label>
+            @if (calculatedTotalTime()) {
+              <p class="muted" style="margin: 0.25rem 0 0;">Calculated total time: <strong>{{ calculatedTotalTime() }}</strong></p>
+            }
+          } @else {
+            <label class="field">Total kill time across all bosses (m:ss or seconds, optional)
+              <input formControlName="totalTime" placeholder="e.g. 1:07">
+            </label>
+          }
         } @else if (draft.mode === 'treasure-scramble') {
         <label class="field">Placement type
           <select formControlName="placementType">
@@ -101,8 +118,22 @@
             [min]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01" max="100"
             [step]="submissionForm.controls.placementType.value === 'rank' ? 1 : 0.01">
         </label>
+        } @else if (draft.mode === 'cursed-realm') {
+          @if (resultEntryMode() === 'per-round') {
+            <label class="field">Damage for {{ draft.forms[draft.cur].label }} (optional)
+              <input [value]="draft.forms[draft.cur].damage ?? ''" placeholder="e.g. 46.3B"
+                (input)="store.updateDraftDamage(inputValue($event))">
+            </label>
+            @if (calculatedTotalDamage()) {
+              <p class="muted" style="margin: 0.25rem 0 0;">Calculated total damage: <strong>{{ calculatedTotalDamage() }}</strong></p>
+            }
+          } @else {
+            <label class="field">Total damage across all six fights
+              <input formControlName="damage" placeholder="e.g. 294B">
+            </label>
+          }
         } @else {
-        <label class="field">{{ draft.mode === 'cursed-realm' ? 'Total damage across all six fights' : 'Damage dealt' }}
+        <label class="field">Damage dealt
           <input formControlName="damage" placeholder="e.g. 1.84B">
         </label>
         }

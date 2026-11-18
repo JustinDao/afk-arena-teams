@@ -313,6 +313,7 @@ create table formations (
   pet_id        int references pets(id),
   pet_level     smallint check (pet_level between 1 and 36),
   result_time_seconds int check (result_time_seconds > 0),
+  result_damage numeric check (result_damage is null or result_damage > 0),
   check (pet_level is null or pet_id is not null),
   unique (submission_id, slot_key)
 );
