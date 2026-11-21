@@ -81,8 +81,11 @@ export class HeroIconService {
   framedIconUrl(unitId: number, ascension: AscensionRank, investment: Investment | null): string {
     const ascensionCode: Readonly<Record<AscensionRank, string>> = {
       epic: 'e',
+      epic_plus: 'ep',
       legendary: 'l',
+      legendary_plus: 'lp',
       mythic: 'm',
+      mythic_plus: 'mp',
       ascended: 'a',
       ascended_1: 'a1',
       ascended_2: 'a2',

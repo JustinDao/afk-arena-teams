@@ -10,8 +10,11 @@ export interface Hero {
 
 export const ASCENSION_RANKS = [
   'epic',
+  'epic_plus',
   'legendary',
+  'legendary_plus',
   'mythic',
+  'mythic_plus',
   'ascended',
   'ascended_1',
   'ascended_2',
@@ -24,8 +27,11 @@ export type AscensionRank = (typeof ASCENSION_RANKS)[number];
 
 export const ASCENSION_RANK_LABELS: Readonly<Record<AscensionRank, string>> = {
   epic: 'Epic',
+  epic_plus: 'Epic+',
   legendary: 'Legendary',
+  legendary_plus: 'Legendary+',
   mythic: 'Mythic',
+  mythic_plus: 'Mythic+',
   ascended: 'Ascended',
   ascended_1: 'Ascended 1 star',
   ascended_2: 'Ascended 2 stars',
@@ -258,7 +264,7 @@ export const MODES: readonly ModeConfig[] = [
     name: 'Twisted Realm',
     targetLabel: 'Boss',
     targetAll: 'All bosses',
-    targets: ['Kane', 'Demonic Entity', 'The Unhinged', 'Ice Shemira', 'Burning Brute', 'Grotesque Mage'],
+    targets: ['Kane', 'Demonic Entity', 'The Unhinged', 'Ice Shemira', 'Burning Brute', 'Grotesque Mage', 'Dune Destroyer'],
     rules: 'One team per run. Heroes are level-matched to the account Resonating Crystal level; gear and ascension still count. The boss rotates every couple of days.',
     formations: [{ key: 'team', label: 'Team' }],
     collectionsEnabled: true,
@@ -324,7 +330,7 @@ export const MODES: readonly ModeConfig[] = [
     name: 'Cursed Realm',
     targetLabel: 'Boss',
     targetAll: 'All bosses',
-    targets: ['Kane', 'Demonic Entity', 'The Unhinged', 'Ice Shemira', 'Burning Brute', 'Grotesque Mage'],
+    targets: ['Kane', 'Demonic Entity', 'The Unhinged', 'Ice Shemira', 'Burning Brute', 'Grotesque Mage', 'Dune Destroyer'],
     rules: 'Six formations: five Shadow Guards and the boss. Heroes are level 360 with no artifact or union bonuses, up to one mercenary across the full lineup, and a hero can only appear once per run.',
     formations: [
       { key: 'sg1', label: 'SG1' },

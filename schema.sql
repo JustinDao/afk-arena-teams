@@ -195,7 +195,7 @@ create table user_roster (
   si        smallint check (si between 0 and 50),
   furniture smallint check (furniture between 0 and 36),
   engraving smallint check (engraving between 0 and 100),
-  ascension text check (ascension in ('epic', 'legendary', 'mythic', 'ascended', 'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5')),
+  ascension text check (ascension in ('epic', 'epic_plus', 'legendary', 'legendary_plus', 'mythic', 'mythic_plus', 'ascended', 'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5')),
   primary key (user_id, hero_id)
 );
 
@@ -330,7 +330,7 @@ create table formation_heroes (
   si            smallint check (si between 0 and 50),          -- all three optional; null = not specified
   furniture     smallint check (furniture between 0 and 36),
   engraving     smallint check (engraving between 0 and 100),
-  ascension     text check (ascension in ('epic', 'legendary', 'mythic', 'ascended', 'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5')),
+  ascension     text check (ascension in ('epic', 'epic_plus', 'legendary', 'legendary_plus', 'mythic', 'mythic_plus', 'ascended', 'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5')),
   primary key (formation_id, position),
   unique (formation_id, hero_id)
 );
@@ -827,7 +827,7 @@ begin
     cross join lateral jsonb_array_elements(coalesce(forms.value -> 'heroes', '[]'::jsonb)) as heroes(value)
     where heroes.value ->> 'ascension' is not null
       and heroes.value ->> 'ascension' not in (
-        'epic', 'legendary', 'mythic', 'ascended',
+        'epic', 'epic_plus', 'legendary', 'legendary_plus', 'mythic', 'mythic_plus', 'ascended',
         'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5'
       )
   ) then
@@ -903,7 +903,7 @@ begin
       or (
         entry.value ->> 'ascension' is not null
         and entry.value ->> 'ascension' not in (
-          'epic', 'legendary', 'mythic', 'ascended',
+          'epic', 'epic_plus', 'legendary', 'legendary_plus', 'mythic', 'mythic_plus', 'ascended',
           'ascended_1', 'ascended_2', 'ascended_3', 'ascended_4', 'ascended_5'
         )
       )
@@ -1438,7 +1438,7 @@ $$;
 create or replace function public.ascension_rank(p_value text) returns int
 language sql immutable as $$
   select array_position(
-    array['epic','legendary','mythic','ascended','ascended_1','ascended_2','ascended_3','ascended_4','ascended_5'],
+    array['epic','epic_plus','legendary','legendary_plus','mythic','mythic_plus','ascended','ascended_1','ascended_2','ascended_3','ascended_4','ascended_5'],
     p_value)
 $$;
 

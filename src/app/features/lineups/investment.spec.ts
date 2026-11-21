@@ -68,6 +68,11 @@ describe('investment codes', () => {
 
     it('removes furniture and engraving when dropping below Ascended', () => {
       const inv = { si: 30, furn: 9, eng: 60 };
+      expect(sanitizeInvestmentForAscension(inv, 'mythic_plus')).toEqual({
+        si: 30,
+        furn: 0,
+        eng: 0,
+      });
       expect(sanitizeInvestmentForAscension(inv, 'mythic')).toEqual({
         si: 30,
         furn: 0,
@@ -78,7 +83,17 @@ describe('investment codes', () => {
 
     it('removes signature item, furniture, and engraving when dropping below Mythic', () => {
       const inv = { si: 30, furn: 9, eng: 60 };
+      expect(sanitizeInvestmentForAscension(inv, 'legendary_plus')).toEqual({
+        si: 0,
+        furn: 0,
+        eng: 0,
+      });
       expect(sanitizeInvestmentForAscension(inv, 'legendary')).toEqual({
+        si: 0,
+        furn: 0,
+        eng: 0,
+      });
+      expect(sanitizeInvestmentForAscension(inv, 'epic_plus')).toEqual({
         si: 0,
         furn: 0,
         eng: 0,

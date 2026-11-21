@@ -29,8 +29,11 @@ METHODS = {
 }
 HERO_ASCENSIONS = (
     ("epic", "e"),
+    ("epic_plus", "ep"),
     ("legendary", "l"),
+    ("legendary_plus", "lp"),
     ("mythic", "m"),
+    ("mythic_plus", "mp"),
     ("ascended", "a"),
     ("ascended_1", "a1"),
     ("ascended_2", "a2"),
@@ -264,10 +267,13 @@ def hero_state_urls(hero_id):
     si_levels = (None, 0, 10, 20, 30, 40)
     furniture_levels = (None, 3, 9, 36)
     engraving_levels = (None, 30, 60, 80)
+    mythic_index = next(i for i, (name, _) in enumerate(HERO_ASCENSIONS) if name == "mythic")
+    ascended_index = next(i for i, (name, _) in enumerate(HERO_ASCENSIONS) if name == "ascended")
+    ascended_1_index = next(i for i, (name, _) in enumerate(HERO_ASCENSIONS) if name == "ascended_1")
     for rank_index, (_, ascension_code) in enumerate(HERO_ASCENSIONS):
-        si_options = si_levels if rank_index >= 2 else (None,)
-        furniture_options = furniture_levels if rank_index >= 3 else (None,)
-        engraving_options = engraving_levels if rank_index >= 4 else (None,)
+        si_options = si_levels if rank_index >= mythic_index else (None,)
+        furniture_options = furniture_levels if rank_index >= ascended_index else (None,)
+        engraving_options = engraving_levels if rank_index >= ascended_1_index else (None,)
         for si in si_options:
             for furniture in furniture_options:
                 for engraving in engraving_options:

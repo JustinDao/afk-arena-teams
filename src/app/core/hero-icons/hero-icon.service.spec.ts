@@ -50,8 +50,11 @@ describe('HeroIconService', () => {
     const baseUrl = 'https://raw.githubusercontent.com/afk-mine/cdn/main/framed_unit_icon/';
     const baseRanks = [
       ['epic', 'e'],
+      ['epic_plus', 'ep'],
       ['legendary', 'l'],
+      ['legendary_plus', 'lp'],
       ['mythic', 'm'],
+      ['mythic_plus', 'mp'],
       ['ascended', 'a'],
     ] as const;
     for (const [rank, code] of baseRanks) {
@@ -59,8 +62,12 @@ describe('HeroIconService', () => {
     }
     expect(service.framedIconUrl(182, 'epic', { si: 30, furn: 9, eng: 60 }))
       .toBe(`${baseUrl}182_e.webp`);
+    expect(service.framedIconUrl(182, 'legendary_plus', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_lp.webp`);
     expect(service.framedIconUrl(182, 'mythic', { si: 30, furn: 9, eng: 60 }))
       .toBe(`${baseUrl}182_m_si30.webp`);
+    expect(service.framedIconUrl(182, 'mythic_plus', { si: 30, furn: 9, eng: 60 }))
+      .toBe(`${baseUrl}182_mp_si30.webp`);
     expect(service.framedIconUrl(182, 'ascended', { si: 30, furn: 9, eng: 60 }))
       .toBe(`${baseUrl}182_a_si30_f9.webp`);
     expect(service.framedIconUrl(182, 'ascended_1', { si: 30, furn: 9, eng: 60 }))

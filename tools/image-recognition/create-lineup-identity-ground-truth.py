@@ -10,8 +10,11 @@ IMAGE_NAME = "afk-nightmare-corridor-infernal-overlord-9.png"
 CDN_BASE = "https://raw.githubusercontent.com/afk-mine/cdn/main"
 ASCENSION_CODES = {
     "epic": "e",
+    "epic_plus": "ep",
     "legendary": "l",
+    "legendary_plus": "lp",
     "mythic": "m",
+    "mythic_plus": "mp",
     "ascended": "a",
     "ascended_1": "a1",
     "ascended_2": "a2",
@@ -102,6 +105,7 @@ def hero_asset_url(hero, catalog_entry):
     si = hero.get("si")
     if si is not None and ascension in (
         "mythic",
+        "mythic_plus",
         "ascended",
         "ascended_1",
         "ascended_2",
