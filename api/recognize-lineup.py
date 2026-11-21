@@ -366,6 +366,7 @@ def _list_sample_images():
         ("tools/image-recognition/pilot-images/pilot-nc-round-2.png", "Single-Round Staggered Crop — Round 2 Cindercrow (362×397)"),
         ("cr-mcwhare-2026-11-p2w-dark-nemora-p1.png,cr-mcwhare-2026-11-p2w-dark-nemora-p2.png", "Nov 2026 P2W Weekly CR — Dark Nemora (2 Images)"),
         ("nc-mcwhare-2026-11-p2w-soulchain-p1.png,nc-mcwhare-2026-11-p2w-soulchain-p2.png", "Nov 2026 P2W Weekly NC — Soulchain Knight (2 Images)"),
+        ("nc-mcwhare-2026-11-f2p-soulchain-p1.png,nc-mcwhare-2026-11-f2p-soulchain-p2.png", "Nov 2026 F2P Weekly NC — Soulchain Knight (2 Images)"),
         ("nc-mugen-2026-11-1m07s.png", "Nov 2026 Mugen NC 1:07 Guide — 6 Rounds + Subs"),
         ("cr-mugen-2026-11-dark-nemora-294b.png", "Nov 2026 Mugen CR Dark Nemora 294b — 6 Rounds + Subs"),
         ("cr-groody-2026-11-dark-nemora-3account-grid.png", "Nov 2026 Groody CR Dark Nemora — 3-Account Grid"),

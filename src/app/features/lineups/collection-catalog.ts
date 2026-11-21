@@ -23,6 +23,9 @@ export const COLLECTION_CATALOG: readonly CollectionCatalogItem[] = [
   { id: 18, class: 'Ranger', codeName: 'nunassassin', name: 'Demon Sealer' },
   { id: 19, class: 'Mage', codeName: 'selene', name: 'Crescent Wheel' },
   { id: 20, class: 'Support', codeName: 'siren', name: 'Ashen Tide Relic' },
+  { id: 21, class: 'Support', codeName: 'cursecarrier', name: 'Cinder Obsidian' },
+  { id: 22, class: 'Tank', codeName: 'bdruid', name: 'Wild Spirit Pact' },
+  { id: 23, class: 'Warrior', codeName: 'admiral', name: "Wayfinder's Mirror" },
 ];
 
 export const COLLECTION_NODE_STATS: readonly CollectionNodeStat[] = [

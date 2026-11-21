@@ -236,7 +236,10 @@ insert into collection_catalog (id, class, code_name, name, icon_url) values
   (17, 'Tank', 'sonia', 'Sinner''s Rose', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/17_cl.webp'),
   (18, 'Ranger', 'nunassassin', 'Demon Sealer', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/18_cl.webp'),
   (19, 'Mage', 'selene', 'Crescent Wheel', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/19_cl.webp'),
-  (20, 'Support', 'siren', 'Ashen Tide Relic', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/20_cl.webp');
+  (20, 'Support', 'siren', 'Ashen Tide Relic', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/20_cl.webp'),
+  (21, 'Support', 'cursecarrier', 'Cinder Obsidian', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/21_cl.webp'),
+  (22, 'Tank', 'bdruid', 'Wild Spirit Pact', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/22_cl.webp'),
+  (23, 'Warrior', 'admiral', 'Wayfinder''s Mirror', 'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/23_cl.webp');
 
 create table collection_node_types (
   node_type text primary key check (node_type ~ '^[a-z0-9_]+$')
@@ -1225,7 +1228,8 @@ insert into heroes (id, slug, name, faction, class, hero_type, role, rarity, is_
   (257, 'kikoru-shinomiya', 'Kikoru Shinomiya', 'Dimensional', 'Warrior', 'strength', 'Burst Damage', 'elite', false),
   (186, 'highborn-gwyneth', 'Gwyneth (Highborn)', 'Draconis', 'Tank', 'strength', 'Continuous Damage', 'legendary', false),
   (258, 'awakened-theowyn', 'Theowyn (Awakened)', 'Graveborn', 'Mage', 'intelligence', 'Buffer', 'legendary', true),
-  (259, 'greisman', 'Greisman', 'Graveborn', 'Mage', 'intelligence', 'Debuffer', 'elite', false)
+  (259, 'greisman', 'Greisman', 'Graveborn', 'Mage', 'intelligence', 'Debuffer', 'elite', false),
+  (260, 'highborn-brenna', 'Brenna (Highborn)', 'Draconis', 'Warrior', 'strength', 'Tank', 'legendary', false)
 on conflict (id) do update set
   slug = excluded.slug, name = excluded.name, faction = excluded.faction,
   class = excluded.class, hero_type = excluded.hero_type, role = excluded.role, rarity = excluded.rarity,

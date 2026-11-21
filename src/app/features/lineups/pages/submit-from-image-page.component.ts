@@ -190,6 +190,11 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     label: 'Nov 2026 P2W Weekly NC — Soulchain Knight (2 Images)',
   },
   {
+    id: 'nc-f2p-soulchain-2026-11',
+    path: 'nc-mcwhare-2026-11-f2p-soulchain-p1.png,nc-mcwhare-2026-11-f2p-soulchain-p2.png',
+    label: 'Nov 2026 F2P Weekly NC — Soulchain Knight (2 Images)',
+  },
+  {
     id: 'nc-mugen-107-2026-11',
     path: 'nc-mugen-2026-11-1m07s.png',
     label: 'Nov 2026 Mugen NC 1:07 Guide — 6 Rounds + Subs',
