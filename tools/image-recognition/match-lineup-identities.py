@@ -701,6 +701,30 @@ def build_type_tensors(candidate_assets, cache_root=None):
                 }
             )
 
+    extra_hero_dir = Path(__file__).resolve().parent / "hero-extra-templates"
+    if extra_hero_dir.is_dir():
+        hero_name_by_id = {c["id"]: c["name"] for c in candidate_assets if c["type"] == "hero"}
+        for p in sorted(extra_hero_dir.glob("*.png")):
+            hid_str = p.stem.split("_", 1)[0]
+            if not hid_str.isdigit():
+                continue
+            hid = int(hid_str)
+            if hid not in hero_name_by_id:
+                continue
+            im = cv2.imread(str(p), cv2.IMREAD_UNCHANGED)
+            if im is not None:
+                expanded_assets.append(
+                    {
+                        "type": "hero",
+                        "id": hid,
+                        "name": hero_name_by_id[hid],
+                        "url": f"file://{p}",
+                        "state": f"extra_{p.stem}",
+                        "template": normalized_center(im),
+                        "image": im,
+                    }
+                )
+
     seen_pet_base = {
         c["id"] for c in expanded_assets if c["type"] == "pet" and str(c.get("state", "")).startswith("base")
     }
@@ -741,7 +765,12 @@ def build_type_tensors(candidate_assets, cache_root=None):
         )
         m2 = np.zeros_like(alpha)
         if c["type"] == "hero":
-            m2[8:46, 10:54] = 1.0
+            m2[8:48, 10:54] = 1.0
+            # Down-weight top-left (level/rank), top-right (SP), bottom-left (faction), bottom-right (collection) badge corners
+            m2[8:22, 10:22] = 0.1
+            m2[8:24, 40:54] = 0.1
+            m2[38:48, 10:22] = 0.1
+            m2[38:48, 42:54] = 0.1
             m_left = np.zeros_like(alpha)
             m_left[6:56, 6:56] = 1.0
             m_left[40:64, 40:64] = 0.0
@@ -755,14 +784,12 @@ def build_type_tensors(candidate_assets, cache_root=None):
     for t_name, items in by_type.items():
         T = np.stack([x[1] for x in items], axis=0)
         M = np.stack([x[2] for x in items], axis=0)
-        D = np.sum(M, axis=(1, 2, 3)) * 3.0
-        m_single = M[0]
-        d_single = float(D[0])
+        D = np.maximum(1.0, np.sum(M, axis=(1, 2, 3)) * 3.0).reshape(1, -1)
         T_flat = T.reshape(T.shape[0], -1)
-        M_flat = np.repeat(m_single, 3, axis=2).reshape(1, -1)
+        M_flat = np.repeat(M, 3, axis=3).reshape(T.shape[0], -1)
         TM_flat = T_flat * M_flat
         T2 = np.sum(T_flat * TM_flat, axis=1, keepdims=True).T
-        type_tensors[t_name] = (items, T_flat, M_flat, TM_flat, T2, d_single)
+        type_tensors[t_name] = (items, T_flat, M_flat, TM_flat, T2, D)
 
     _TENSOR_CACHE[cache_key] = type_tensors
     return type_tensors
@@ -858,33 +885,40 @@ def rank_candidates_in_box(
     sz = TENSOR_TEMPLATE_SIZE
 
     best_per_idx = np.full(len(items), np.inf, dtype=np.float32)
-    for scale_mult in scales:
-        s_px = est_sz * scale_mult
-        if s_px < 24:
-            continue
-        pad_px = s_px * pad_ratio
-        half = s_px / 2.0 + pad_px
-        x0, y0 = max(0, round(cx - half)), max(0, round(cy - half))
-        x1, y1 = min(img.shape[1], round(cx + half)), min(img.shape[0], round(cy + half))
-        if x1 - x0 < 20 or y1 - y0 < 20:
-            continue
-        roi = img[y0:y1, x0:x1].astype(np.float32)
-        sf = sz / float(s_px)
-        r_w, r_h = max(sz, round(roi.shape[1] * sf)), max(sz, round(roi.shape[0] * sf))
-        roi_r = cv2.resize(roi, (r_w, r_h), interpolation=cv2.INTER_AREA)
-        patches = [
-            roi_r[oy : oy + sz, ox : ox + sz]
-            for oy in range(0, r_h - sz + 1, stride)
-            for ox in range(0, r_w - sz + 1, stride)
-        ]
-        if not patches:
-            continue
-        P = np.stack(patches, axis=0)
-        P_flat = P.reshape(P.shape[0], -1)
-        P2 = np.sum((P_flat**2) * M_flat, axis=1, keepdims=True)
-        dist = (P2 + T2 - 2.0 * (P_flat @ TM_flat.T)) / d_single
-        min_d = dist.min(axis=0)
-        best_per_idx = np.minimum(best_per_idx, min_d)
+
+    def _run_scales(scale_list, pad_r):
+        nonlocal best_per_idx
+        for scale_mult in scale_list:
+            s_px = est_sz * scale_mult
+            if s_px < 24:
+                continue
+            pad_px = s_px * pad_r
+            half = s_px / 2.0 + pad_px
+            x0, y0 = max(0, round(cx - half)), max(0, round(cy - half))
+            x1, y1 = min(img.shape[1], round(cx + half)), min(img.shape[0], round(cy + half))
+            if x1 - x0 < 20 or y1 - y0 < 20:
+                continue
+            roi = img[y0:y1, x0:x1].astype(np.float32)
+            sf = sz / float(s_px)
+            r_w, r_h = max(sz, round(roi.shape[1] * sf)), max(sz, round(roi.shape[0] * sf))
+            roi_r = cv2.resize(roi, (r_w, r_h), interpolation=cv2.INTER_AREA)
+            patches = [
+                roi_r[oy : oy + sz, ox : ox + sz]
+                for oy in range(0, r_h - sz + 1, stride)
+                for ox in range(0, r_w - sz + 1, stride)
+            ]
+            if not patches:
+                continue
+            P = np.stack(patches, axis=0)
+            P_flat = P.reshape(P.shape[0], -1)
+            P2 = (P_flat**2) @ M_flat.T
+            dist = (P2 + T2 - 2.0 * (P_flat @ TM_flat.T)) / d_single
+            min_d = dist.min(axis=0)
+            best_per_idx = np.minimum(best_per_idx, min_d)
+
+    _run_scales(scales, pad_ratio)
+    if t_name == "hero" and float(best_per_idx.min()) > 2200.0:
+        _run_scales((0.78, 0.84, 1.16, 1.24), max(pad_ratio, 0.32))
 
     scored_items = []
     for idx in range(len(items)):

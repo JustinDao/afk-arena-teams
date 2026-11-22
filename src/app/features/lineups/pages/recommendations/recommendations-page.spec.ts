@@ -122,6 +122,19 @@ describe('Recommendations pages', () => {
     expect(first.target).toBe('');
   });
 
+  it('labels single-stat hero targets explicitly (SI, furniture, engraving)', async () => {
+    loadRecommendations.and.resolveTo([
+      recommendation(heroes[0].id, 'invest', { rank: 1, investment: { si: 40, furn: null, eng: null }, ascension: 'ascended' }),
+      recommendation(heroes[1].id, 'invest', { rank: 2, investment: { si: null, furn: 9, eng: null }, ascension: null }),
+      recommendation(heroes[2].id, 'invest', { rank: 3, category: 'awakened', investment: { si: null, furn: null, eng: 60 }, ascension: null }),
+    ]);
+    await setup({ id: 'u1' });
+    const fixture = await render(RecommendationHeroesComponent);
+    const groups = fixture.componentInstance.groups();
+    expect(groups[0].items.map((item) => item.target)).toEqual(['SI 40 · Ascended', '9F']);
+    expect(groups[2].items[0].target).toBe('E60');
+  });
+
   it('groups collection recommendations by class and describes the target build', async () => {
     const warriorPick: CollectionRecommendation = {
       catalogId: 1, collectionClass: 'Warrior', rank: 1, kind: 'upgrade', score: 1, completeCount: 1, nearCount: 0,

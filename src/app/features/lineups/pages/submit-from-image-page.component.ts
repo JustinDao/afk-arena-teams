@@ -127,6 +127,25 @@ export interface EditableImportFormation {
   readonly substituteTeams: readonly EditableSubstituteTeam[];
 }
 
+export interface EditableLineupSetState {
+  readonly index: number;
+  readonly label: string;
+  readonly included: boolean;
+  readonly status: 'ready' | 'submitting' | 'submitted' | 'error';
+  readonly errorMessage: string;
+  readonly modeSlug: string;
+  readonly targetName: string;
+  readonly teamCount: number;
+  readonly formations: readonly EditableImportFormation[];
+  readonly rawFormations: readonly EditableImportFormation[];
+  readonly notes: string;
+  readonly totalDamage: string;
+  readonly totalTime: string;
+  readonly resultEntryMode: 'per-round' | 'total';
+  readonly placementType: '' | 'rank' | 'percent';
+  readonly placementValue: string;
+}
+
 interface SampleGuideOption {
   readonly id: string;
   readonly path: string;
@@ -228,6 +247,11 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
     id: 'ts-swamp-5t-2026-11',
     path: 'ts-noname-2026-11-fog-5t-teams.png,ts-noname-2026-11-fog-5t-lookup.png',
     label: 'Nov 2026 TS Fog (Swamp) 5-Team + Lookup Sheet (2 Images)',
+  },
+  {
+    id: 'ts-theafkguys-volcano-2026-11',
+    path: 'ts-theafkguys-2026-11-volcano.jpeg',
+    label: 'Nov 2026 TheAFKGuys TS Fire (Volcano) — 7T + Whale/Dolphin/Budget 5T',
   },
 ];
 
@@ -376,22 +400,55 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
               </div>
               <p class="rules-text">{{ currentModeConfig().rules }}</p>
             </div>
-          @if (detectedLineupSets().length > 1) {
+          @if (lineupSetStates().length > 0) {
             <div class="alt-group lineup-sets-bar" role="group" aria-label="Detected lineup sets">
-              <span class="alt-label">Detected lineups in image ({{ detectedLineupSets().length }}):</span>
-              <div class="chip-row">
-                @for (lSet of detectedLineupSets(); track lSet.index) {
-                  <button
-                    mat-button
-                    type="button"
-                    class="chip-btn"
-                    [class.active-candidate]="lSet.index === activeLineupSetIndex()"
-                    [attr.aria-pressed]="lSet.index === activeLineupSetIndex()"
-                    (click)="selectLineupSet(lSet.index)">
-                    {{ lSet.label }} ({{ lSet.teams.length }} rounds)
-                  </button>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="alt-label">Lineup queue ({{ lineupSetStates().length }}):</span>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="btn"
+                  [disabled]="batchSubmitting()"
+                  (click)="duplicateActiveSetAsVariant()">
+                  + Duplicate as variant
+                </button>
+              </div>
+              <div class="chip-row" style="margin-top: 0.35rem;">
+                @for (lSet of lineupSetStates(); track lSet.index) {
+                  <div
+                    class="queue-pill"
+                    style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.45rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);">
+                    @if (lineupSetStates().length > 1) {
+                      <input
+                        type="checkbox"
+                        [checked]="lSet.included"
+                        [disabled]="batchSubmitting() || lSet.status === 'submitted'"
+                        [attr.aria-label]="'Include ' + lSet.label"
+                        (change)="toggleSetIncluded(lSet.index)" />
+                    }
+                    <button
+                      mat-button
+                      type="button"
+                      class="chip-btn"
+                      [class.active-candidate]="lSet.index === activeLineupSetIndex()"
+                      [attr.aria-pressed]="lSet.index === activeLineupSetIndex()"
+                      [disabled]="batchSubmitting()"
+                      (click)="selectLineupSet(lSet.index)">
+                      {{ lSet.label }} ({{ lSet.formations.length }}T)
+                      @if (lSet.status === 'submitted') {
+                        <span class="conf-badge ok" style="margin-left: 0.25rem;">Submitted ✓</span>
+                      } @else if (lSet.status === 'submitting') {
+                        <span class="conf-badge warn" style="margin-left: 0.25rem;">Submitting…</span>
+                      } @else if (lSet.status === 'error') {
+                        <span class="conf-badge warn" style="margin-left: 0.25rem;">Needs review</span>
+                      }
+                    </button>
+                  </div>
                 }
               </div>
+              @if (activeSetState()?.status === 'error' && activeSetState()?.errorMessage) {
+                <p class="status-banner" role="alert" style="margin-top: 0.4rem;">{{ activeSetState()?.errorMessage }}</p>
+              }
             </div>
           }
           <div class="formation-tabs-bar">
@@ -593,16 +650,57 @@ const SAMPLE_GUIDE_OPTIONS: readonly SampleGuideOption[] = [
               placeholder="Optional notes, kill times, or substitution tips…"></textarea>
           </label>
 
+          @if (batchResultBanner(); as banner) {
+            <div class="status-banner" role="status" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+              <span>Submitted {{ banner.count }} lineup(s) to {{ currentModeConfig().name }}.</span>
+              <span style="display: flex; gap: 0.5rem;">
+                <a mat-stroked-button class="btn" [routerLink]="'/' + banner.modeSlug">View in {{ currentModeConfig().short }}</a>
+                <button mat-button type="button" class="btn" (click)="resetToUpload()">Analyze another image</button>
+              </span>
+            </div>
+          }
+
+          @if (store.backendConfigured && !store.isAuthenticated && includedPendingCount() > 1) {
+            <p class="status-banner" role="status" style="margin-top: 0.5rem;">
+              Sign in from the header account dialog to submit multiple lineups at once.
+            </p>
+          }
+
           <div class="footer-actions">
             <a mat-button class="btn" routerLink="/submit">Cancel</a>
-            <button
-              mat-flat-button
-              type="button"
-              class="btn primary apply-draft-btn"
-              [disabled]="!hasAnyHero()"
-              (click)="applyToSubmitForm()">
-              Use lineup in submit form
-            </button>
+            @if (lineupSetStates().length > 1) {
+              <button
+                mat-stroked-button
+                type="button"
+                class="btn"
+                [disabled]="batchSubmitting() || !hasAnyHero()"
+                (click)="applyToSubmitForm()">
+                Open active in /submit
+              </button>
+              <button
+                mat-flat-button
+                type="button"
+                class="btn primary apply-draft-btn"
+                [disabled]="batchSubmitting() || includedPendingCount() === 0 || (store.backendConfigured && !store.isAuthenticated)"
+                (click)="submitSelectedLineups()">
+                @if (batchSubmitting()) {
+                  Submitting…
+                } @else if (hasBatchErrors()) {
+                  Retry remaining ({{ includedPendingCount() }})
+                } @else {
+                  Submit selected lineups ({{ includedPendingCount() }})
+                }
+              </button>
+            } @else {
+              <button
+                mat-flat-button
+                type="button"
+                class="btn primary apply-draft-btn"
+                [disabled]="!hasAnyHero()"
+                (click)="applyToSubmitForm()">
+                Use lineup in submit form
+              </button>
+            }
           </div>
         </section>
       </div>
@@ -1453,6 +1551,19 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     () => this.formations()[this.activeFormationIndex()] ?? null,
   );
 
+  readonly lineupSetStates = signal<readonly EditableLineupSetState[]>([]);
+  readonly batchSubmitting = signal(false);
+  readonly batchResultBanner = signal<{ readonly count: number; readonly modeSlug: string } | null>(null);
+  readonly activeSetState = computed(() =>
+    this.lineupSetStates().find((s) => s.index === this.activeLineupSetIndex()) ?? null,
+  );
+  readonly includedPendingCount = computed(() =>
+    this.lineupSetStates().filter((s) => s.included && s.status !== 'submitted').length,
+  );
+  readonly hasBatchErrors = computed(() =>
+    this.lineupSetStates().some((s) => s.included && s.status === 'error'),
+  );
+
   readonly hasAnyHero = computed(() =>
     this.formations().some((f) => f.heroes.some((h) => h.heroId !== null)),
   );
@@ -1471,6 +1582,9 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     this.reviewSuggestions.set([]);
     this.statusMessage.set('');
     this.formations.set([]);
+    this.lineupSetStates.set([]);
+    this.batchResultBanner.set(null);
+    this.batchSubmitting.set(false);
     this.editingSlot.set(null);
     this.petModalOpen.set(false);
   }
@@ -2900,12 +3014,15 @@ export class SubmitFromImagePageComponent implements OnDestroy {
                 ? petObj.level
                 : Math.min(18, petMaxLevel(resolvedPet.kind)))
             : null,
-          petConfidence: Number(petObj?.confidence ?? 0.9),
+          petConfidence: t.pet_warning ? 0 : Number(petObj?.confidence ?? 0.9),
           petGuideOptions,
           petVisualAlternatives,
           time: typeof t.kill_time === 'string' ? t.kill_time : '',
           damage: typeof t.damage_display === 'string' ? t.damage_display : '',
-          notes: typeof t.notes === 'string' ? t.notes : '',
+          notes: [
+            typeof t.pet_warning === 'string' ? t.pet_warning : '',
+            typeof t.notes === 'string' ? t.notes : '',
+          ].filter(Boolean).join('\n'),
           heroes,
           substituteTeams,
         };
@@ -2935,20 +3052,220 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     this.placementType.set(value === 'rank' || value === 'percent' ? value : '');
   }
 
+  private saveActiveSetState(): void {
+    const activeIdx = this.activeLineupSetIndex();
+    this.lineupSetStates.update((states) =>
+      states.map((s) =>
+        s.index === activeIdx
+          ? {
+              ...s,
+              modeSlug: this.selectedModeSlug(),
+              targetName: this.selectedTargetName(),
+              teamCount: this.teamCount(),
+              formations: this.formations(),
+              rawFormations: this.rawExtractedFormations,
+              notes: this.notes(),
+              totalDamage: this.totalDamage(),
+              totalTime: this.totalTime(),
+              resultEntryMode: this.resultEntryMode(),
+              placementType: this.placementType(),
+              placementValue: this.placementValue(),
+            }
+          : s,
+      ),
+    );
+  }
+
+  toggleSetIncluded(setIndex: number): void {
+    this.lineupSetStates.update((states) =>
+      states.map((s) => (s.index === setIndex ? { ...s, included: !s.included } : s)),
+    );
+  }
+
+  duplicateActiveSetAsVariant(): void {
+    this.saveActiveSetState();
+    const current = this.activeSetState();
+    if (!current) return;
+    const nextIdx = Math.max(0, ...this.lineupSetStates().map((s) => s.index)) + 1;
+    const clonedFormations = current.formations.map((f) => ({
+      ...f,
+      heroes: f.heroes.map((h) => ({ ...h })),
+      substituteTeams: [...f.substituteTeams],
+    }));
+    const variant: EditableLineupSetState = {
+      ...current,
+      index: nextIdx,
+      label: `${current.label} (Variant)`,
+      included: true,
+      status: 'ready',
+      errorMessage: '',
+      formations: clonedFormations,
+      rawFormations: clonedFormations,
+    };
+    this.lineupSetStates.update((states) => [...states, variant]);
+    this.selectLineupSet(nextIdx);
+  }
+
   selectLineupSet(setIndex: number): void {
-    const sets = this.detectedLineupSets();
-    const chosen = sets.find((s) => s.index === setIndex);
+    this.saveActiveSetState();
+    const chosen = this.lineupSetStates().find((s) => s.index === setIndex);
     if (!chosen) return;
     this.activeLineupSetIndex.set(setIndex);
-    const mapped = this.mapRecognizedTeamsToFormations(chosen.teams);
-    this.rawExtractedFormations = mapped;
-    this.syncFormationsToModeAndTarget(false);
+    this.selectedModeSlug.set(chosen.modeSlug);
+    this.selectedTargetName.set(chosen.targetName);
+    this.teamCount.set(chosen.teamCount);
+    this.rawExtractedFormations = [...chosen.rawFormations];
+    this.formations.set(chosen.formations);
+    this.notes.set(chosen.notes);
+    this.totalDamage.set(chosen.totalDamage);
+    this.totalTime.set(chosen.totalTime);
+    this.resultEntryMode.set(chosen.resultEntryMode);
+    this.placementType.set(chosen.placementType);
+    this.placementValue.set(chosen.placementValue);
     this.activeFormationIndex.set(0);
     this.selectedSubstituteIndex.set(0);
-    const totalHeroes = mapped.reduce((sum, f) => sum + this.countFilledHeroes(f), 0);
+    const totalHeroes = chosen.formations.reduce((sum, f) => sum + this.countFilledHeroes(f), 0);
     this.statusMessage.set(
-      `Switched to ${chosen.label} — ${mapped.length} round(s) (${totalHeroes} heroes) in ${this.currentModeConfig().name} (${this.selectedTargetName()}).`,
+      `Switched to ${chosen.label} — ${chosen.formations.length} round(s) (${totalHeroes} heroes) in ${this.currentModeConfig().name} (${this.selectedTargetName()}).`,
     );
+  }
+
+  private buildSetImportPayload(setState: EditableLineupSetState) {
+    const modeCfg = this.store.modes().find((m) => m.slug === setState.modeSlug) ?? this.currentModeConfig();
+    const draftFormations: DraftFormation[] = setState.formations.map((form) => {
+      const slots: DraftSlot[] = form.heroes.map((slot) => {
+        const hero = slot.heroId !== null ? this.heroes().find((h) => h.id === slot.heroId) : undefined;
+        const inv = parseInvestment(slot.investmentCode);
+        const ascension = hero ? (defaultAscensionForInvestment(inv) ?? 'ascended') : null;
+        const heroClass = hero ? this.heroClassFor(hero) : null;
+        const collectionSnapshot: CollectionSnapshot | null =
+          slot.collectionSnapshot ??
+          this.buildCollectionSnapshot(slot.collectionId, slot.collectionLevel, slot.collectionNodes, heroClass);
+        return {
+          hid: slot.heroId,
+          merc: slot.merc,
+          inv: slot.investmentCode,
+          ascension,
+          collectionId: '',
+          collectionSnapshot,
+        };
+      });
+      return {
+        key: form.key,
+        label: form.label,
+        petId: form.petId,
+        petLevel: form.petLevel,
+        time: setState.resultEntryMode === 'per-round' ? (form.time ?? '') : '',
+        damage: setState.resultEntryMode === 'per-round' ? (form.damage ?? '') : '',
+        notes: form.notes ?? '',
+        slots,
+      };
+    });
+
+    const roundDamages = setState.formations
+      .map((f) => parseDamage(f.damage ?? ''))
+      .filter((d): d is number => d !== null && d > 0);
+    const calcDamage = roundDamages.length ? formatDamage(roundDamages.reduce((s, d) => s + d, 0)) : '';
+    const effectiveDamage =
+      setState.modeSlug === 'cursed-realm' && setState.resultEntryMode === 'per-round'
+        ? (calcDamage || undefined)
+        : (setState.totalDamage || undefined);
+
+    return {
+      modeCfg,
+      imported: {
+        mode: setState.modeSlug,
+        target: setState.targetName,
+        notes: setState.notes,
+        damage: effectiveDamage,
+        totalTime:
+          setState.modeSlug === 'nightmare-corridor' && setState.resultEntryMode === 'total'
+            ? (setState.totalTime || undefined)
+            : undefined,
+        placementType: setState.placementType || undefined,
+        placementValue: setState.placementValue || undefined,
+        formations: draftFormations,
+      },
+      formValue: {
+        target: setState.targetName,
+        notes: setState.notes,
+        damage: effectiveDamage ?? '',
+        totalTime:
+          setState.modeSlug === 'nightmare-corridor' && setState.resultEntryMode === 'total'
+            ? setState.totalTime
+            : '',
+        rcLevel: String(this.store.heroLevel() ?? ''),
+        placementType: setState.placementType,
+        placementValue: setState.placementValue,
+      },
+    };
+  }
+
+  async submitSelectedLineups(): Promise<void> {
+    if (this.batchSubmitting()) return;
+    this.saveActiveSetState();
+    this.batchResultBanner.set(null);
+    const pending = this.lineupSetStates().filter((s) => s.included && s.status !== 'submitted');
+    if (!pending.length) return;
+
+    // Pre-validate all selected sets before submitting any
+    let firstInvalidIndex: number | null = null;
+    for (const setState of pending) {
+      const { imported, formValue } = this.buildSetImportPayload(setState);
+      const errors = this.store.validateImportedLineup(imported, formValue);
+      if (errors.length) {
+        if (firstInvalidIndex === null) firstInvalidIndex = setState.index;
+        this.lineupSetStates.update((states) =>
+          states.map((s) => (s.index === setState.index ? { ...s, status: 'error', errorMessage: errors[0] } : s)),
+        );
+      } else if (setState.status === 'error') {
+        this.lineupSetStates.update((states) =>
+          states.map((s) => (s.index === setState.index ? { ...s, status: 'ready', errorMessage: '' } : s)),
+        );
+      }
+    }
+    if (firstInvalidIndex !== null) {
+      this.selectLineupSet(firstInvalidIndex);
+      return;
+    }
+
+    this.batchSubmitting.set(true);
+    let submittedCount = 0;
+    try {
+      for (let i = 0; i < pending.length; i++) {
+        const setState = pending[i];
+        this.lineupSetStates.update((states) =>
+          states.map((s) => (s.index === setState.index ? { ...s, status: 'submitting', errorMessage: '' } : s)),
+        );
+        this.statusMessage.set(`Submitting ${i + 1} of ${pending.length}: ${setState.label}…`);
+        const { imported, formValue } = this.buildSetImportPayload(setState);
+        const res = await this.store.submitImportedLineup(imported, formValue, { skipReload: true });
+        if (res.ok) {
+          submittedCount += 1;
+          this.lineupSetStates.update((states) =>
+            states.map((s) => (s.index === setState.index ? { ...s, status: 'submitted', errorMessage: '' } : s)),
+          );
+        } else {
+          this.lineupSetStates.update((states) =>
+            states.map((s) =>
+              s.index === setState.index
+                ? { ...s, status: 'error', errorMessage: res.errors[0] ?? 'Could not submit lineup.' }
+                : s,
+            ),
+          );
+        }
+      }
+      if (submittedCount > 0) {
+        await this.store.reloadSubmissions();
+      }
+      const totalSubmitted = this.lineupSetStates().filter((s) => s.status === 'submitted').length;
+      if (this.includedPendingCount() === 0 && totalSubmitted > 0) {
+        this.batchResultBanner.set({ count: totalSubmitted, modeSlug: this.selectedModeSlug() });
+        this.statusMessage.set(`Submitted ${totalSubmitted} lineup(s) successfully.`);
+      }
+    } finally {
+      this.batchSubmitting.set(false);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2984,6 +3301,91 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       }
     } else {
       this.syncFormationsToModeAndTarget(false);
+    }
+
+    this.batchResultBanner.set(null);
+    const rawSets = Array.isArray(data.lineup_sets) ? data.lineup_sets : [];
+    const curModeSlug = this.selectedModeSlug();
+    const curTarget = this.selectedTargetName();
+    const curMode = this.currentModeConfig();
+    if (rawSets.length > 0) {
+      const states: EditableLineupSetState[] = rawSets.map((s: any, idx: number) => {
+        if (idx === 0) {
+          return {
+            index: s.index ?? 0,
+            label: s.label || 'Lineup 1',
+            included: true,
+            status: 'ready',
+            errorMessage: '',
+            modeSlug: curModeSlug,
+            targetName: curTarget,
+            teamCount: this.teamCount(),
+            formations: this.formations(),
+            rawFormations: [...this.rawExtractedFormations],
+            notes: this.notes(),
+            totalDamage: this.totalDamage(),
+            totalTime: this.totalTime(),
+            resultEntryMode: this.resultEntryMode(),
+            placementType: this.placementType(),
+            placementValue: this.placementValue(),
+          };
+        }
+        const sMapped = this.mapRecognizedTeamsToFormations(s.teams ?? []);
+        const sCount = curMode.variable
+          ? Math.min(curMode.variable.max, Math.max(curMode.variable.min, sMapped.length))
+          : sMapped.length;
+        const savedRaw = this.rawExtractedFormations;
+        const savedForms = this.formations();
+        const savedCount = this.teamCount();
+        this.rawExtractedFormations = sMapped;
+        this.teamCount.set(sCount);
+        this.syncFormationsToModeAndTarget(false);
+        const aligned = this.formations();
+        this.rawExtractedFormations = savedRaw;
+        this.teamCount.set(savedCount);
+        this.formations.set(savedForms);
+        const sHasDmg = sMapped.some((f) => Boolean(f.damage?.trim()));
+        return {
+          index: s.index ?? idx,
+          label: s.label || `Lineup ${idx + 1}`,
+          included: true,
+          status: 'ready',
+          errorMessage: '',
+          modeSlug: curModeSlug,
+          targetName: curTarget,
+          teamCount: sCount,
+          formations: aligned,
+          rawFormations: sMapped,
+          notes: '',
+          totalDamage: '',
+          totalTime: '',
+          resultEntryMode: curModeSlug === 'cursed-realm' && !sHasDmg ? 'total' : 'per-round',
+          placementType: '',
+          placementValue: '',
+        };
+      });
+      this.lineupSetStates.set(states);
+    } else {
+      this.lineupSetStates.set([
+        {
+          index: 0,
+          label: 'Lineup 1',
+          included: true,
+          status: 'ready',
+          errorMessage: '',
+          modeSlug: curModeSlug,
+          targetName: curTarget,
+          teamCount: this.teamCount(),
+          formations: this.formations(),
+          rawFormations: [...this.rawExtractedFormations],
+          notes: this.notes(),
+          totalDamage: this.totalDamage(),
+          totalTime: this.totalTime(),
+          resultEntryMode: this.resultEntryMode(),
+          placementType: this.placementType(),
+          placementValue: this.placementValue(),
+        },
+      ]);
     }
     this.activeFormationIndex.set(0);
     this.selectedSubstituteIndex.set(0);

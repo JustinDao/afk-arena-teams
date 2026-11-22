@@ -56,9 +56,21 @@ export class RecommendationHeroesComponent {
 
   private targetFor(recommendation: HeroRecommendation): string {
     const parts: string[] = [];
-    const code = formatInvestment(recommendation.investment);
+    const code = this.formatRecommendationInvestment(recommendation.investment);
     if (code) parts.push(code);
     if (recommendation.ascension) parts.push(ASCENSION_RANK_LABELS[recommendation.ascension]);
     return parts.join(' · ');
+  }
+
+  private formatRecommendationInvestment(investment: HeroRecommendation['investment']): string {
+    if (!investment) return '';
+    const { si, furn, eng } = investment;
+    const present = [si, furn, eng].filter((value) => value !== null).length;
+    if (present === 1) {
+      if (si !== null) return `SI ${si}`;
+      if (furn !== null) return `${furn}F`;
+      if (eng !== null) return `E${eng}`;
+    }
+    return formatInvestment(investment);
   }
 }

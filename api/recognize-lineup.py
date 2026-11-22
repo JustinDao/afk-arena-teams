@@ -174,10 +174,11 @@ def recognize_multiple_images(image_bytes_list):
     matcher = state["matcher"]
 
     lookup_imgs = [im for im in imgs if det.is_hero_lookup_sheet_image(im)]
-    formation_imgs = [im for im in imgs if not det.is_hero_lookup_sheet_image(im)]
-    if not formation_imgs and lookup_imgs:
-        formation_imgs = lookup_imgs
+    formation_imgs_indexed = [(idx, im) for idx, im in enumerate(imgs) if not det.is_hero_lookup_sheet_image(im)]
+    if not formation_imgs_indexed and lookup_imgs:
+        formation_imgs_indexed = list(enumerate(lookup_imgs))
         lookup_imgs = []
+    formation_imgs = [im for _, im in formation_imgs_indexed]
 
     lookup_map = {}
     for l_im in lookup_imgs:
@@ -195,7 +196,7 @@ def recognize_multiple_images(image_bytes_list):
     all_solved_teams = []
     fold_names = []
     primary_img = formation_imgs[0]
-    for f_im in formation_imgs:
+    for orig_img_idx, f_im in formation_imgs_indexed:
         model, fold_name = _select_model_for_image(f_im, state)
         fold_names.append(fold_name)
         if model is not None:
@@ -225,6 +226,8 @@ def recognize_multiple_images(image_bytes_list):
                 detector_scores=raw_scores,
                 allowed_hero_slugs=allowed_hero_slugs,
             )
+        for t in part_teams:
+            t["image_index"] = orig_img_idx
         has_multi_sets = any("set_index" in t for t in part_teams)
         if not has_multi_sets and all_solved_teams:
             offset = len(all_solved_teams)
@@ -374,6 +377,7 @@ def _list_sample_images():
         ("ts-mugen-2026-11-fog-6t.png", "Nov 2026 Mugen TS Fog — 6-Team Guide"),
         ("ts-noname-2026-11-fog-6t-teams.png,ts-noname-2026-11-fog-6t-lookup.png", "Nov 2026 TS Fog (Swamp) 6-Team + Lookup Sheet (2 Images)"),
         ("ts-noname-2026-11-fog-5t-teams.png,ts-noname-2026-11-fog-5t-lookup.png", "Nov 2026 TS Fog (Swamp) 5-Team + Lookup Sheet (2 Images)"),
+        ("ts-theafkguys-2026-11-volcano.jpeg", "Nov 2026 TheAFKGuys TS Fire (Volcano) — 7T + Whale/Dolphin/Budget 5T"),
     ]
     out = []
     for rel, label in candidates:

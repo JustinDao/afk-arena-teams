@@ -327,11 +327,11 @@ describe('roster pages', () => {
     const harness = await RouterTestingHarness.create();
     const component = await navigateTo(harness, '/roster/collections', RosterCollectionsComponent);
 
-    expect(component.collectionCatalog().length).toBe(20);
+    expect(component.collectionCatalog().length).toBe(23);
     expect(component.collectionCatalog().map(({ name }) => name)).toEqual(
       [...component.collectionCatalog().map(({ name }) => name)].sort((a, b) => a.localeCompare(b)),
     );
-    expect(new Set(COLLECTION_CATALOG.map(({ id }) => id)).size).toBe(20);
+    expect(new Set(COLLECTION_CATALOG.map(({ id }) => id)).size).toBe(23);
     expect(COLLECTION_NODE_STATS.length).toBe(26);
     expect(component.store.collectionNodeStats()).toContain('skill_level');
     expect(collectionIconUrl(1, 2)).toBe(

@@ -569,4 +569,33 @@ describe('SubmitPageComponent', () => {
       fixture.destroy();
     });
   });
+
+  it('preserves per-set edits in multi-lineup queue and submits selected lineups sequentially', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    Object.defineProperty(TestBed.inject(UserDataService), 'configured', { get: () => false });
+    const store = TestBed.inject(LineupsStore);
+    const fixture = TestBed.createComponent(SubmitFromImagePageComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();
+
+    comp.applyBuiltInSampleRecognition('ts-mugen-2026-11-fog-7t.png', 3000, 6000);
+    comp.updateTeamNotes(0, 'Primary set note');
+    comp.duplicateActiveSetAsVariant();
+    expect(comp.lineupSetStates().length).toBe(2);
+    expect(comp.activeLineupSetIndex()).toBe(1);
+
+    comp.updateTeamNotes(0, 'Variant set note');
+    comp.selectLineupSet(0);
+    expect(comp.formations()[0].notes).toBe('Primary set note');
+
+    const beforeCount = store.submissions().length;
+    await comp.submitSelectedLineups();
+    fixture.detectChanges();
+
+    expect(comp.lineupSetStates().map((s) => s.errorMessage)).toEqual(['', '']);
+    expect(store.submissions().length).toBe(beforeCount + 2);
+    expect(comp.lineupSetStates().every((s) => s.status === 'submitted')).toBeTrue();
+    expect(comp.batchResultBanner()?.count).toBe(2);
+    fixture.destroy();
+  });
 });

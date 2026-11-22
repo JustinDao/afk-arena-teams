@@ -683,6 +683,144 @@ export class LineupsStore {
     readonly placementValue?: string;
     readonly formations: readonly DraftFormation[];
   }): void {
+    const draft = this.buildImportedDraft(imported);
+    this.draftErrorsSignal.set([]);
+    this.draftSignal.set(draft);
+  }
+
+  get backendConfigured(): boolean {
+    return this.data.configured;
+  }
+
+  get isAuthenticated(): boolean {
+    return Boolean(this.activeUser);
+  }
+
+  validateImportedLineup(
+    imported: {
+      readonly mode: string;
+      readonly target: string;
+      readonly notes?: string;
+      readonly damage?: string;
+      readonly totalTime?: string;
+      readonly placementType?: 'rank' | 'percent';
+      readonly placementValue?: string;
+      readonly formations: readonly DraftFormation[];
+    },
+    formValue: SubmissionFormValue & { readonly totalTime?: string },
+  ): string[] {
+    const draft = this.buildImportedDraft(imported);
+    const mode = this.getMode(draft.mode);
+    return this.validateDraft(draft, formValue, mode);
+  }
+
+  async submitImportedLineup(
+    imported: {
+      readonly mode: string;
+      readonly target: string;
+      readonly notes?: string;
+      readonly damage?: string;
+      readonly totalTime?: string;
+      readonly placementType?: 'rank' | 'percent';
+      readonly placementValue?: string;
+      readonly formations: readonly DraftFormation[];
+    },
+    formValue: SubmissionFormValue & { readonly totalTime?: string },
+    options?: { readonly skipReload?: boolean },
+  ): Promise<{ readonly ok: boolean; readonly errors: readonly string[] }> {
+    const draft = this.buildImportedDraft(imported);
+    const mode = this.getMode(draft.mode);
+    const errors = this.validateDraft(draft, formValue, mode);
+    if (errors.length) {
+      return { ok: false, errors };
+    }
+    if (this.data.configured && !this.activeUser) {
+      return { ok: false, errors: ['Sign in before submitting a lineup.'] };
+    }
+    const { result, heroLevel, forms } = this.buildSubmissionPayload(draft, formValue, mode);
+    if (this.data.configured) {
+      try {
+        await this.data.submitLineup({
+          mode_slug: draft.mode,
+          target_slug: mode.targetSlugs?.[formValue.target],
+          hero_level: heroLevel,
+          result,
+          notes: formValue.notes.trim(),
+          formations: forms.map((form, idx) => ({
+            slot_key: form.key,
+            slot_label: form.label,
+            pet_id: form.petId,
+            pet_level: form.petLevel,
+            time_seconds: form.timeSeconds,
+            damage: form.damage,
+            notes: form.notes || null,
+            heroes: draft.forms[idx].slots.flatMap((slot, position) => slot.hid === null ? [] : [{
+              position,
+              hero_id: slot.hid,
+              is_merc: slot.merc,
+              si: parseInvestment(slot.inv)?.si,
+              furniture: parseInvestment(slot.inv)?.furn,
+              engraving: parseInvestment(slot.inv)?.eng,
+              ascension: slot.ascension,
+              collection_id: slot.collectionSnapshot ? null : slot.collectionId || null,
+              collection: slot.collectionSnapshot ? {
+                catalog_id: slot.collectionSnapshot.catalogId,
+                nodes: (slot.collectionSnapshot.recommendation ? [] : slot.collectionSnapshot.nodes).map((node) => ({
+                  slot_index: node.slotIndex,
+                  stat_type: node.stat,
+                  tier: node.tier,
+                })),
+                ...(slot.collectionSnapshot.recommendation ? {
+                  recommendation: {
+                    level: slot.collectionSnapshot.recommendation.level,
+                    attack_stats: slot.collectionSnapshot.recommendation.attackStats,
+                    defense_stats: slot.collectionSnapshot.recommendation.defenseStats,
+                  },
+                } : {}),
+              } : null,
+            }]),
+          })),
+        });
+        if (!options?.skipReload) {
+          this.submissionsSignal.set(await this.data.loadSubmissions());
+        }
+        return { ok: true, errors: [] };
+      } catch (error) {
+        const message = error instanceof Error && error.message ? error.message : 'Could not submit lineup.';
+        return { ok: false, errors: [message] };
+      }
+    }
+    const newSubmission: Submission = {
+      id: ++this.nextSubmissionId,
+      mode: draft.mode,
+      target: formValue.target,
+      up: 0,
+      days: 0,
+      result,
+      forms,
+      notes: formValue.notes.trim(),
+      by: 'you',
+      heroLevel,
+    };
+    this.submissionsSignal.update((submissions) => [newSubmission, ...submissions]);
+    return { ok: true, errors: [] };
+  }
+
+  async reloadSubmissions(): Promise<void> {
+    if (!this.data.configured) return;
+    this.submissionsSignal.set(await this.data.loadSubmissions());
+  }
+
+  private buildImportedDraft(imported: {
+    readonly mode: string;
+    readonly target: string;
+    readonly notes?: string;
+    readonly damage?: string;
+    readonly totalTime?: string;
+    readonly placementType?: 'rank' | 'percent';
+    readonly placementValue?: string;
+    readonly formations: readonly DraftFormation[];
+  }): LineupDraft {
     const mode = this.getMode(imported.mode);
     const baseForms = mode.targetFormations?.[imported.target] ?? mode.formations ?? [];
     let forms: DraftFormation[];
@@ -736,8 +874,7 @@ export class LineupsStore {
       }));
     }
     const firstNonEmpty = forms.findIndex((f) => f.slots.some((s) => s.hid !== null));
-    this.draftErrorsSignal.set([]);
-    this.draftSignal.set({
+    return {
       mode: imported.mode,
       target: imported.target,
       cur: firstNonEmpty >= 0 ? firstNonEmpty : 0,
@@ -752,7 +889,7 @@ export class LineupsStore {
             ? { placementType: imported.placementType, placementValue: imported.placementValue }
             : {},
       forms,
-    });
+    };
   }
 
   changeDraftMode(slug: string): void {
@@ -930,65 +1067,7 @@ export class LineupsStore {
       return;
     }
 
-    const result: Record<string, number | boolean | string> = {};
-    for (const field of mode.fields) {
-      const raw = value[field.k as keyof SubmissionFormValue];
-      if (typeof raw === 'string' && !raw.trim()) continue;
-      if (field.t === 'bool') result[field.k] = Boolean(raw);
-      else if (field.t === 'damage') result[field.k] = parseDamage(String(raw))!;
-      else if (field.t === 'dur') result[field.k] = parseDuration(String(raw))!;
-      else result[field.k] = Number(raw);
-    }
-    const heroLevel = draft.mode === 'twisted-realm'
-      ? Number(value.rcLevel)
-      : this.heroLevelSignal();
-    if (draft.mode === 'treasure-scramble' && value.placementValue.trim()) {
-      result['placementType'] = value.placementType;
-      result['placement'] = Number(value.placementValue);
-    }
-
-    const forms = draft.forms.map((form) => {
-      const parsedTime = draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null;
-      const parsedDmg = draft.mode === 'cursed-realm' ? parseDamage(form.damage ?? '') : null;
-      return {
-        key: form.key,
-        label: form.label,
-        beast: this.petName(form.petId) ?? '',
-        petId: form.petId,
-        petLevel: form.petLevel,
-        timeSeconds: parsedTime !== null ? Math.max(1, Math.round(parsedTime)) : null,
-        damage: parsedDmg !== null && parsedDmg > 0 ? parsedDmg : null,
-        notes: form.notes?.trim() ?? '',
-        heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
-          pos,
-          hid: slot.hid,
-          merc: slot.merc,
-          inv: parseInvestment(slot.inv),
-          ascension: slot.ascension,
-          collection: slot.collectionSnapshot ?? (slot.collectionId
-            ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
-            : null),
-        }]),
-      };
-    });
-    if (draft.mode === 'cursed-realm' && result['damage'] === undefined) {
-      const roundDamages = forms.map((f) => f.damage).filter((d): d is number => d !== null && d > 0);
-      if (roundDamages.length > 0) {
-        result['damage'] = roundDamages.reduce((sum, d) => sum + d, 0);
-      }
-    }
-    if (draft.mode === 'nightmare-corridor') {
-      const rawTotal = value.totalTime?.trim();
-      const parsedTotal = rawTotal ? parseDuration(rawTotal) : null;
-      if (parsedTotal !== null && parsedTotal > 0) {
-        result['timeSeconds'] = Math.max(1, Math.round(parsedTotal));
-      } else {
-        const roundTimes = forms.map((f) => f.timeSeconds).filter((t): t is number => t !== null && t > 0);
-        if (roundTimes.length === forms.length && roundTimes.length > 0) {
-          result['timeSeconds'] = roundTimes.reduce((sum, t) => sum + t, 0);
-        }
-      }
-    }
+    const { result, heroLevel, forms } = this.buildSubmissionPayload(draft, value, mode);
     if (this.data.configured) {
       const modeForSubmission = this.getMode(draft.mode);
       try {
@@ -1061,6 +1140,73 @@ export class LineupsStore {
     this.targetSignal.set(value.target);
     this.draftSignal.set(null);
     this.showToast(this.data.configured ? 'Lineup added.' : 'Lineup added. This prototype keeps it in memory only.');
+  }
+
+  private buildSubmissionPayload(
+    draft: LineupDraft,
+    value: SubmissionFormValue & { readonly totalTime?: string },
+    mode: ModeConfig,
+  ) {
+    const result: Record<string, number | boolean | string> = {};
+    for (const field of mode.fields) {
+      const raw = value[field.k as keyof SubmissionFormValue];
+      if (typeof raw === 'string' && !raw.trim()) continue;
+      if (field.t === 'bool') result[field.k] = Boolean(raw);
+      else if (field.t === 'damage') result[field.k] = parseDamage(String(raw))!;
+      else if (field.t === 'dur') result[field.k] = parseDuration(String(raw))!;
+      else result[field.k] = Number(raw);
+    }
+    const heroLevel = draft.mode === 'twisted-realm'
+      ? Number(value.rcLevel)
+      : this.heroLevelSignal();
+    if (draft.mode === 'treasure-scramble' && value.placementValue.trim()) {
+      result['placementType'] = value.placementType;
+      result['placement'] = Number(value.placementValue);
+    }
+
+    const forms = draft.forms.map((form) => {
+      const parsedTime = draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null;
+      const parsedDmg = draft.mode === 'cursed-realm' ? parseDamage(form.damage ?? '') : null;
+      return {
+        key: form.key,
+        label: form.label,
+        beast: this.petName(form.petId) ?? '',
+        petId: form.petId,
+        petLevel: form.petLevel,
+        timeSeconds: parsedTime !== null ? Math.max(1, Math.round(parsedTime)) : null,
+        damage: parsedDmg !== null && parsedDmg > 0 ? parsedDmg : null,
+        notes: form.notes?.trim() ?? '',
+        heroes: form.slots.flatMap((slot, pos) => slot.hid === null ? [] : [{
+          pos,
+          hid: slot.hid,
+          merc: slot.merc,
+          inv: parseInvestment(slot.inv),
+          ascension: slot.ascension,
+          collection: slot.collectionSnapshot ?? (slot.collectionId
+            ? this.collectionsSignal().find((collection) => collection.id === slot.collectionId) ?? null
+            : null),
+        }]),
+      };
+    });
+    if (draft.mode === 'cursed-realm' && result['damage'] === undefined) {
+      const roundDamages = forms.map((f) => f.damage).filter((d): d is number => d !== null && d > 0);
+      if (roundDamages.length > 0) {
+        result['damage'] = roundDamages.reduce((sum, d) => sum + d, 0);
+      }
+    }
+    if (draft.mode === 'nightmare-corridor') {
+      const rawTotal = value.totalTime?.trim();
+      const parsedTotal = rawTotal ? parseDuration(rawTotal) : null;
+      if (parsedTotal !== null && parsedTotal > 0) {
+        result['timeSeconds'] = Math.max(1, Math.round(parsedTotal));
+      } else {
+        const roundTimes = forms.map((f) => f.timeSeconds).filter((t): t is number => t !== null && t > 0);
+        if (roundTimes.length === forms.length && roundTimes.length > 0) {
+          result['timeSeconds'] = roundTimes.reduce((sum, t) => sum + t, 0);
+        }
+      }
+    }
+    return { result, heroLevel, forms };
   }
 
   evaluatedSubmission(id: number): EvaluatedSubmission | null {

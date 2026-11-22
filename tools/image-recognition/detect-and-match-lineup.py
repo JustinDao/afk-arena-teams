@@ -473,7 +473,7 @@ def assemble_row_5_col_team(img, norm_boxes, round_num=1):
         else []
     )
 
-    h_w = 140
+    h_w = max(135, min(180, int(np.median([b[2] for b in hero_band])))) if hero_band else 140
     c_w = 98
     h_y = int(np.median([b[1] for b in hero_band])) if hero_band else 160
     coll_candidates = [
@@ -512,6 +512,28 @@ def assemble_row_5_col_team(img, norm_boxes, round_num=1):
     else:
         col_centers = [180 + i * 200 for i in range(5)]
 
+    # Snap h_y upward/around detected hero_band using vertical portrait-edge contrast
+    # (prevents bottom investment badges like +30 9/9 30 from pulling h_y down)
+    if img is not None and len(col_centers) == 5:
+        H_im, W_im = img.shape[:2]
+        strips = [
+            img[:, max(0, round(cx - h_w * 0.35)) : min(W_im, round(cx + h_w * 0.35))]
+            for cx in col_centers
+        ]
+        strips = [s for s in strips if s.shape[1] > 4]
+        if strips:
+            row_std = cv2.cvtColor(np.concatenate(strips, axis=1), cv2.COLOR_BGR2GRAY).astype(np.float32).std(axis=1)
+            win_lo = max(0, h_y - 70)
+            win_hi = min(H_im - h_w - 1, h_y + 25)
+            best_hy, best_score = h_y, 0.0
+            for y in range(win_lo, win_hi):
+                inside = float(row_std[y + 10 : y + h_w - 10].mean())
+                above = float(row_std[max(0, y - 30) : max(1, y - 4)].mean())
+                score = inside - 1.5 * above
+                if score > best_score:
+                    best_score, best_hy = score, y
+            h_y = best_hy
+
     hero_slots = [[round(cx - h_w / 2.0), h_y, h_w, h_w] for cx in col_centers]
     coll_slots = [[round(cx - c_w / 2.0), c_y, c_w, c_w] for cx in col_centers]
     return [
@@ -537,7 +559,7 @@ def assemble_staggered_teams(img, norm_boxes):
     cand.sort(key=lambda b: b[1])
     rounds_raw = []
     for b in cand:
-        if not rounds_raw or (b[1] - rounds_raw[-1][0][1]) > round(360 * scale):
+        if not rounds_raw or (b[1] - rounds_raw[-1][-1][1]) > round(115 * scale):
             rounds_raw.append([b])
         else:
             rounds_raw[-1].append(b)
@@ -549,8 +571,19 @@ def assemble_staggered_teams(img, norm_boxes):
         med_w = round(70 * scale)
         r_xs = sorted(b[0] for b in r_boxes)
         x_mid = (min(r_xs) + max(r_xs)) / 2.0
-        left_col = sorted([b for b in r_boxes if b[0] < x_mid], key=lambda b: b[1])
-        right_col = sorted([b for b in r_boxes if b[0] >= x_mid], key=lambda b: b[1])
+        y_tol = round(med_w * 0.55)
+
+        def _cluster_col_by_y(col_boxes):
+            clusters = []
+            for b in col_boxes:
+                if not clusters or (b[1] - clusters[-1][0][1]) > y_tol:
+                    clusters.append([b])
+                else:
+                    clusters[-1].append(b)
+            return [max(cl, key=lambda b: (b[2], -b[0])) for cl in clusters]
+
+        left_col = _cluster_col_by_y(sorted([b for b in r_boxes if b[0] < x_mid], key=lambda b: b[1]))
+        right_col = _cluster_col_by_y(sorted([b for b in r_boxes if b[0] >= x_mid], key=lambda b: b[1]))
         if not left_col or not right_col:
             continue
         x_L = round(float(np.median([b[0] for b in left_col])))
@@ -672,11 +705,329 @@ def assemble_ts_compact_7_teams(img):
     return teams
 
 
+def assemble_theafkguys_ts_grid(img):
+    """Assemble 4x2 TheAFKGuys TS guide: 7 main teams + 1st Calculation (Whale/Dolphin/Budget 5T)."""
+    H, W = img.shape[:2]
+    sx = W / 3577.0
+    sy = H / 2986.0
+    panels = [
+        (1, 68, 805, 912),
+        (2, 974, 805, 912),
+        (3, 1872, 805, 912),
+        (4, 2770, 805, 912),
+        (5, 70, 1975, 2082),
+        (6, 976, 1975, 2082),
+        (7, 1874, 1975, 2082),
+    ]
+    hw = round(88 * sx)
+    pw = round(56 * sx)
+    gray_full = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Detect exact top/bottom row hero bands on white background
+    def _detect_row_band(y_frac_lo, y_frac_hi, default_hy):
+        ya, yb = max(0, round(y_frac_lo * H)), min(H, round(y_frac_hi * H))
+        sub = gray_full[ya:yb, round(0.025 * W) : round(0.16 * W)]
+        if sub.size == 0:
+            return default_hy, hw
+        ys = np.where((sub < 215).mean(axis=1) > 0.70)[0]
+        if len(ys) == 0:
+            return default_hy, hw
+        runs = [r for r in np.split(ys, np.where(np.diff(ys) > 3)[0] + 1) if 65 <= (r[-1] - r[0] + 1) <= 130]
+        if not runs:
+            return default_hy, hw
+        best = runs[-1]
+        return ya + int(best[0]), max(65, int(best[-1] - best[0] + 1) - 2)
+
+    hy_top, hw_top = _detect_row_band(0.24, 0.42, round(805 * sy))
+    hy_bot, hw_bot = _detect_row_band(0.60, 0.76, round(1975 * sy))
+
+    teams = []
+    for r_idx, raw_px, raw_hy, raw_py in panels:
+        px = round(raw_px * sx)
+        hy = hy_top if raw_hy < 1200 else hy_bot
+        panel_hw = hw_top if raw_hy < 1200 else hw_bot
+        # Snap x-start and stride on the actual hero bar in this panel
+        x_scan_lo = max(0, px)
+        x_scan_hi = min(W, px + round(610 * sx))
+        bar = gray_full[hy + 8 : min(H, hy + panel_hw - 8), x_scan_lo:x_scan_hi]
+        hero_boxes = None
+        if bar.size > 0:
+            xs_dark = np.where((bar < 225).mean(axis=0) > 0.60)[0]
+            if len(xs_dark) > 0:
+                x_runs = [xr for xr in np.split(xs_dark, np.where(np.diff(xs_dark) > 18)[0] + 1) if (xr[-1] - xr[0] + 1) >= panel_hw * 3.5]
+                if x_runs:
+                    xr = max(x_runs, key=len)
+                    x_start = x_scan_lo + int(xr[0])
+                    x_end = x_scan_lo + int(xr[-1]) + 1
+                    stride_x = max(float(panel_hw), (x_end - x_start) / 5.0)
+                    hero_boxes = [[round(x_start + i * stride_x), hy, panel_hw, panel_hw] for i in range(5)]
+        if hero_boxes is None:
+            hero_boxes = [[px + round((26 + i * 102) * sx), hy, panel_hw, panel_hw] for i in range(5)]
+        py = round(raw_py * sy)
+        pet_box = [
+            hero_boxes[-1][0] + panel_hw + round(10 * sx),
+            max(0, hy - round(8 * sy)),
+            round(106 * sx),
+            round(102 * sy),
+        ]
+        teams.append(
+            {
+                "round": r_idx,
+                "layout": "theafkguys_ts_grid",
+                "set_index": 0,
+                "set_label": "Set 1 — 7-Team Meta (Teams 1–7)",
+                "hero_boxes": hero_boxes,
+                "coll_boxes": None,
+                "pet_box": pet_box,
+                "_panel_px": px,
+                "_panel_py": py,
+            }
+        )
+
+    calc_sets = [
+        (1, "Set 2 — 5-Team Whale Setup (1st Calculation)", 2786, [2035, 2117, 2199, 2281, 2363]),
+        (2, "Set 3 — 5-Team Dolphin Setup (1st Calculation)", 3155, [2035, 2117, 2199, 2281, 2363]),
+        (3, "Set 4 — 5-Team Budget Setup (1st Calculation)", 2786, [2545, 2627, 2709, 2791, 2873]),
+    ]
+    cw = round(48 * sx)
+    for set_idx, set_label, raw_x0, raw_ys in calc_sets:
+        x0 = round(raw_x0 * sx)
+        x1 = min(W, x0 + round(256 * sx))
+        strip_std = (
+            cv2.cvtColor(img[:, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32).std(axis=1)
+            if x1 > x0 + 10
+            else None
+        )
+        search_r = round(45 * sy)
+        for r_idx, raw_y in enumerate(raw_ys):
+            y0 = round(raw_y * sy)
+            if strip_std is not None:
+                best_y, best_s = y0, 0.0
+                for y in range(max(4, y0 - search_r), min(H - cw - 1, y0 + search_r)):
+                    inside = float(strip_std[y + 4 : y + cw - 4].mean())
+                    above = float(strip_std[max(0, y - 14) : max(1, y - 2)].mean())
+                    s = inside - 1.2 * above
+                    if s > best_s:
+                        best_s, best_y = s, y
+                y0 = best_y
+            hero_boxes = [[x0 + round(i * 52 * sx), y0, cw, cw] for i in range(5)]
+            pet_box = [x0 + round(5 * 52 * sx), y0, cw, cw]
+            teams.append(
+                {
+                    "round": r_idx + 1,
+                    "layout": "theafkguys_ts_grid",
+                    "set_index": set_idx,
+                    "set_label": set_label,
+                    "hero_boxes": hero_boxes,
+                    "coll_boxes": None,
+                    "pet_box": pet_box,
+                }
+            )
+    return teams
+
+
+_PET_CHIBI_CACHE = None
+
+
+def _load_pet_chibi_templates():
+    global _PET_CHIBI_CACHE
+    if _PET_CHIBI_CACHE is not None:
+        return _PET_CHIBI_CACHE
+    tpl_dir = Path(__file__).resolve().parent / "pet-chibi-templates"
+    templates = []
+    if tpl_dir.is_dir():
+        for p in sorted(tpl_dir.glob("*.png")):
+            pid_str = p.stem.split("_", 1)[0]
+            if not pid_str.isdigit():
+                continue
+            im = cv2.imread(str(p))
+            if im is not None:
+                templates.append((int(pid_str), cv2.resize(im, (48, 48), interpolation=cv2.INTER_AREA).astype(np.float32)))
+    _PET_CHIBI_CACHE = templates
+    return templates
+
+
+def _tight_white_bg_sprite(roi_bgr):
+    if roi_bgr is None or roi_bgr.size == 0:
+        return None
+    h, w = roi_bgr.shape[:2]
+    non_white = (roi_bgr.min(axis=2) <= 230).astype(np.uint8)
+    num, _, stats, _ = cv2.connectedComponentsWithStats(non_white)
+    if num <= 1:
+        return None
+    best_lbl, best_area = None, 0
+    for lbl in range(1, num):
+        x, y, cw, ch, area = stats[lbl]
+        if area < 40 or (cw > w * 0.85 and ch < 12):
+            continue
+        if area > best_area:
+            best_area, best_lbl = area, lbl
+    if best_lbl is None:
+        return None
+    x, y, cw, ch, _ = stats[best_lbl]
+    x0, y0 = max(0, x - 3), max(0, y - 3)
+    x1, y1 = min(w, x + cw + 3), min(h, y + ch + 3)
+    patch = roi_bgr[y0:y1, x0:x1].astype(np.float32)
+    ph, pw = patch.shape[:2]
+    side = max(ph, pw)
+    canvas = np.full((side, side, 3), 255.0, dtype=np.float32)
+    cy, cx = (side - ph) // 2, (side - pw) // 2
+    canvas[cy : cy + ph, cx : cx + pw] = patch
+    return cv2.resize(canvas, (48, 48), interpolation=cv2.INTER_AREA)
+
+
+def _match_theafkguys_chibi_pet(img, team, pet_meta):
+    templates = _load_pet_chibi_templates()
+    if not templates or not team.get("hero_boxes"):
+        return None
+    H, W = img.shape[:2]
+    sx, sy = W / 3577.0, H / 2986.0
+    if team.get("set_index", 0) == 0:
+        px, py, pw, ph = team.get("pet_box") or [
+            team["hero_boxes"][-1][0] + team["hero_boxes"][-1][2] + round(10 * sx),
+            max(0, team["hero_boxes"][0][1] - round(8 * sy)),
+            round(106 * sx),
+            round(102 * sy),
+        ]
+        rx0 = max(0, px)
+        ry0 = max(0, py)
+        rx1 = min(W, px + pw)
+        ry1 = min(H, py + ph)
+    else:
+        hx, hy, hw, _ = team["hero_boxes"][-1]
+        rx0 = max(0, hx + hw + round(4 * sx))
+        ry0 = max(0, hy - round(4 * sy))
+        rx1 = min(W, rx0 + round(56 * sx))
+        ry1 = min(H, ry0 + round(56 * sy))
+    crop48 = _tight_white_bg_sprite(img[ry0:ry1, rx0:rx1])
+    if crop48 is None:
+        return None
+    best_by_pid = {}
+    for pid, tpl in templates:
+        if pid not in pet_meta:
+            continue
+        d = float(np.mean((crop48 - tpl) ** 2))
+        if pid not in best_by_pid or d < best_by_pid[pid]:
+            best_by_pid[pid] = d
+    if not best_by_pid:
+        return None
+    ranked = sorted((d, pid) for pid, d in best_by_pid.items())
+    return ranked
+
+
+def _extract_theafkguys_variants(img, solved_teams, matcher, type_tensors, hero_meta, pet_meta):
+    """Extract 2-team / 4-team version rows and notes from TheAFKGuys 4x2 panels."""
+    ocr = _get_ocr_engine()
+    if ocr is None:
+        return
+    H, W = img.shape[:2]
+    sx = W / 3577.0
+    sy = H / 2986.0
+    cw = round(48 * sx)
+    panel_w = round(840 * sx)
+    for t in solved_teams:
+        if t.get("set_index", 0) != 0:
+            continue
+        r_idx = t["round"]
+        px = round((68 if r_idx in (1, 5) else 974 if r_idx in (2, 6) else 1872 if r_idx in (3, 7) else 2770) * sx)
+        py = round((912 if r_idx <= 4 else 2082) * sy)
+        y_start = py + round(70 * sy)
+        y_end = min(H, round((1830 if r_idx <= 4 else 2960) * sy))
+        x_end = min(W, px + panel_w)
+        roi = img[y_start:y_end, px:x_end]
+        if roi.size == 0:
+            continue
+        try:
+            res, _ = ocr(roi)
+        except Exception:
+            continue
+        if not res:
+            continue
+
+        note_lines = []
+        sub_teams = []
+        seen_ys = []
+        for box, txt, _sc in res:
+            low = txt.lower().strip()
+            if not any(k in low for k in ("version", "only")):
+                continue
+            bx1 = px + round(max(p[0] for p in box))
+            by0 = y_start + round(min(p[1] for p in box)) - round(8 * sy)
+            if any(abs(by0 - sy_prev) < round(28 * sy) for sy_prev in seen_ys):
+                continue
+            seen_ys.append(by0)
+            x_row = bx1 + round(14 * sx)
+            row_heroes = []
+            row_pet = None
+            for idx in range(6):
+                ix = x_row + round(idx * 54 * sx)
+                if ix + cw > x_end or by0 < 0 or by0 + cw > H:
+                    break
+                patch = img[by0 : by0 + cw, ix : ix + cw]
+                if patch.shape[:2] != (cw, cw) or float(patch.std()) < 22.0:
+                    break
+                if idx < 5:
+                    rk = matcher.rank_candidates_in_box(
+                        img,
+                        [ix, by0, cw, cw],
+                        "hero",
+                        type_tensors,
+                        scales=(0.92, 0.98, 1.04),
+                        pad_ratio=0.16,
+                        stride=2,
+                    )
+                    if not rk:
+                        continue
+                    h_slug = hero_meta.get(rk[0]["id"], {}).get("slug")
+                    if not h_slug:
+                        continue
+                    row_heroes.append(
+                        {
+                            "primary_slug": h_slug,
+                            "options": [h_slug],
+                        }
+                    )
+                else:
+                    prk = matcher.rank_candidates_in_box(
+                        img,
+                        [ix, by0, cw, cw],
+                        "pet",
+                        type_tensors,
+                        scales=(0.92, 0.98, 1.04),
+                        pad_ratio=0.16,
+                        stride=2,
+                    )
+                    if prk:
+                        row_pet = pet_meta.get(prk[0]["id"], {}).get("slug")
+            if len(row_heroes) >= 3:
+                label_clean = txt.strip().rstrip(":").strip()
+                hero_names = [hero_meta.get(h["primary_slug"], {}).get("name", h["primary_slug"]) for h in row_heroes]
+                pet_label = pet_meta.get(row_pet, {}).get("name", row_pet) if row_pet else ""
+                note_lines.append(
+                    f"• {label_clean}: {', '.join(hero_names)}" + (f" ({pet_label})" if pet_label else "")
+                )
+                if len(row_heroes) == 5:
+                    sub_teams.append(
+                        {
+                            "row_index": len(sub_teams) + 1,
+                            "pet": row_pet or "",
+                            "pet_options": [row_pet] if row_pet else [],
+                            "hero_slots": row_heroes,
+                        }
+                    )
+        if sub_teams:
+            t["substitute_teams"] = sub_teams
+        if note_lines:
+            t["notes"] = "\n".join(note_lines)
+
+
+def assemble_theafkguys_check_end():
+    pass
+
+
 def assemble_multi_column_nc_grid(img, norm_boxes=None):
     H, W = img.shape[:2]
     sx = W / 3888.0
     sy = H / 5955.0
-    row_ys = [round(y * sy) for y in (1601, 2291, 3021, 3713, 4440, 5168)]
     hw = round(140 * sx)
     cw = round(108 * sx)
     c_off_x = round(16 * sx)
@@ -686,6 +1037,31 @@ def assemble_multi_column_nc_grid(img, norm_boxes=None):
         (1, "Set 2 — Kraken Account", [1398, 1576, 1752, 1938, 2110], 2291),
         (2, "Set 3 — F2P Account", [2648, 2834, 3022, 3206, 3396], 3587),
     ]
+    # Refine row_ys per image using vertical portrait-edge contrast across hero columns
+    base_row_ys = (1601, 2291, 3021, 3713, 4440, 5168)
+    sample_xs = [x for _, _, hxs, _ in col_sets for x in hxs[:4]]
+    strip = np.concatenate(
+        [img[:, round((x + 10) * sx):round((x + 130) * sx)] for x in sample_xs],
+        axis=1,
+    )
+    row_std = cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY).astype(np.float32).std(axis=1)
+    pad_in = max(4, round(10 * sy))
+    above_hi = max(2, round(4 * sy))
+    above_lo = max(10, round(40 * sy))
+    search_r = round(150 * sy)
+    row_ys = []
+    for base_y in base_row_ys:
+        est = round(base_y * sy)
+        win_start = max(0, est - search_r)
+        win_end = min(H - hw - 1, est + search_r)
+        best_y, best_s = est, 0.0
+        for y in range(win_start, win_end):
+            inside = row_std[y + pad_in : y + hw - pad_in].mean()
+            above = row_std[max(0, y - above_lo) : max(1, y - above_hi)].mean()
+            s = float(inside - 1.5 * above)
+            if s > best_s:
+                best_s, best_y = s, y
+        row_ys.append(best_y)
     det_boxes = [b for b, _ in (norm_boxes or [])]
     teams = []
     for set_idx, set_label, raw_hxs, raw_px in col_sets:
@@ -1429,7 +1805,7 @@ def solve_teams(
 
             inv_result = (
                 None
-                if layout == "ts_compact_7"
+                if layout in ("ts_compact_7", "theafkguys_ts_grid")
                 else detect_hero_investment(img, hbox)
             )
 
@@ -1482,40 +1858,90 @@ def solve_teams(
             }
             if slot_options:
                 h_entry_dict["slot_options"] = slot_options
+            hx, hy, hw, hh = hbox
+            pad_e = max(4, round(min(hw, hh) * 0.12))
+            inner = img[
+                max(0, hy + pad_e) : min(img.shape[0], hy + hh - pad_e),
+                max(0, hx + pad_e) : min(img.shape[1], hx + hw - pad_e),
+            ]
+            if inner.size > 0 and float(inner.std()) < 20.0:
+                continue
             team_heroes.append(h_entry_dict)
 
         p_choice = pet_by_team.get(t_idx)
         p_ranked = pet_rank_by_team.get(t_idx, [])
         pet_out = None
-        if p_choice is not None:
-            p_info = pet_meta[p_choice["id"]]
-            p_runner_mse = p_ranked[1]["mse"] if len(p_ranked) > 1 else None
-            p_conf = mse_to_confidence(p_choice["mse"], p_runner_mse, scale=2600.0)
-            pet_out = {
-                "id": p_info["id"],
-                "slug": p_info["slug"],
-                "name": p_info["name"],
-                "bbox": team["pet_box"],
-                "mse": p_choice["mse"],
-                "confidence": p_conf,
-                "needs_review": bool(
-                    p_choice["mse"] > 2300.0
-                    or (
-                        p_runner_mse is not None
-                        and p_runner_mse / max(1.0, p_choice["mse"]) < 1.20
-                    )
-                ),
-                "visual_alternatives": [
-                    {
-                        "id": x["id"],
-                        "slug": pet_meta[x["id"]]["slug"],
-                        "name": pet_meta[x["id"]]["name"],
-                        "mse": round(float(x["mse"]), 2),
-                        "confidence": mse_to_confidence(x["mse"], scale=2600.0),
+        pet_warning = None
+        if layout == "theafkguys_ts_grid":
+            chibi_ranked = _match_theafkguys_chibi_pet(img, team, pet_meta)
+            if chibi_ranked:
+                best_d, best_pid = chibi_ranked[0]
+                if best_d <= 2400.0:
+                    p_info = pet_meta[best_pid]
+                    runner_d = chibi_ranked[1][0] if len(chibi_ranked) > 1 else None
+                    pet_out = {
+                        "id": p_info["id"],
+                        "slug": p_info["slug"],
+                        "name": p_info["name"],
+                        "bbox": team["pet_box"],
+                        "mse": round(best_d, 2),
+                        "confidence": mse_to_confidence(best_d, runner_d, scale=2000.0),
+                        "needs_review": bool(best_d > 1400.0),
+                        "visual_alternatives": [
+                            {
+                                "id": pid,
+                                "slug": pet_meta[pid]["slug"],
+                                "name": pet_meta[pid]["name"],
+                                "mse": round(d, 2),
+                                "confidence": mse_to_confidence(d, scale=2000.0),
+                            }
+                            for d, pid in chibi_ranked[:5]
+                        ],
                     }
-                    for x in p_ranked[:5]
-                ],
-            }
+                else:
+                    p_info = pet_meta[best_pid]
+                    pet_warning = (
+                        f"⚠️ Pet could not be recognized confidently "
+                        f"(best guess {p_info['name']} had MSE {best_d:.0f}); left blank."
+                    )
+            else:
+                pet_warning = "⚠️ Pet sprite could not be isolated; left blank."
+        elif p_choice is not None:
+            p_info = pet_meta[p_choice["id"]]
+            p_mse_cutoff = 3800.0 if layout == "theafkguys_ts_grid" else 4200.0
+            if float(p_choice["mse"]) > p_mse_cutoff:
+                pet_warning = (
+                    f"⚠️ Pet could not be recognized confidently "
+                    f"(best guess {p_info['name']} had high MSE {p_choice['mse']:.0f}); left blank."
+                )
+            else:
+                p_runner_mse = p_ranked[1]["mse"] if len(p_ranked) > 1 else None
+                p_conf = mse_to_confidence(p_choice["mse"], p_runner_mse, scale=2600.0)
+                pet_out = {
+                    "id": p_info["id"],
+                    "slug": p_info["slug"],
+                    "name": p_info["name"],
+                    "bbox": team["pet_box"],
+                    "mse": p_choice["mse"],
+                    "confidence": p_conf,
+                    "needs_review": bool(
+                        p_choice["mse"] > 2300.0
+                        or (
+                            p_runner_mse is not None
+                            and p_runner_mse / max(1.0, p_choice["mse"]) < 1.20
+                        )
+                    ),
+                    "visual_alternatives": [
+                        {
+                            "id": x["id"],
+                            "slug": pet_meta[x["id"]]["slug"],
+                            "name": pet_meta[x["id"]]["name"],
+                            "mse": round(float(x["mse"]), 2),
+                            "confidence": mse_to_confidence(x["mse"], scale=2600.0),
+                        }
+                        for x in p_ranked[:5]
+                    ],
+                }
         elif team.get("pet_banner_box") is not None:
             pet_banners = _get_lookup_assets()["pet_banners"]
             pb_x, pb_y, pb_w, pb_h = team["pet_banner_box"]
@@ -1572,10 +1998,16 @@ def solve_teams(
             "pet": pet_out,
             "heroes": team_heroes,
         }
+        if pet_warning:
+            team_dict["pet_warning"] = pet_warning
         if "set_index" in team:
             team_dict["set_index"] = team["set_index"]
         if "set_label" in team:
             team_dict["set_label"] = team["set_label"]
+        if team_heroes:
+            mean_team_mse = sum(float(h.get("mse") or 0.0) for h in team_heroes) / len(team_heroes)
+            if mean_team_mse > 2900.0 and (len(team_heroes) < 5 or layout == "app_card_3_2"):
+                continue
         solved_teams.append(team_dict)
     return solved_teams
 
@@ -2556,6 +2988,7 @@ def infer_mode_and_lineup_matches(
         ("cursed-realm", "Cursed Realm", "demonic-entity", "Demonic Entity", 6),
         ("cursed-realm", "Cursed Realm", "the-unhinged", "The Unhinged", 6),
         ("cursed-realm", "Cursed Realm", "grotesque-mage", "Grotesque Mage", 6),
+        ("cursed-realm", "Cursed Realm", "dune-destroyer", "Dune Destroyer", 6),
         ("treasure-scramble", "Treasure Scramble", "fire", "Fire", 4),
         ("treasure-scramble", "Treasure Scramble", "frost", "Frost", 4),
         ("treasure-scramble", "Treasure Scramble", "forest", "Forest", 4),
@@ -2865,10 +3298,13 @@ def detect_and_assemble_teams_for_image(
     H, W = img.shape[:2]
     if is_hero_lookup_sheet_image(img):
         return []
-    # 0. Multi-column 3x6 Nightmare Corridor grid (e.g. 3888x5955 5w6pegdl2o1i1.png)
+    # 0. Multi-column 3x6 Nightmare Corridor / Cursed Realm grid (e.g. 3888x5955 5w6pegdl2o1i1.png)
     if W >= 3400 and H >= 5000:
         teams_geom = assemble_multi_column_nc_grid(img, None)
-    # 1. Tall 2-column community guide (e.g. 3000x6000 lydydxhxpyyh1.png)
+    # 0.5. 4x2 TheAFKGuys TS grid (e.g. 3577x2986)
+    elif W >= 3200 and 2400 <= H <= 3400:
+        teams_geom = assemble_theafkguys_ts_grid(img)
+    # 1. Tall 2-column community guide (e.g. 3000x6000 nc-mugen-2026-10-infernal-overlord.png)
     elif H >= 3000 and W >= 2400:
         raw_boxes, raw_scores = [], []
         for y0 in range(400, H - 300, 700):
@@ -2957,6 +3393,8 @@ def detect_and_assemble_teams_for_image(
         collections_catalog,
         allowed_hero_slugs=allowed_hero_slugs,
     )
+    if W >= 3200 and 2400 <= H <= 3400:
+        _extract_theafkguys_variants(img, solved_teams, matcher, type_tensors, hero_meta, pet_meta)
     if H >= 3000 and 2400 <= W < 3400:
         left_rounds = decode_left_panel_rounds(
             img, matcher, type_tensors, hero_meta, pet_meta
@@ -3056,17 +3494,19 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             hints["targets"].append("burning-brute")
         if "ice shemira" in hdr_text:
             hints["targets"].append("ice-shemira")
-        if "grotesque mage" in hdr_text:
+        if "grotesque mage" in hdr_text or "idre" in hdr_text:
             hints["targets"].append("grotesque-mage")
-        if "swamp" in hdr_text or "factionless" in hdr_text or "fog" in hdr_text:
+        if "dune" in hdr_text:
+            hints["targets"].append("dune-destroyer")
+        if "swamp" in hdr_text or "swap" in hdr_text or "factionless" in hdr_text or "fog" in hdr_text:
             hints["targets"].append("fog")
         if "forest" in hdr_text:
             hints["targets"].append("forest")
-        if "frost" in hdr_text:
+        if "frost" in hdr_text or "blizzard" in hdr_text:
             hints["targets"].append("frost")
-        if "fountain" in hdr_text:
+        if "fountain" in hdr_text or "pure realm" in hdr_text:
             hints["targets"].append("fountain")
-        if "fire" in hdr_text:
+        if "fire" in hdr_text or "volcano" in hdr_text:
             hints["targets"].append("fire")
 
     for t in solved_teams:
