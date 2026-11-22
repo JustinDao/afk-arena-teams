@@ -2,21 +2,21 @@
   <p class="rules" role="status">Loading pet roster and hero level…</p>
 }
 <section aria-label="Heroes">
-  <label class="investment-row">
-    <span>Resonance Crystal level</span>
-    <input
-      type="number"
-      min="180"
-      max="32767"
-      step="1"
-      [disabled]="busy()"
-      [value]="store.heroLevel() ?? ''"
-      placeholder="670"
-      aria-label="Resonance Crystal level"
-      (change)="store.setHeroLevel(nullableNumberValue($event))"
-    >
-  </label>
-  <div class="row-wrap">
+  <div class="roster-actions-bar">
+    <label class="rc-level-field">
+      <span>Resonance Crystal level</span>
+      <input
+        type="number"
+        min="180"
+        max="32767"
+        step="1"
+        [disabled]="busy()"
+        [value]="store.heroLevel() ?? ''"
+        placeholder="670"
+        aria-label="Resonance Crystal level"
+        (change)="store.setHeroLevel(nullableNumberValue($event))"
+      >
+    </label>
     <button mat-flat-button class="btn primary" [disabled]="busy()" (click)="addingHero.set(true)">Add hero</button>
   </div>
   <app-hero-filters

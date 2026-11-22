@@ -10,66 +10,35 @@ app-root {
   font: 0.9375rem / 1.5 'IBM Plex Sans', system-ui, sans-serif;
 }
 
-.top {
-  position: sticky;
-  z-index: 20;
-  top: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-3);
-  padding: var(--app-space-3) var(--app-space-4);
-  border-bottom: 1px solid var(--app-line);
-  background: color-mix(in srgb, var(--app-bg) 88%, transparent);
-  backdrop-filter: blur(10px);
-}
-
-.brand h1,
 h2,
 h3,
 .tab {
   font-family: 'Bricolage Grotesque', 'IBM Plex Sans', system-ui, sans-serif;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
-.brand h1 {
-  margin: 0;
-  font-size: 1.3125rem;
-  line-height: 1.1;
-}
-
-.brand p {
-  margin: var(--app-space-1) 0 0;
-  color: var(--app-muted);
-  font-size: 0.8rem;
-}
-
-.top-actions,
-.primary-nav,
-.utility-actions,
 .row-wrap {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--app-space-2);
+  gap: 6px;
 }
 
-.utility-actions {
-  padding-left: var(--app-space-2);
-  border-left: 1px solid var(--app-line);
-}
-
-.btn {
+.btn,
+.btn.mat-mdc-button {
+  --mdc-text-button-label-text-color: var(--app-ink);
+  --mdc-outlined-button-label-text-color: var(--app-ink);
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-sm);
   background: var(--app-panel);
-  transition: border-color 140ms ease, background-color 140ms ease;
+  color: var(--app-ink);
+  transition: border-color 140ms ease, background-color 140ms ease, transform 120ms ease;
 }
 
-.btn.active:not(.primary) {
+.btn.active:not(.primary),
+.btn.mat-mdc-button.active:not(.primary) {
   border-color: var(--app-primary);
-  background: color-mix(in srgb, var(--app-primary) 12%, var(--app-panel));
+  background: color-mix(in srgb, var(--app-primary) 14%, var(--app-panel));
   color: var(--app-ink);
 }
 
@@ -79,10 +48,21 @@ h3,
   border-color: var(--app-primary);
 }
 
-.btn.primary {
+.btn.primary,
+.btn.primary.mat-mdc-unelevated-button {
+  --mdc-filled-button-container-color: var(--app-primary);
+  --mdc-filled-button-label-text-color: var(--app-on-primary);
   border-color: var(--app-primary);
   background: var(--app-primary);
   color: var(--app-on-primary);
+}
+
+.btn:disabled,
+.btn.mat-mdc-button:disabled,
+.btn.primary:disabled,
+.btn.primary.mat-mdc-unelevated-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .theme-button {
@@ -96,7 +76,7 @@ h3,
   overflow-y: hidden;
   overflow-x: auto;
   gap: var(--app-space-1);
-  padding-inline: var(--app-space-3);
+  padding-inline: max(var(--app-space-3), calc((100% - 1040px) / 2 + var(--app-space-3)));
   border-bottom: 1px solid var(--app-line);
   background: var(--app-panel);
   scroll-snap-type: x proximity;
@@ -113,24 +93,35 @@ h3,
   background: var(--app-primary);
 }
 
-.tab {
+.tab,
+.tab.mat-mdc-button {
+  --mdc-text-button-label-text-color: var(--app-muted);
+  --mdc-text-button-disabled-label-text-color: color-mix(in srgb, var(--app-muted) 65%, transparent);
+  --mdc-text-button-container-shape: 0px;
   flex: 0 0 auto;
   scroll-snap-align: start;
-  padding: var(--app-space-3) var(--app-space-3) var(--app-space-2);
+  height: auto;
+  min-height: 44px;
+  padding: var(--app-space-2) var(--app-space-3);
   border-bottom: 3px solid transparent;
   border-radius: 0;
   color: var(--app-muted);
   font-size: 0.9375rem;
   font-weight: 600;
-  transition: color 140ms ease, border-color 140ms ease;
+  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
 }
 
-.tab:hover:not(:disabled) {
+.tab:hover:not(:disabled),
+.tab.mat-mdc-button:hover:not(:disabled) {
+  --mdc-text-button-label-text-color: var(--app-ink);
   color: var(--app-ink);
 }
 
-.tab[aria-selected='true'] {
+.tab[aria-selected='true'],
+.tab.mat-mdc-button[aria-selected='true'] {
+  --mdc-text-button-label-text-color: var(--app-ink);
   border-bottom-color: var(--app-primary);
+  background: color-mix(in srgb, var(--app-primary) 10%, transparent);
   color: var(--app-ink);
 }
 
@@ -147,12 +138,15 @@ main {
 }
 
 .chip[aria-pressed='true'],
-.seg button[aria-pressed='true'] {
+.seg button[aria-pressed='true'],
+.seg button.mat-mdc-button[aria-pressed='true'] {
+  --mdc-text-button-label-text-color: var(--app-on-primary);
   background: var(--app-primary);
   color: var(--app-on-primary);
 }
 
 .chip.mat-mdc-button[aria-pressed='true'] {
+  --mdc-text-button-label-text-color: var(--app-on-primary);
   color: var(--app-on-primary);
 }
 
@@ -164,10 +158,14 @@ main {
   background: var(--app-panel);
 }
 
-.seg button {
+.seg button,
+.seg button.mat-mdc-button {
+  --mdc-text-button-label-text-color: var(--app-ink);
+  --mdc-text-button-container-shape: 0px;
   border: 0;
   border-radius: 0;
   padding: var(--app-space-1) var(--app-space-3);
+  color: var(--app-ink);
   font-size: 0.85rem;
 }
 
@@ -317,16 +315,30 @@ footer {
   margin: var(--app-space-3) 0 var(--app-space-2);
 }
 
-.formation-tabs button {
+.formation-tabs button,
+.formation-tabs button.mat-mdc-button {
+  --mdc-text-button-label-text-color: var(--app-ink);
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-sm);
   background: var(--app-panel);
+  color: var(--app-ink);
 }
 
-.formation-tabs button[aria-pressed='true'] {
+.formation-tabs button[aria-pressed='true'],
+.formation-tabs button.mat-mdc-button[aria-pressed='true'] {
+  --mdc-text-button-label-text-color: var(--app-on-primary);
   border-color: var(--app-primary);
   background: var(--app-primary);
   color: var(--app-on-primary);
+}
+
+.pet-slot-field {
+  align-items: center;
+  text-align: center;
+}
+
+.pet-slot-field h3 {
+  margin-top: var(--app-space-2);
 }
 
 .formation-tabs small {
@@ -547,6 +559,27 @@ footer {
   .utility-actions {
     padding-left: 0;
     border-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .top-navbar {
+    position: static;
+  }
+
+  .top-navbar__inner {
+    padding: 10px var(--app-space-3);
+    gap: 10px;
+  }
+
+  .nav-cluster {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .modes {
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+    padding-right: var(--app-space-7);
   }
 }
 

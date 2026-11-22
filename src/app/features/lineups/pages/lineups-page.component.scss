@@ -40,11 +40,21 @@
   margin-left: auto;
 }
 
+@media (max-width: 640px) {
+  .toolbar {
+    padding: var(--app-space-3);
+  }
+
+  .sort-select {
+    margin-left: 0;
+  }
+}
+
 .roster-filter-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--app-space-3);
+  gap: var(--app-space-2) var(--app-space-3);
   padding-top: var(--app-space-3);
   border-top: 1px solid var(--app-line);
 }
@@ -95,12 +105,12 @@
 .skeleton-card {
   height: 176px;
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius);
+  border-radius: var(--app-radius-lg);
   background: linear-gradient(
-    90deg,
-    var(--app-panel) 25%,
-    var(--app-panel-variant) 50%,
-    var(--app-panel) 75%
+    100deg,
+    var(--app-panel) 20%,
+    var(--app-board) 50%,
+    var(--app-panel) 80%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;

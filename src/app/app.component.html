@@ -1,28 +1,79 @@
-<header class="top">
-  <div class="brand">
-    <h1>AFK Arena Team Lineups</h1>
-    <p>AFK Arena, classic server.</p>
-  </div>
-  <div class="top-actions">
-    <nav class="primary-nav" aria-label="Primary navigation">
-      @if (auth.user()) {
-        <button mat-button class="btn" (click)="openAccount()">{{ auth.user()?.email }}</button>
-      } @else {
-        <button mat-button class="btn" (click)="openAccount()">Sign in</button>
-      }
-      <a mat-button class="btn" routerLink="/roster/heroes" routerLinkActive="active">My roster</a>
-      @if (auth.user()) {
-        <a mat-button class="btn" routerLink="/recommendations/heroes" routerLinkActive="active">Recommendations</a>
-      }
-      <a mat-flat-button class="btn primary" routerLink="/submit" routerLinkActive="active">Submit a lineup</a>
-    </nav>
-    <div class="utility-actions" role="group" aria-label="Display preferences">
-      <button mat-button class="btn theme-button" (click)="toggleTheme()" [attr.aria-label]="'Theme: ' + theme() + '. Change theme'">
-        {{ theme() === 'system' ? 'System theme' : theme() === 'dark' ? 'Dark theme' : 'Light theme' }}
-      </button>
-      <button mat-button class="btn theme-button" title="Switch between front-on-top and front-on-right formations" (click)="toggleLineupOrientation()" [attr.aria-label]="'Lineup orientation: ' + lineupOrientationLabel() + '. Change orientation'">
-        Lineup: {{ lineupOrientationLabel() }}
-      </button>
+<header class="top-navbar">
+  <div class="top-navbar__inner">
+    <a routerLink="/" class="brand">
+      <img src="/favicon.svg" alt="" class="brand__logo" width="32" height="32">
+      <div class="brand__text">
+        <h1 class="brand__title">AFK Arena Team Lineups</h1>
+        <p class="brand__subtitle">AFK Arena, classic server.</p>
+      </div>
+    </a>
+
+    <div class="nav-cluster">
+      <nav class="main-nav" aria-label="Primary navigation">
+        <a routerLink="/roster/heroes" routerLinkActive="nav-link--active" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>My roster</span>
+        </a>
+        @if (auth.user()) {
+          <a routerLink="/recommendations/heroes" routerLinkActive="nav-link--active" class="nav-link">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span>Recommendations</span>
+          </a>
+        }
+        <a routerLink="/submit" routerLinkActive="nav-link--active" class="nav-link nav-link--cta">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Submit lineup</span>
+        </a>
+      </nav>
+
+      <div class="utility-actions" role="group" aria-label="Display preferences and account">
+        <button type="button" class="utility-btn" (click)="toggleTheme()" [attr.aria-label]="'Theme: ' + theme() + '. Change theme'">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (theme() === 'dark') {
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            } @else if (theme() === 'light') {
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+            } @else {
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            }
+          </svg>
+          <span>{{ theme() === 'system' ? 'System' : theme() === 'dark' ? 'Dark' : 'Light' }}</span>
+        </button>
+
+        <button type="button" class="utility-btn" title="Switch between front-on-top and front-on-right formations" (click)="toggleLineupOrientation()" [attr.aria-label]="'Lineup orientation: ' + lineupOrientationLabel() + '. Change orientation'">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+          </svg>
+          <span>{{ lineupOrientationLabel() }}</span>
+        </button>
+
+        @if (auth.user()) {
+          <button type="button" class="utility-btn utility-btn--account" (click)="openAccount()">{{ auth.user()?.email }}</button>
+        } @else {
+          <button type="button" class="utility-btn" (click)="openAccount()">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            <span>Sign in</span>
+          </button>
+        }
+      </div>
     </div>
   </div>
 </header>

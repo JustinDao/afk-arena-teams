@@ -118,6 +118,32 @@
   gap: 8px;
 }
 
+.roster-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-3);
+  padding: var(--app-space-3) var(--app-space-4);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-panel);
+}
+
+.rc-level-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.rc-level-field input {
+  width: 96px;
+  font-variant-numeric: tabular-nums;
+}
+
 .roster-filters {
   display: grid;
   gap: var(--app-space-2);
@@ -191,9 +217,7 @@
 }
 
 .icon-filter-button.active {
-  border-color: color-mix(in srgb, var(--app-primary) 75%, white);
-  background: color-mix(in srgb, var(--app-primary) 15%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-primary) 24%, transparent);
+  background: color-mix(in srgb, var(--app-primary) 10%, transparent);
 }
 
 .icon-filter-button.active .filter-caption {
@@ -202,9 +226,10 @@
 }
 
 .icon-filter-button.active .filter-token {
+  border-color: var(--app-primary);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--filter-color, #a8b4ca) 30%, transparent),
-    0 0 10px color-mix(in srgb, var(--filter-color, #a8b4ca) 50%, transparent);
+    0 0 0 2px color-mix(in srgb, var(--app-primary) 35%, transparent),
+    0 0 12px color-mix(in srgb, var(--filter-color, #a8b4ca) 45%, transparent);
 }
 
 .filter-caption {

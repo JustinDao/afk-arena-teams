@@ -43,6 +43,55 @@
       "skillPath": "skills/decision/SKILL.md",
       "computedHash": "234eaa200dd7fa2936bfc2b5fb09c97cd874d98bffb429f64ad9010ef5a0c5f8"
     },
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "commit": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "b10eab0a9684cd09cf34c31ef04a3bf530a5f4404422f9c520d42372d670c7fc"
+    },
+    "flow-empty-states": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-empty-states/SKILL.md",
+      "computedHash": "3c795b6ecf5416e13a109127cf4643abbb6cab27f72f3ed5799cc2dc15949f6c"
+    },
+    "flow-errors": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-errors/SKILL.md",
+      "computedHash": "eec6f13a1ba6f168bef51291c50a6065edc66f2f4f9b50c5cd884fc136c64864"
+    },
+    "flow-forms": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-forms/SKILL.md",
+      "computedHash": "1456c8e264d45d0a148d391d94dad555bc425b63904bca43543cddb8d2cef4ea"
+    },
+    "flow-navigation": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-navigation/SKILL.md",
+      "computedHash": "24657bae54de62109f7fe94d1d0fdccb9e647b086fe2bd432772b91b6a441ef0"
+    },
+    "flow-search": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-search/SKILL.md",
+      "computedHash": "3796d1b1a69573e06406b364fe3d7ada6f58997691896a7e615bf4561f75face"
+    },
+    "flow-tables": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/flow-tables/SKILL.md",
+      "computedHash": "b1e7b422c0cfe74b667947ddf548602a8db228bc9a854e078271d8165f48cc1f"
+    },
     "frame": {
       "source": "Tranz007/ux-skills",
       "sourceType": "github",
@@ -54,6 +103,13 @@
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
+    },
+    "hallmark": {
+      "source": "Nutlope/hallmark",
+      "commit": "04977e15f3dfd6ee4b74c887dac3eb52665d6c92",
+      "sourceType": "github",
+      "skillPath": "skills/hallmark/SKILL.md",
+      "computedHash": "e5d4ee5cf0af2dcc81a23ef49b587fbfd71236ff9f9df9da12d3bf347e26e572"
     },
     "handoff": {
       "source": "Tranz007/ux-skills",
@@ -96,6 +152,13 @@
       "sourceType": "github",
       "skillPath": "skills/user-grounding/SKILL.md",
       "computedHash": "af4564d1ed47c6a5d75c83dd27dcc3dc468c557dc7ee4d3721a35f07e6c11a2b"
+    },
+    "userflow": {
+      "source": "jpoindexter/ux-flow-skills",
+      "commit": "fc7f4a4b913dc5b1a2029af16fb8ec363331c821",
+      "sourceType": "github",
+      "skillPath": "skills/userflow/SKILL.md",
+      "computedHash": "8af8230873e9533afb287d787661981604ca951b0e8de074ed87c177303bb719"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
