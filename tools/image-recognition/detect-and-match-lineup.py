@@ -2397,8 +2397,18 @@ def teams_to_seed_formations(solved_teams):
                     slot_counter += 1
                 coll_obj = {"catalog": coll["catalog"], "nodes": nodes_list}
             hero_entry = {"slug": h["slug"], "collection": coll_obj}
-            if h.get("investment") and h["investment"].get("code"):
-                hero_entry["investment"] = h["investment"]["code"]
+            inv = h.get("investment") or {}
+            if inv.get("code"):
+                hero_entry["investment"] = inv["code"]
+            eng_val = inv.get("eng") if inv.get("eng") is not None else (inv.get("engraving") or 0)
+            furn_val = inv.get("furn") if inv.get("furn") is not None else (inv.get("furniture") or 0)
+            si_val = inv.get("si") or 0
+            if eng_val > 0:
+                hero_entry["ascension"] = "ascended_1"
+            elif furn_val > 0:
+                hero_entry["ascension"] = "ascended"
+            elif si_val > 0:
+                hero_entry["ascension"] = "mythic"
             if h.get("slot_options") and len(h["slot_options"]) > 1:
                 hero_entry["alternatives"] = h["slot_options"][1:]
             heroes_out.append(hero_entry)
@@ -2408,6 +2418,12 @@ def teams_to_seed_formations(solved_teams):
             "pet": team["pet"]["slug"] if team.get("pet") else None,
             "heroes": heroes_out,
         }
+        if team.get("pet") and team["pet"].get("level"):
+            formation_entry["pet_level"] = team["pet"]["level"]
+        if team.get("damage") is not None:
+            formation_entry["damage"] = team["damage"]
+        if team.get("kill_time_seconds") is not None:
+            formation_entry["time_seconds"] = team["kill_time_seconds"]
         if team.get("notes"):
             formation_entry["notes"] = team["notes"]
         if team.get("pet") and team["pet"].get("options") and len(team["pet"]["options"]) > 1:
@@ -3464,6 +3480,7 @@ def detect_and_assemble_teams_for_image(
                 t["substitute_teams"] = lr["substitute_teams"]
         _extract_ts_guide_team_notes(img, solved_teams)
     _extract_guide_results_and_target_hints(img, solved_teams)
+    _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta)
     return solved_teams
 
 
@@ -3520,6 +3537,151 @@ def _format_damage_short(dmg: int) -> str:
     if dmg >= 1_000_000:
         return f"{dmg / 1_000_000:.2f}M"
     return str(dmg)
+
+
+def _hungarian_min_cost(cost_matrix):
+    """Pure-Python O(n^2 m) Kuhn-Munkres assignment for rectangular cost_matrix (n <= m)."""
+    n = len(cost_matrix)
+    if n == 0:
+        return []
+    m = len(cost_matrix[0])
+    u = [0.0] * (n + 1)
+    v = [0.0] * (m + 1)
+    p = [0] * (m + 1)
+    way = [0] * (m + 1)
+    for i in range(1, n + 1):
+        p[0] = i
+        j0 = 0
+        minv = [float("inf")] * (m + 1)
+        used = [False] * (m + 1)
+        while True:
+            used[j0] = True
+            i0 = p[j0]
+            delta = float("inf")
+            j1 = 0
+            row = cost_matrix[i0 - 1]
+            for j in range(1, m + 1):
+                if not used[j]:
+                    cur = row[j - 1] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+            for j in range(m + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+    ans = [-1] * n
+    for j in range(1, m + 1):
+        if p[j] > 0:
+            ans[p[j] - 1] = j - 1
+    return ans
+
+
+_OFFMETA_WATCHLIST = frozenset({"oden", "warek", "talene", "kaz", "tidus"})
+
+
+def _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta):
+    """Resolve duplicate hero assignments globally per lineup set and flag low-confidence slots."""
+    by_set = {}
+    for t in solved_teams:
+        by_set.setdefault(t.get("set_index", 0), []).append(t)
+
+    for set_teams in by_set.values():
+        slots = []
+        for t in set_teams:
+            for h in t.get("heroes", []):
+                if h.get("id") is not None:
+                    slots.append(h)
+
+        # 1. Global duplicate-free assignment when any hero appears more than once in the set.
+        seen_ids = [h["id"] for h in slots]
+        if len(seen_ids) != len(set(seen_ids)) and len(slots) <= 45:
+            cand_pool = {}
+            slot_cands = []
+            for h in slots:
+                cands = {}
+                cur_mse = float(h.get("mse") if h.get("mse") is not None else 0.05)
+                cands[h["id"]] = (cur_mse, h["slug"], h["name"])
+                for alt in h.get("visual_alternatives") or []:
+                    aid = alt.get("id")
+                    amse = alt.get("mse")
+                    if aid is not None and amse is not None and float(amse) <= 0.135:
+                        if aid not in cands or float(amse) < cands[aid][0]:
+                            cands[aid] = (float(amse), alt.get("slug"), alt.get("name"))
+                slot_cands.append(cands)
+                for aid in cands:
+                    if aid not in cand_pool:
+                        cand_pool[aid] = len(cand_pool)
+
+            n_slots = len(slots)
+            n_real = len(cand_pool)
+            inv_pool = [None] * n_real
+            for aid, col in cand_pool.items():
+                inv_pool[col] = aid
+            # Add n_slots dummy columns (high fallback cost) so infeasible swaps never force garbage.
+            n_cols = n_real + n_slots
+            BIG = 10.0
+            FALLBACK = 0.22
+            cost = [[BIG] * n_cols for _ in range(n_slots)]
+            for i, cands in enumerate(slot_cands):
+                for aid, (mse_val, _sl, _nm) in cands.items():
+                    cost[i][cand_pool[aid]] = mse_val
+                cost[i][n_real + i] = FALLBACK
+
+            assignment = _hungarian_min_cost(cost)
+            for i, col in enumerate(assignment):
+                if 0 <= col < n_real:
+                    chosen_id = inv_pool[col]
+                    h = slots[i]
+                    if chosen_id != h["id"] and chosen_id in slot_cands[i]:
+                        new_mse, new_slug, new_name = slot_cands[i][chosen_id]
+                        old_entry = {
+                            "id": h["id"],
+                            "slug": h["slug"],
+                            "name": h["name"],
+                            "mse": h.get("mse"),
+                        }
+                        meta = hero_meta.get(chosen_id, {})
+                        h["id"] = chosen_id
+                        h["slug"] = new_slug or meta.get("slug", h["slug"])
+                        h["name"] = new_name or meta.get("name", h["name"])
+                        h["mse"] = round(new_mse, 5)
+                        alts = [a for a in (h.get("visual_alternatives") or []) if a.get("id") != chosen_id]
+                        alts.insert(0, old_entry)
+                        h["visual_alternatives"] = alts[:5]
+                        h["reassigned_from_duplicate"] = True
+
+        # 2. Flag low-confidence or off-meta-watchlist hero slots for quick review.
+        for h in slots:
+            mse = float(h.get("mse") if h.get("mse") is not None else 0.0)
+            alts = h.get("visual_alternatives") or []
+            alt_mse = float(alts[0]["mse"]) if (alts and alts[0].get("mse") is not None) else None
+            reasons = []
+            if mse >= 0.085:
+                reasons.append(f"high visual distance ({mse:.3f})")
+            if alt_mse is not None and 0.0 <= (alt_mse - mse) < 0.004 and mse >= 0.035:
+                reasons.append(f"close to {alts[0].get('name', 'alt')}")
+            if (h.get("slug") or "").lower() in _OFFMETA_WATCHLIST and mse >= 0.045:
+                reasons.append("rarely-used hero match — verify portrait")
+            if h.get("reassigned_from_duplicate"):
+                reasons.append("swapped to avoid duplicate hero across teams")
+            if reasons:
+                h["low_confidence"] = True
+                h["low_confidence_reason"] = "; ".join(reasons)
 
 
 def _extract_guide_results_and_target_hints(img, solved_teams):
@@ -3616,6 +3778,7 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
     is_ts_compact = 740 <= W <= 860 and 1200 <= H <= 2000
     is_multi_nc = W >= 3200 and H >= 4000
     if is_tall_dual:
+        team_row_bounds = []
         for t in solved_teams:
             pb = (t.get("pet") or {}).get("bbox")
             if pb and len(pb) == 4:
@@ -3623,6 +3786,7 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             else:
                 hbs = [h["bbox"] for h in t.get("heroes", []) if h.get("bbox") and len(h["bbox"]) == 4]
                 if not hbs:
+                    team_row_bounds.append(None)
                     continue
                 row_y = float(np.median([b[1] for b in hbs]))
                 row_h = float(np.median([b[3] for b in hbs]))
@@ -3630,6 +3794,7 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             x1 = min(W, round(W * 0.360))
             y0 = max(0, round(row_y) - 18)
             y1 = min(H, round(row_y + row_h) + 18)
+            team_row_bounds.append((x0, x1, y0, y1))
             if x1 <= x0 + 10 or y1 <= y0 + 10:
                 continue
             crop = img[y0:y1, x0:x1]
@@ -3681,6 +3846,71 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
                             break
                 if parsed:
                     break
+
+        # Outlier sanity check & multi-scale re-OCR for Mugen CR damage / NC kill time.
+        def _reocr_mugen_numbers(bounds):
+            bx0, bx1, by0, by1 = bounds
+            wx0 = max(0, round(W * 0.270))
+            wx1 = min(W, round(W * 0.362))
+            c = img[max(0, by0 - 4):min(H, by1 + 4), wx0:wx1]
+            if c.size == 0:
+                return []
+            gray = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY)
+            _, bw = cv2.threshold(gray, 185, 255, cv2.THRESH_BINARY_INV)
+            bw3 = cv2.cvtColor(bw, cv2.COLOR_GRAY2BGR)
+            variants = [
+                c,
+                cv2.resize(c, (0, 0), fx=1.4, fy=0.9, interpolation=cv2.INTER_CUBIC),
+                cv2.resize(c, (0, 0), fx=1.2, fy=1.0, interpolation=cv2.INTER_CUBIC),
+                bw3,
+            ]
+            nums = []
+            for v in variants:
+                try:
+                    r, _ = ocr(v, use_cls=False)
+                except Exception:
+                    r = None
+                for _b, txt, _sc in (r or []):
+                    m = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)[bBsS]?", txt.strip())
+                    if m:
+                        nums.append(float(m.group(1)))
+            return nums
+
+        cr_dmgs = [t["damage"] for t in solved_teams if isinstance(t.get("damage"), (int, float))]
+        if len(cr_dmgs) >= 3:
+            med_b = float(np.median(cr_dmgs)) / 1_000_000_000.0
+            for idx, t in enumerate(solved_teams):
+                d = t.get("damage")
+                if not isinstance(d, (int, float)):
+                    continue
+                db = d / 1_000_000_000.0
+                if db < med_b * 0.45 or db > med_b * 2.2:
+                    bounds = team_row_bounds[idx] if idx < len(team_row_bounds) else None
+                    cands = [v for v in (_reocr_mugen_numbers(bounds) if bounds else []) if med_b * 0.45 <= v <= med_b * 2.0]
+                    if cands:
+                        best_b = min(cands, key=lambda v: abs(v - med_b))
+                        dmg = round(best_b * 1_000_000_000)
+                        t["damage"] = dmg
+                        t["damage_display"] = _format_damage_short(dmg)
+                    else:
+                        t["result_warning"] = f"Outlier CR damage ({t['damage_display']} vs median {med_b:.1f}B)"
+
+        nc_times = [t["kill_time_seconds"] for t in solved_teams if isinstance(t.get("kill_time_seconds"), (int, float))]
+        if len(nc_times) >= 3:
+            med_s = float(np.median(nc_times))
+            for idx, t in enumerate(solved_teams):
+                ts = t.get("kill_time_seconds")
+                if not isinstance(ts, (int, float)):
+                    continue
+                if ts < 4.0 or ts > max(22.0, med_s * 2.1):
+                    bounds = team_row_bounds[idx] if idx < len(team_row_bounds) else None
+                    cands = [v for v in (_reocr_mugen_numbers(bounds) if bounds else []) if 4.0 <= v <= max(22.0, med_s * 1.9)]
+                    if cands:
+                        best_s = min(cands, key=lambda v: abs(v - med_s))
+                        t["kill_time_seconds"] = best_s
+                        t["kill_time"] = f"{int(best_s) if best_s == int(best_s) else best_s}s"
+                    else:
+                        t["result_warning"] = f"Outlier NC kill time ({t['kill_time']} vs median {med_s:.1f}s)"
         return
     if is_multi_nc:
         # Groody multi-column CR/NC guides show "Damage: 48b" or "Time: 13.6s"

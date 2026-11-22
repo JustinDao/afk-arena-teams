@@ -97,6 +97,9 @@ export interface EditableHeroSlot {
   readonly merc: boolean;
   readonly ascension?: AscensionRank | null;
   readonly collectionSnapshot?: CollectionSnapshot | null;
+  readonly bbox?: readonly number[];
+  readonly imageIndex?: number;
+  readonly lowConfidenceReason?: string;
 }
 
 export interface EditableSubstituteTeam {
@@ -2141,6 +2144,9 @@ export class SubmitFromImagePageComponent implements OnDestroy {
               ? (defaultAscensionForInvestment(parseInvestment(s.investmentCode)) ??
                  this.heroIcons.lowestAscensionFor(resolvedName))
               : null;
+            if (hero && s.heroId !== hero.id && s.bbox && s.bbox.length === 4) {
+              this.saveCorrectedHeroTemplate(hero.id, this.toSlug(resolvedName), s.bbox, s.imageIndex ?? 0);
+            }
             return {
               ...s,
               heroId: hero?.id ?? null,
@@ -2152,11 +2158,36 @@ export class SubmitFromImagePageComponent implements OnDestroy {
               collectionSnapshot,
               ascension: s.ascension ?? ascension,
               needsReview: false,
+              lowConfidenceReason: undefined,
             };
           }),
         };
       }),
     );
+  }
+
+  private saveCorrectedHeroTemplate(
+    heroId: number,
+    slug: string,
+    bbox: readonly number[],
+    imageIndex: number,
+  ): void {
+    const payload = JSON.stringify({ hero_id: heroId, slug, bbox: [...bbox], image_index: imageIndex });
+    const endpoints = ['/api/save-hero-template', 'http://127.0.0.1:8174/api/save-hero-template'];
+    void (async () => {
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+          });
+          if (res.ok) return;
+        } catch {
+          // Best-effort: local recognizer server may not be running in static/test builds.
+        }
+      }
+    })();
   }
 
   updateSlotCollection(slotIndex: number, collectionIdRaw: string, levelOverride?: number): void {
@@ -2969,7 +3000,10 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             heroName,
             slug: h.slug || this.toSlug(heroName),
             confidence: Number(h.confidence ?? 0.9),
-            needsReview: Boolean(h.needs_review),
+            needsReview: Boolean(h.needs_review || h.low_confidence),
+            bbox: Array.isArray(h.bbox) && h.bbox.length === 4 ? h.bbox : undefined,
+            imageIndex: typeof t.image_index === 'number' ? t.image_index : 0,
+            lowConfidenceReason: typeof h.low_confidence_reason === 'string' ? h.low_confidence_reason : undefined,
             guideAlternatives,
             visualAlternatives,
             collectionId,
@@ -3021,6 +3055,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
           damage: typeof t.damage_display === 'string' ? t.damage_display : '',
           notes: [
             typeof t.pet_warning === 'string' ? t.pet_warning : '',
+            typeof t.result_warning === 'string' ? t.result_warning : '',
             typeof t.notes === 'string' ? t.notes : '',
           ].filter(Boolean).join('\n'),
           heroes,

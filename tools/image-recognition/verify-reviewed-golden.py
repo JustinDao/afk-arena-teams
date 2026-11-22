@@ -79,12 +79,40 @@ def main():
         else:
             struct_fail.append((lbl, exp_n, got_n))
 
+    # Result, pet-level, collection & ascension-clamping regression checks on loaded guides
+    meta_checks = []
+    if "1xwh4g5" in results:
+        t0 = (results["1xwh4g5"].get("lineup_sets") or [{"teams": results["1xwh4g5"].get("teams", [])}])[0]["teams"][0]
+        meta_checks.append(("Groody CR T1 damage == 48B", t0.get("damage") == 48_000_000_000, t0.get("damage")))
+        meta_checks.append(("Groody CR T1 pet_level 1..36", isinstance((t0.get("pet") or {}).get("level"), int), (t0.get("pet") or {}).get("level")))
+        meta_checks.append(("Groody CR T1 hero0 has collection", (t0["heroes"][0].get("collection") or {}).get("catalog") is not None, t0["heroes"][0].get("collection")))
+        f0 = (results["1xwh4g5"].get("seed_payload") or {}).get("formations", [{}])[0]
+        bad_asc = [
+            h for h in f0.get("heroes", [])
+            if "e" in str(h.get("investment", "")).lower()
+            and int(str(h.get("investment")).lower().split("e", 1)[1] or "0") > 0
+            and h.get("ascension") not in ("ascended_1", "ascended_2", "ascended_3", "ascended_4", "ascended_5")
+        ]
+        meta_checks.append(("Groody CR T1 seed_payload engraving -> A1*", len(bad_asc) == 0, bad_asc))
+    if "1xrh9tw" in results:
+        t0 = results["1xrh9tw"]["teams"][0]
+        meta_checks.append(("mcwhare CR T1 damage > 0", (t0.get("damage") or 0) > 0, t0.get("damage")))
+    if "1xxg2zw" in results:
+        t0 = results["1xxg2zw"]["teams"][0]
+        meta_checks.append(("mcwhare NC T1 kill_time > 0", (t0.get("kill_time_seconds") or 0) > 0, t0.get("kill_time_seconds")))
+
+    meta_pass = sum(1 for _, ok, _ in meta_checks if ok)
+
     print(f"GOLDEN HERO CHECKS: {passed}/{len(GOLDEN_CHECKS)} passed")
     for lbl, exp, got in failed:
         print(f"  FAIL: {lbl} | expected={exp} got={got}")
     print(f"STRUCTURAL CHECKS: {struct_pass}/{len(STRUCTURAL_CHECKS)} passed")
     for lbl, exp, got in struct_fail:
         print(f"  FAIL: {lbl} | expected={exp} got={got}")
+    print(f"RESULT/PET/COLLECTION/ASCENSION CHECKS: {meta_pass}/{len(meta_checks)} passed")
+    for lbl, ok, val in meta_checks:
+        if not ok:
+            print(f"  FAIL: {lbl} | got={val}")
 
 if __name__ == "__main__":
     main()

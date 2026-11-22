@@ -170,6 +170,7 @@ def recognize_multiple_images(image_bytes_list):
         imgs.append(im)
 
     state = _load_pipeline()
+    state["last_images"] = imgs
     det = state["det"]
     matcher = state["matcher"]
 
@@ -921,6 +922,34 @@ class handler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", "0"))
             body = self.rfile.read(content_length)
             content_type = self.headers.get("Content-Type", "")
+
+            if parsed.path == "/api/save-hero-template":
+                payload = json.loads(body.decode("utf-8"))
+                hero_id = int(payload["hero_id"])
+                slug = str(payload.get("slug") or "").strip().lower()
+                bbox = payload.get("bbox")
+                img_idx = int(payload.get("image_index") or 0)
+                if not slug or not isinstance(bbox, list) or len(bbox) != 4:
+                    raise ValueError("Provide hero_id, slug, and [x, y, w, h] bbox.")
+                imgs = _STATE.get("last_images") or []
+                if img_idx < 0 or img_idx >= len(imgs):
+                    raise ValueError("No matching cached image for this correction.")
+                src = imgs[img_idx]
+                H, W = src.shape[:2]
+                x, y, w, h = [int(round(v)) for v in bbox]
+                x0, y0 = max(0, x), max(0, y)
+                x1, y1 = min(W, x + w), min(H, y + h)
+                if x1 - x0 < 16 or y1 - y0 < 16:
+                    raise ValueError("Hero bbox crop is too small.")
+                crop = src[y0:y1, x0:x1]
+                out_dir = LAB_DIR / "extra-hero-templates"
+                out_dir.mkdir(parents=True, exist_ok=True)
+                out_path = out_dir / f"{hero_id}_{slug}_{int(time.time())}.png"
+                cv2.imwrite(str(out_path), crop)
+                # Refresh hero template cache on next recognition if needed
+                _STATE.pop("initialized", None)
+                self._send_json(200, {"ok": True, "saved": str(out_path.name)})
+                return
 
             if parsed.path == "/api/recognize-sample":
                 payload = json.loads(body.decode("utf-8"))
