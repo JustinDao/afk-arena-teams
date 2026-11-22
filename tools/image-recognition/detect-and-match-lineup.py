@@ -1980,6 +1980,10 @@ def solve_teams(
                         for x in p_ranked[:5]
                     ],
                 }
+                if layout in ("multi_col_nc_grid", "app_card_3_2"):
+                    det_pet_lvl = _detect_pet_level(img, team["pet_box"])
+                    if det_pet_lvl is not None:
+                        pet_out["level"] = det_pet_lvl
         elif team.get("pet_banner_box") is not None:
             pet_banners = _get_lookup_assets()["pet_banners"]
             pb_x, pb_y, pb_w, pb_h = team["pet_banner_box"]
@@ -3477,6 +3481,37 @@ def _get_ocr_engine():
     except Exception:
         _OCR_ENGINE_CACHE = None
     return _OCR_ENGINE_CACHE
+
+
+def _detect_pet_level(img, pet_box):
+    """Read an optional numeric pet level badge (1..36) directly beneath a pet icon."""
+    if img is None or not pet_box or len(pet_box) != 4:
+        return None
+    ocr = _get_ocr_engine()
+    if ocr is None:
+        return None
+    H, W = img.shape[:2]
+    px, py, pw, ph = pet_box
+    y0 = max(0, py + round(ph * 0.72))
+    y1 = min(H, py + round(ph * 1.45))
+    x0 = max(0, px - 6)
+    x1 = min(W, px + pw + 6)
+    if y1 - y0 < 10 or x1 - x0 < 10:
+        return None
+    crop = img[y0:y1, x0:x1]
+    crop2 = cv2.resize(crop, (crop.shape[1] * 2, crop.shape[0] * 2), interpolation=cv2.INTER_CUBIC)
+    try:
+        res, _ = ocr(crop2)
+    except Exception:
+        return None
+    for _box, txt, score in (res or []):
+        s = (txt or "").strip()
+        if re.fullmatch(r"(?:lv\.?\s*)?(\d{1,2})", s, flags=re.IGNORECASE):
+            m = re.search(r"(\d{1,2})", s)
+            val = int(m.group(1))
+            if 1 <= val <= 36 and float(score) >= 0.70:
+                return val
+    return None
 
 
 def _format_damage_short(dmg: int) -> str:
