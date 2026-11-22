@@ -3561,16 +3561,28 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
                 hints["modes"].append("nightmare-corridor")
         if "infernal overlord" in hdr_text:
             hints["targets"].append("infernal-overlord")
+            if not hints["modes"]:
+                hints["modes"].append("nightmare-corridor")
         if "netherspinner" in hdr_text:
             hints["targets"].append("netherspinner")
-        if "burning brute" in hdr_text:
+            if not hints["modes"]:
+                hints["modes"].append("nightmare-corridor")
+        if "burning brute" in hdr_text or "brute" in hdr_text:
             hints["targets"].append("burning-brute")
-        if "ice shemira" in hdr_text:
+            if not hints["modes"]:
+                hints["modes"].append("cursed-realm")
+        if "ice shemira" in hdr_text or "shemira" in hdr_text:
             hints["targets"].append("ice-shemira")
+            if not hints["modes"]:
+                hints["modes"].append("cursed-realm")
         if "grotesque mage" in hdr_text or "idre" in hdr_text:
             hints["targets"].append("grotesque-mage")
+            if not hints["modes"]:
+                hints["modes"].append("cursed-realm")
         if "dune" in hdr_text:
             hints["targets"].append("dune-destroyer")
+            if not hints["modes"]:
+                hints["modes"].append("cursed-realm")
         if "swamp" in hdr_text or "swap" in hdr_text or "factionless" in hdr_text or "fog" in hdr_text:
             hints["targets"].append("fog")
         if "forest" in hdr_text:
@@ -3579,8 +3591,10 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             hints["targets"].append("frost")
         if "fountain" in hdr_text or "pure realm" in hdr_text:
             hints["targets"].append("fountain")
-        if "kane" in hdr_text:
+        if "kane" in hdr_text or re.search(r"\bhane\b", hdr_text):
             hints["targets"].append("kane")
+            if not hints["modes"]:
+                hints["modes"].append("cursed-realm")
         if "fire" in hdr_text or "volcano" in hdr_text:
             hints["targets"].append("fire")
 
@@ -3604,51 +3618,119 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
     if is_tall_dual:
         for t in solved_teams:
             pb = (t.get("pet") or {}).get("bbox")
-            if not pb or len(pb) != 4:
-                continue
+            if pb and len(pb) == 4:
+                row_y, row_h = float(pb[1]), float(pb[3])
+            else:
+                hbs = [h["bbox"] for h in t.get("heroes", []) if h.get("bbox") and len(h["bbox"]) == 4]
+                if not hbs:
+                    continue
+                row_y = float(np.median([b[1] for b in hbs]))
+                row_h = float(np.median([b[3] for b in hbs]))
             x0 = max(0, round(W * 0.285))
-            x1 = min(W, round(W * 0.355))
-            y0 = max(0, round(pb[1]) - 14)
-            y1 = min(H, round(pb[1] + pb[3]) + 14)
+            x1 = min(W, round(W * 0.360))
+            y0 = max(0, round(row_y) - 18)
+            y1 = min(H, round(row_y + row_h) + 18)
             if x1 <= x0 + 10 or y1 <= y0 + 10:
                 continue
+            crop = img[y0:y1, x0:x1]
+            # Stretch tall condensed white numerals horizontally and disable angle classifier
+            # so single digits ("6") and narrow pairs ("43") aren't misread or flipped.
+            stretched = cv2.resize(crop, (0, 0), fx=1.6, fy=0.8, interpolation=cv2.INTER_CUBIC)
+            ocr_candidates = []
+            for img_variant in (stretched, crop):
+                try:
+                    res, _ = ocr(img_variant, use_cls=False)
+                except Exception:
+                    res = None
+                if res:
+                    ocr_candidates.append(res)
+            parsed = False
+            for res in ocr_candidates:
+                for _box, txt, _sc in res:
+                    clean = txt.strip()
+                    m_dmg = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([bBmM])", clean)
+                    if m_dmg:
+                        val = float(m_dmg.group(1))
+                        mult = 1_000_000_000 if m_dmg.group(2).lower() == "b" else 1_000_000
+                        dmg = round(val * mult)
+                        t["damage"] = dmg
+                        t["damage_display"] = _format_damage_short(dmg)
+                        parsed = True
+                        break
+                    m_sec = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)\s*s", clean, re.I)
+                    if m_sec:
+                        val = float(m_sec.group(1))
+                        if 1 <= val <= 120:
+                            t["kill_time_seconds"] = val
+                            t["kill_time"] = f"{m_sec.group(1)}s"
+                            parsed = True
+                            break
+                    m_num = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)", clean)
+                    if m_num:
+                        val = float(m_num.group(1))
+                        if "cursed-realm" in hints["modes"] and 1 <= val <= 500:
+                            dmg = round(val * 1_000_000_000)
+                            t["damage"] = dmg
+                            t["damage_display"] = _format_damage_short(dmg)
+                            parsed = True
+                            break
+                        if 1 <= val <= 120:
+                            t["kill_time_seconds"] = val
+                            t["kill_time"] = f"{m_num.group(1)}s"
+                            parsed = True
+                            break
+                if parsed:
+                    break
+        return
+    if is_multi_nc:
+        # Groody multi-column CR/NC guides show "Damage: 48b" or "Time: 13.6s"
+        # inside the notes box footer directly below each team's hero + pet row.
+        for t in solved_teams:
+            hbs = [h["bbox"] for h in t.get("heroes", []) if h.get("bbox") and len(h["bbox"]) == 4]
+            if not hbs:
+                continue
+            hy = float(np.median([b[1] for b in hbs]))
+            hw = float(np.median([b[2] for b in hbs]))
+            hx0 = min(b[0] for b in hbs)
+            pb = (t.get("pet") or {}).get("bbox")
+            right_x = (pb[0] + pb[2]) if (pb and len(pb) == 4) else (max(b[0] + b[2] for b in hbs) + round(hw * 1.4))
+            x0 = max(0, round(hx0) - 30)
+            x1 = min(W, round(right_x) + 40)
+            y0 = max(0, round(hy + hw * 2.80))
+            y1 = min(H, round(hy + hw * 4.75))
+            if x1 <= x0 + 20 or y1 <= y0 + 20:
+                continue
             try:
-                res, _ = ocr(img[y0:y1, x0:x1])
+                res, _ = ocr(img[y0:y1, x0:x1], use_cls=False)
             except Exception:
                 continue
             if not res:
                 continue
-            for _box, txt, _sc in res:
-                clean = txt.strip()
-                m_dmg = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([bBmM])", clean)
-                if m_dmg:
-                    val = float(m_dmg.group(1))
-                    mult = 1_000_000_000 if m_dmg.group(2).lower() == "b" else 1_000_000
-                    dmg = round(val * mult)
-                    t["damage"] = dmg
-                    t["damage_display"] = _format_damage_short(dmg)
-                    break
-                m_sec = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)\s*s", clean, re.I)
-                if m_sec:
-                    val = float(m_sec.group(1))
-                    if 1 <= val <= 120:
-                        t["kill_time_seconds"] = val
-                        t["kill_time"] = f"{m_sec.group(1)}s"
-                        break
-                m_num = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)", clean)
-                if m_num:
-                    val = float(m_num.group(1))
-                    if "cursed-realm" in hints["modes"] and 1 <= val <= 500:
-                        dmg = round(val * 1_000_000_000)
-                        t["damage"] = dmg
-                        t["damage_display"] = _format_damage_short(dmg)
-                        break
-                    if 1 <= val <= 120:
-                        t["kill_time_seconds"] = val
-                        t["kill_time"] = f"{m_num.group(1)}s"
-                        break
+            # Sort OCR boxes top-to-bottom, left-to-right so "Damage:" + "48b" join cleanly.
+            ordered = sorted(
+                ((sum(p[1] for p in b) / 4.0, sum(p[0] for p in b) / 4.0, txt.strip()) for b, txt, _s in res if txt),
+                key=lambda item: (round(item[0] / 25.0), item[1]),
+            )
+            joined = " ".join(item[2] for item in ordered)
+            m_dmg = re.search(r"damage\s*:?\s*(\d+(?:\.\d+)?)\s*([bBmM])?\b", joined, re.I)
+            if m_dmg:
+                val = float(m_dmg.group(1))
+                unit = (m_dmg.group(2) or "b").lower()
+                mult = 1_000_000_000 if unit == "b" else 1_000_000
+                dmg = round(val * mult)
+                t["damage"] = dmg
+                t["damage_display"] = _format_damage_short(dmg)
+                continue
+            m_time = re.search(r"time\s*:?\s*(\d{1,3}(?:\.\d+)?)\s*s\b", joined, re.I)
+            if not m_time:
+                m_time = re.search(r"time\s*:?\s*(\d{1,3}(?:\.\d+)?)\b", joined, re.I)
+            if m_time:
+                val = float(m_time.group(1))
+                if 1 <= val <= 120:
+                    t["kill_time_seconds"] = val
+                    t["kill_time"] = f"{m_time.group(1)}s"
         return
-    if is_ts_compact or is_multi_nc:
+    if is_ts_compact:
         return
 
     left_w = min(W, int(W * 0.44))
@@ -3664,12 +3746,13 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
         ys = [h["bbox"][1] for h in t.get("heroes", []) if h.get("bbox")]
         team_hys.append(float(np.median(ys)) if ys else None)
 
+    sorted_hys = sorted(h for h in team_hys if h is not None)
     for idx, t in enumerate(solved_teams):
         hy = team_hys[idx]
         if hy is None:
             continue
-        prev_hy = next((h for h in reversed(team_hys[:idx]) if h is not None), None)
-        next_hy = next((h for h in team_hys[idx + 1 :] if h is not None), None)
+        prev_hy = max((h for h in sorted_hys if h < hy - 20), default=None)
+        next_hy = min((h for h in sorted_hys if h > hy + 20), default=None)
         y0 = max(0, round((prev_hy + hy) / 2) if prev_hy is not None else round(hy - 280))
         y1 = min(H, round((hy + next_hy) / 2) if next_hy is not None else round(hy + 420))
 
@@ -3686,13 +3769,17 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
         goal_dmg = None
 
         for _ymid, txt in band_texts:
-            m_killed = re.search(r"killed\s*\d*\s*boss(?:es)?\s*within\s*(\d+(?:\.\d+)?)\s*s", txt, re.I)
+            m_killed = re.search(r"kil+ed\s*\d*\s*boss(?:es)?\s*within\s*(\d+(?:[.:]\d+)?)\s*s", txt, re.I)
             if m_killed and actual_time is None:
-                actual_time = m_killed.group(1)
+                actual_time = m_killed.group(1).replace(":", ".")
                 continue
-            m_goal_s = re.search(r"goal[:\s]*(\d+(?:\.\d+)?)\s*s\b", txt, re.I)
+            m_peak_s = re.search(r"peak[:\s]*(\d+(?:[.:]\d+)?)\s*s\b", txt, re.I)
+            if m_peak_s and goal_time is None:
+                goal_time = m_peak_s.group(1).replace(":", ".")
+                continue
+            m_goal_s = re.search(r"goal[:\s]*(\d+(?:[.:]\d+)?)\s*s\b", txt, re.I)
             if m_goal_s and goal_time is None:
-                goal_time = m_goal_s.group(1)
+                goal_time = m_goal_s.group(1).replace(":", ".")
                 continue
             m_squad = re.search(r"squad\s*damage[:\s]*([\d,]+)", txt, re.I)
             if m_squad and actual_dmg is None:
