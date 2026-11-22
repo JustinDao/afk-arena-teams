@@ -1,10 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { collectionIconUrl, collectionNodeLabel, COLLECTION_CATALOG } from '../../collection-catalog';
 import { countLabel } from '../../plural';
 import { CollectionCatalogItem, CollectionRecommendation, displayHeroName } from '../../models';
 import { LineupsStore } from '../../lineups.store';
 import { ModeCount, modeCountsFor, reasonFor } from './recommendation-views';
 import { RecommendationsState } from './recommendations.state';
+
+interface CollectionTopUser {
+  readonly id: number;
+  readonly name: string;
+  readonly iconUrl: string | null;
+}
 
 interface CollectionRecommendationView {
   readonly key: string;
@@ -13,7 +20,7 @@ interface CollectionRecommendationView {
   readonly iconUrl: string;
   readonly reason: string;
   readonly target: string;
-  readonly topUsers: string;
+  readonly topUsers: readonly CollectionTopUser[];
   readonly modeCounts: readonly ModeCount[];
 }
 
@@ -23,6 +30,7 @@ const OVERALL_LIMIT = 10;
 @Component({
   selector: 'app-recommendation-collections',
   standalone: true,
+  imports: [HeroIconComponent],
   templateUrl: './recommendation-collections.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -32,16 +40,16 @@ export class RecommendationCollectionsComponent {
   readonly countLabel = countLabel;
 
   readonly views = computed<readonly CollectionRecommendationView[]>(() => {
-    const heroById = new Map(this.store.heroes().map((hero) => [hero.id, displayHeroName(hero)]));
+    const heroById = new Map(this.store.heroes().map((hero) => [hero.id, hero]));
     return this.state.collections().flatMap((recommendation): CollectionRecommendationView[] => {
       const item = COLLECTION_CATALOG.find((entry) => entry.id === recommendation.catalogId);
       if (!item) return [];
       const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
       const level = recommendation.levelNodes + 1;
-      const topUsers = (recommendation.topHeroIds ?? [])
-        .map((id) => heroById.get(id))
-        .filter((name): name is string => Boolean(name))
-        .join(', ');
+      const topUsers: CollectionTopUser[] = (recommendation.topHeroIds ?? []).flatMap((id) => {
+        const hero = heroById.get(id);
+        return hero ? [{ id: hero.id, name: displayHeroName(hero), iconUrl: hero.iconUrl ?? null }] : [];
+      });
       return [{
         key: `${recommendation.catalogId}-${recommendation.levelNodes}`,
         recommendation,

@@ -20,7 +20,16 @@
                 @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
               </div>
               <div class="rec-sub-line">
-                <span>{{ view.reason }}@if (view.topUsers) { · Used by: {{ view.topUsers }} }</span>
+                <span class="rec-reason-with-users">
+                  <span>{{ view.reason }}</span>
+                  @if (view.topUsers.length) {
+                    <span class="rec-users" aria-label="Most common users">
+                      @for (hero of view.topUsers; track hero.id) {
+                        <app-hero-icon size="small" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                      }
+                    </span>
+                  }
+                </span>
                 @if (view.modeCounts.length) {
                   <span class="rec-modes">
                     @for (mode of view.modeCounts; track mode.slug) {
@@ -55,7 +64,16 @@
                     @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
                   </div>
                   <div class="rec-sub-line">
-                    <span>{{ view.reason }}@if (view.topUsers) { · Used by: {{ view.topUsers }} }</span>
+                    <span class="rec-reason-with-users">
+                      <span>{{ view.reason }}</span>
+                      @if (view.topUsers.length) {
+                        <span class="rec-users" aria-label="Most common users">
+                          @for (hero of view.topUsers; track hero.id) {
+                            <app-hero-icon size="small" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                          }
+                        </span>
+                      }
+                    </span>
                     @if (view.modeCounts.length) {
                       <span class="rec-modes">
                         @for (mode of view.modeCounts; track mode.slug) {

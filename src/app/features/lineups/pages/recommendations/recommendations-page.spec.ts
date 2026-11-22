@@ -242,8 +242,10 @@ describe('Recommendations pages', () => {
     expect(warrior.items[0].name).toContain('· Lv 2');
     expect(warrior.items[0].target).toBe('CDA ×2 · CRIT');
     expect(warrior.items[0].reason).toBe('Fully unlocks 1 top team');
-    expect(warrior.items[0].topUsers).toContain(heroes[0].name);
-    expect(fixture.nativeElement.textContent).toContain(`Used by: ${warrior.items[0].topUsers}`);
+    expect(warrior.items[0].topUsers.map((u) => u.id)).toEqual([heroes[0].id, heroes[1].id]);
+    const userIcons = fixture.nativeElement.querySelectorAll('.rec-users app-hero-icon');
+    expect(userIcons.length).toBeGreaterThanOrEqual(2);
+    expect(userIcons[0].getAttribute('title')).toContain(heroes[0].name);
   });
 
   it('builds a combined top-10 overall priority list for collections sorted by score', async () => {

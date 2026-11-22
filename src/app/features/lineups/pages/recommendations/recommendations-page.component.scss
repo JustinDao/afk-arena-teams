@@ -199,3 +199,22 @@
   border-radius: 8px;
   object-fit: contain;
 }
+
+.rec-reason-with-users {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rec-users {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .hero-icon.small {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+  }
+}
