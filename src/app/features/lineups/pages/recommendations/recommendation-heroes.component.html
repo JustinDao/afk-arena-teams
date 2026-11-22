@@ -5,34 +5,87 @@
     <p class="rules">Add heroes to your roster for personalised picks. Until then, these are the most-used heroes in the top lineups.</p>
   }
 
-  @for (group of groups(); track group.key) {
-    <h3>{{ group.label }}</h3>
-    @if (group.items.length) {
-      <ol class="recommendation-list">
-        @for (view of group.items; track view.hero.id; let first = $first) {
-          <li class="recommendation" [class.best]="first">
-            <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" size="large" />
-            <div class="recommendation-body">
-              <span class="row-wrap">
+  @if (overall().length) {
+    <section class="rec-panel rec-overall" aria-label="Overall priority">
+      <div class="rec-panel-header">
+        <h3>Overall priority</h3>
+        <span class="rec-panel-sub">Top {{ overall().length }} across all categories</span>
+      </div>
+      <ol class="rec-list">
+        @for (view of overall(); track view.hero.id; let first = $first; let idx = $index) {
+          <li class="rec-row" [class.best]="first">
+            <span class="rec-rank">{{ idx + 1 }}</span>
+            <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" />
+            <div class="rec-main">
+              <div class="rec-title-line">
                 <strong>{{ view.name }}</strong>
-                <span class="mode-count">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
-                @if (first) { <span class="mode-count best-tag">Best next step</span> }
-              </span>
-              <span>{{ view.reason }}</span>
-              @if (view.target) { <span class="muted">{{ view.recommendation.kind === 'build' ? 'Build toward' : 'Invest toward' }} {{ view.target }}</span> }
-              <span class="row-wrap">
-                @for (mode of view.modeCounts; track mode.slug) {
-                  <span class="mode-count" [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                <span class="rec-action" [class.is-build]="view.recommendation.kind === 'build'">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                <span class="rec-category">{{ view.categoryLabel }}</span>
+                @if (view.current || view.target) {
+                  <span class="rec-target">
+                    @if (view.current) { <span class="rec-current">{{ view.current }}@if (view.target) { → }</span> }{{ view.target }}
+                  </span>
                 }
-              </span>
+              </div>
+              <div class="rec-sub-line">
+                <span>{{ view.reason }}</span>
+                @if (view.modeCounts.length) {
+                  <span class="rec-modes">
+                    @for (mode of view.modeCounts; track mode.slug) {
+                      <span [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                    }
+                  </span>
+                }
+              </div>
             </div>
           </li>
         }
       </ol>
-    } @else if (state.loading()) {
-      <p class="muted">Loading recommendations…</p>
-    } @else {
-      <p class="muted">Nothing to recommend here for these modes. You may already have everything the top lineups use.</p>
-    }
+    </section>
   }
+
+  <div class="rec-group-grid">
+    @for (group of groups(); track group.key) {
+      <section class="rec-panel" [attr.aria-label]="group.label">
+        <div class="rec-panel-header">
+          <h3>{{ group.label }}</h3>
+        </div>
+        @if (group.items.length) {
+          <ol class="rec-list">
+            @for (view of group.items; track view.hero.id; let first = $first; let idx = $index) {
+              <li class="rec-row" [class.best]="first">
+                <span class="rec-rank">{{ idx + 1 }}</span>
+                <app-hero-icon [name]="view.name" [imageUrl]="view.hero.iconUrl ?? null" />
+                <div class="rec-main">
+                  <div class="rec-title-line">
+                    <strong>{{ view.name }}</strong>
+                    <span class="rec-action" [class.is-build]="view.recommendation.kind === 'build'">{{ view.recommendation.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                    @if (view.current || view.target) {
+                  <span class="rec-target">
+                    @if (view.current) { <span class="rec-current">{{ view.current }}@if (view.target) { → }</span> }{{ view.target }}
+                  </span>
+                }
+                  </div>
+                  <div class="rec-sub-line">
+                    <span>{{ view.reason }}</span>
+                    @if (view.modeCounts.length) {
+                      <span class="rec-modes">
+                        @for (mode of view.modeCounts; track mode.slug) {
+                          <span [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ol>
+        } @else if (state.loading()) {
+          <p class="rec-empty">Loading recommendations…</p>
+        } @else {
+          <p class="rec-empty">Nothing to recommend here for these modes. You may already have everything the top lineups use.</p>
+        }
+      </section>
+    }
+  </div>
 </section>

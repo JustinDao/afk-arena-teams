@@ -111,7 +111,43 @@ describe('Recommendations pages', () => {
     expect(groups[2].items.length).toBe(1);
     expect(groups[1].items.length).toBe(0);
     expect(groups[0].items[0].reason).toBe('Completes 2 top teams and gets you closer on 1 more');
-    expect(groups[0].items[0].target).toBe('309e60 · Ascended');
+    expect(groups[0].items[0].target).toBe('309e60 · A1*');
+  });
+
+  it('clamps target ascension up to the minimum required by recommended investment', async () => {
+    loadRecommendations.and.resolveTo([
+      recommendation(heroes[0].id, 'invest', { rank: 1, investment: { si: 30, furn: 3, eng: 30 }, ascension: 'ascended' }),
+      recommendation(heroes[1].id, 'invest', { rank: 2, investment: { si: 30, furn: 9, eng: null }, ascension: 'mythic' }),
+      recommendation(heroes[2].id, 'invest', { rank: 3, category: 'awakened', investment: { si: 30, furn: null, eng: null }, ascension: 'legendary' }),
+    ]);
+    await setup({ id: 'u1' });
+    const groups = (await render(RecommendationHeroesComponent)).componentInstance.groups();
+    expect(groups[0].items.map((item) => item.target)).toEqual(['303e30 · A1*', '309 · A']);
+    expect(groups[2].items[0].target).toBe('SI 30 · M');
+  });
+
+  it('builds a combined top-5 overall priority list sorted by score across categories', async () => {
+    loadRecommendations.and.resolveTo([
+      recommendation(heroes[0].id, 'build', { category: 'standard-4f', rank: 1, score: 2 }),
+      recommendation(heroes[1].id, 'invest', { category: 'standard-4f', rank: 2, score: 1 }),
+      recommendation(heroes[2].id, 'build', { category: 'awakened', rank: 1, score: 5 }),
+      recommendation(heroes[3].id, 'build', { category: 'cele-hypo', rank: 1, score: 4 }),
+      recommendation(heroes[4].id, 'invest', { category: 'drago-lite', rank: 1, score: 3 }),
+      recommendation(heroes[5].id, 'build', { category: 'dragon-highborn', rank: 1, score: 0.5 }),
+    ]);
+    await setup({ id: 'u1' });
+    const fixture = await render(RecommendationHeroesComponent);
+    const overall = fixture.componentInstance.overall();
+
+    expect(overall.map((view) => view.hero.id)).toEqual([
+      heroes[2].id,
+      heroes[3].id,
+      heroes[4].id,
+      heroes[0].id,
+      heroes[1].id,
+    ]);
+    expect(overall[0].categoryLabel).toBe('Awakened');
+    expect(fixture.nativeElement.textContent).toContain('Overall priority');
   });
 
   it('describes popularity-only hero results without claiming lineups are completed', async () => {
@@ -131,8 +167,29 @@ describe('Recommendations pages', () => {
     await setup({ id: 'u1' });
     const fixture = await render(RecommendationHeroesComponent);
     const groups = fixture.componentInstance.groups();
-    expect(groups[0].items.map((item) => item.target)).toEqual(['SI 40 · Ascended', '9F']);
+    expect(groups[0].items.map((item) => item.target)).toEqual(['SI 40 · A', '9F']);
     expect(groups[2].items[0].target).toBe('E60');
+  });
+
+  it('shows current roster investment for invest recommendations but not build recommendations', async () => {
+    localStorage.setItem('ll.roster', JSON.stringify({
+      [heroes[0].id]: { inv: '203e30', ascension: 'mythic_plus' },
+    }));
+    try {
+      loadRecommendations.and.resolveTo([
+        recommendation(heroes[0].id, 'invest', { rank: 1, investment: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1' }),
+        recommendation(heroes[1].id, 'build', { rank: 2, investment: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended' }),
+      ]);
+      await setup({ id: 'u1' });
+      const fixture = await render(RecommendationHeroesComponent);
+      const [investItem, buildItem] = fixture.componentInstance.groups()[0].items;
+
+      expect(investItem.current).toBe('203e30 · M+');
+      expect(buildItem.current).toBe('');
+      expect(fixture.nativeElement.textContent).toContain('203e30 · M+ → 309e60 · A1*');
+    } finally {
+      localStorage.removeItem('ll.roster');
+    }
   });
 
   it('groups collection recommendations by class and describes the target build', async () => {
@@ -146,6 +203,27 @@ describe('Recommendations pages', () => {
     expect(warrior.label).toBe('Warrior');
     expect(warrior.items[0].target).toBe('1 Level node · CDA ×2 · CRIT');
     expect(warrior.items[0].reason).toBe('Fully unlocks 1 top team');
+  });
+
+  it('builds a combined top-5 overall priority list for collections sorted by score', async () => {
+    const pick = (catalogId: number, collectionClass: CollectionRecommendation['collectionClass'], score: number): CollectionRecommendation => ({
+      catalogId, collectionClass, rank: 1, kind: 'upgrade', score, completeCount: 1, nearCount: 0,
+      levelNodes: 1, mythicStats: ['cda'], byMode: { 'twisted-realm': 1 }, submissionIds: [1],
+    });
+    loadCollectionRecommendations.and.resolveTo([
+      pick(1, 'Warrior', 2),
+      pick(5, 'Tank', 5),
+      pick(9, 'Ranger', 4),
+      pick(13, 'Mage', 3),
+      pick(17, 'Support', 1),
+      pick(2, 'Warrior', 0.5),
+    ]);
+    await setup({ id: 'u1' });
+    const fixture = await render(RecommendationCollectionsComponent);
+    const overall = fixture.componentInstance.overall();
+
+    expect(overall.map((view) => view.recommendation.catalogId)).toEqual([5, 9, 13, 1, 17]);
+    expect(fixture.nativeElement.textContent).toContain('Overall priority');
   });
 
   it('groups pet recommendations by kind and shows the target level', async () => {

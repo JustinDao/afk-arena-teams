@@ -16,6 +16,7 @@ interface CollectionRecommendationView {
 }
 
 const COLLECTION_CLASSES: readonly CollectionCatalogItem['class'][] = ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'];
+const OVERALL_LIMIT = 5;
 
 @Component({
   selector: 'app-recommendation-collections',
@@ -28,8 +29,8 @@ export class RecommendationCollectionsComponent {
   readonly state = inject(RecommendationsState);
   readonly countLabel = countLabel;
 
-  readonly groups = computed(() => {
-    const views = this.state.collections().flatMap((recommendation): CollectionRecommendationView[] => {
+  readonly views = computed<readonly CollectionRecommendationView[]>(() =>
+    this.state.collections().flatMap((recommendation): CollectionRecommendationView[] => {
       const item = COLLECTION_CATALOG.find((entry) => entry.id === recommendation.catalogId);
       if (!item) return [];
       const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
@@ -41,14 +42,21 @@ export class RecommendationCollectionsComponent {
         target: this.targetFor(recommendation),
         modeCounts,
       }];
-    });
-    return COLLECTION_CLASSES.map((label) => ({
-      label,
-      items: views
-        .filter((view) => view.recommendation.collectionClass === label)
-        .sort((left, right) => left.recommendation.rank - right.recommendation.rank),
-    }));
-  });
+    }),
+  );
+
+  readonly overall = computed<readonly CollectionRecommendationView[]>(() => [...this.views()]
+    .sort((left, right) => right.recommendation.score - left.recommendation.score
+      || left.recommendation.rank - right.recommendation.rank
+      || left.name.localeCompare(right.name))
+    .slice(0, OVERALL_LIMIT));
+
+  readonly groups = computed(() => COLLECTION_CLASSES.map((label) => ({
+    label,
+    items: this.views()
+      .filter((view) => view.recommendation.collectionClass === label)
+      .sort((left, right) => left.recommendation.rank - right.recommendation.rank),
+  })));
 
   private targetFor(recommendation: CollectionRecommendation): string {
     const parts: string[] = [];

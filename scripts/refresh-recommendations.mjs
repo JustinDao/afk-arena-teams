@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 
 const url = process.env.SUPABASE_URL
   ?? /supabaseUrl:\s*'([^']+)'/.exec(readFileSync(new URL('../src/environments/environment.ts', import.meta.url), 'utf8'))?.[1];
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !key) {
-  console.error('Set SUPABASE_SERVICE_ROLE_KEY (Supabase dashboard > Project Settings > API > service_role) in .env.local or your shell.');
+  console.error('Set SUPABASE_SECRET_KEY (Supabase dashboard > Project Settings > API Keys > Secret keys) in .env.local or your shell.');
   process.exit(1);
 }
 
