@@ -438,6 +438,7 @@ export interface CollectionRecommendation {
   readonly mythicStats: readonly string[];
   readonly byMode: Readonly<Record<string, number>>;
   readonly submissionIds: readonly number[];
+  readonly topHeroIds?: readonly number[];
 }
 
 export interface PetRecommendation {

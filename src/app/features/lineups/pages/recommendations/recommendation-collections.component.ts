@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { collectionIconUrl, collectionNodeLabel, COLLECTION_CATALOG } from '../../collection-catalog';
 import { countLabel } from '../../plural';
-import { CollectionCatalogItem, CollectionRecommendation } from '../../models';
+import { CollectionCatalogItem, CollectionRecommendation, displayHeroName } from '../../models';
 import { LineupsStore } from '../../lineups.store';
 import { ModeCount, modeCountsFor, reasonFor } from './recommendation-views';
 import { RecommendationsState } from './recommendations.state';
@@ -13,6 +13,7 @@ interface CollectionRecommendationView {
   readonly iconUrl: string;
   readonly reason: string;
   readonly target: string;
+  readonly topUsers: string;
   readonly modeCounts: readonly ModeCount[];
 }
 
@@ -30,12 +31,17 @@ export class RecommendationCollectionsComponent {
   readonly state = inject(RecommendationsState);
   readonly countLabel = countLabel;
 
-  readonly views = computed<readonly CollectionRecommendationView[]>(() =>
-    this.state.collections().flatMap((recommendation): CollectionRecommendationView[] => {
+  readonly views = computed<readonly CollectionRecommendationView[]>(() => {
+    const heroById = new Map(this.store.heroes().map((hero) => [hero.id, displayHeroName(hero)]));
+    return this.state.collections().flatMap((recommendation): CollectionRecommendationView[] => {
       const item = COLLECTION_CATALOG.find((entry) => entry.id === recommendation.catalogId);
       if (!item) return [];
       const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
       const level = recommendation.levelNodes + 1;
+      const topUsers = (recommendation.topHeroIds ?? [])
+        .map((id) => heroById.get(id))
+        .filter((name): name is string => Boolean(name))
+        .join(', ');
       return [{
         key: `${recommendation.catalogId}-${recommendation.levelNodes}`,
         recommendation,
@@ -43,10 +49,11 @@ export class RecommendationCollectionsComponent {
         iconUrl: collectionIconUrl(item.id, level, recommendation.mythicStats.length),
         reason: reasonFor(recommendation, modeCounts),
         target: this.targetFor(recommendation),
+        topUsers,
         modeCounts,
       }];
-    }),
-  );
+    });
+  });
 
   readonly overall = computed<readonly CollectionRecommendationView[]>(() => [...this.views()]
     .sort((left, right) => right.recommendation.score - left.recommendation.score

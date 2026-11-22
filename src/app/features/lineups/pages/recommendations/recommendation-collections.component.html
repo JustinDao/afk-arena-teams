@@ -20,7 +20,7 @@
                 @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
               </div>
               <div class="rec-sub-line">
-                <span>{{ view.reason }}</span>
+                <span>{{ view.reason }}@if (view.topUsers) { · Used by: {{ view.topUsers }} }</span>
                 @if (view.modeCounts.length) {
                   <span class="rec-modes">
                     @for (mode of view.modeCounts; track mode.slug) {
@@ -55,7 +55,7 @@
                     @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
                   </div>
                   <div class="rec-sub-line">
-                    <span>{{ view.reason }}</span>
+                    <span>{{ view.reason }}@if (view.topUsers) { · Used by: {{ view.topUsers }} }</span>
                     @if (view.modeCounts.length) {
                       <span class="rec-modes">
                         @for (mode of view.modeCounts; track mode.slug) {

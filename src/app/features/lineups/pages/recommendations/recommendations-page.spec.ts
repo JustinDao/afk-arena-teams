@@ -232,14 +232,18 @@ describe('Recommendations pages', () => {
     const warriorPick: CollectionRecommendation = {
       catalogId: 1, collectionClass: 'Warrior', rank: 1, kind: 'upgrade', score: 1, completeCount: 1, nearCount: 0,
       levelNodes: 1, mythicStats: ['cda', 'cda', 'crit'], byMode: { 'twisted-realm': 1 }, submissionIds: [1],
+      topHeroIds: [heroes[0].id, heroes[1].id],
     };
     loadCollectionRecommendations.and.resolveTo([warriorPick]);
     await setup({ id: 'u1' });
-    const [warrior] = (await render(RecommendationCollectionsComponent)).componentInstance.groups();
+    const fixture = await render(RecommendationCollectionsComponent);
+    const [warrior] = fixture.componentInstance.groups();
     expect(warrior.label).toBe('Warrior');
     expect(warrior.items[0].name).toContain('· Lv 2');
     expect(warrior.items[0].target).toBe('CDA ×2 · CRIT');
     expect(warrior.items[0].reason).toBe('Fully unlocks 1 top team');
+    expect(warrior.items[0].topUsers).toContain(heroes[0].name);
+    expect(fixture.nativeElement.textContent).toContain(`Used by: ${warrior.items[0].topUsers}`);
   });
 
   it('builds a combined top-10 overall priority list for collections sorted by score', async () => {

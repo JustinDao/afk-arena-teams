@@ -122,6 +122,7 @@ interface CollectionRecommendationRow {
   rec_mythic_stats: string[] | null;
   by_mode: Record<string, number> | null;
   submission_ids: number[] | null;
+  top_hero_ids?: number[] | null;
 }
 
 interface PetRecommendationRow {
@@ -468,6 +469,7 @@ export class UserDataService {
       mythicStats: row.rec_mythic_stats ?? [],
       byMode: row.by_mode ?? {},
       submissionIds: row.submission_ids ?? [],
+      topHeroIds: row.top_hero_ids ?? [],
     }));
   }
 
