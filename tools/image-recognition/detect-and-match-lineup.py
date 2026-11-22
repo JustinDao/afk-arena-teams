@@ -3911,6 +3911,61 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
                         t["kill_time"] = f"{int(best_s) if best_s == int(best_s) else best_s}s"
                     else:
                         t["result_warning"] = f"Outlier NC kill time ({t['kill_time']} vs median {med_s:.1f}s)"
+
+        # Also extract per-row CR damage / NC kill time for Mugen substitute rows on the left panel.
+        for t in solved_teams:
+            for sub in t.get("substitute_teams") or []:
+                sb = sub.get("bbox")
+                if not sb or len(sb) != 4:
+                    continue
+                sx0 = max(0, round(W * 0.285))
+                sx1 = min(W, round(W * 0.360))
+                sy0 = max(0, round(sb[1]) - 14)
+                sy1 = min(H, round(sb[1] + sb[3]) + 14)
+                if sx1 <= sx0 + 10 or sy1 <= sy0 + 10:
+                    continue
+                scrop = img[sy0:sy1, sx0:sx1]
+                sstretch = cv2.resize(scrop, (0, 0), fx=1.6, fy=0.8, interpolation=cv2.INTER_CUBIC)
+                for variant in (sstretch, scrop):
+                    try:
+                        sres, _ = ocr(variant, use_cls=False)
+                    except Exception:
+                        sres = None
+                    matched_sub = False
+                    for _b, txt, _sc in (sres or []):
+                        clean = txt.strip()
+                        m_dmg = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([bBmM])", clean)
+                        if m_dmg:
+                            val = float(m_dmg.group(1))
+                            dmg = round(val * (1_000_000_000 if m_dmg.group(2).lower() == "b" else 1_000_000))
+                            sub["damage"] = dmg
+                            sub["damage_display"] = _format_damage_short(dmg)
+                            matched_sub = True
+                            break
+                        m_sec = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)\s*s", clean, re.I)
+                        if m_sec:
+                            val = float(m_sec.group(1))
+                            if 1 <= val <= 120:
+                                sub["kill_time_seconds"] = val
+                                sub["kill_time"] = f"{m_sec.group(1)}s"
+                                matched_sub = True
+                                break
+                        m_num = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)", clean)
+                        if m_num:
+                            val = float(m_num.group(1))
+                            if "cursed-realm" in hints["modes"] and 1 <= val <= 500:
+                                dmg = round(val * 1_000_000_000)
+                                sub["damage"] = dmg
+                                sub["damage_display"] = _format_damage_short(dmg)
+                                matched_sub = True
+                                break
+                            if 1 <= val <= 120:
+                                sub["kill_time_seconds"] = val
+                                sub["kill_time"] = f"{m_num.group(1)}s"
+                                matched_sub = True
+                                break
+                    if matched_sub:
+                        break
         return
     if is_multi_nc:
         # Groody multi-column CR/NC guides show "Damage: 48b" or "Time: 13.6s"
