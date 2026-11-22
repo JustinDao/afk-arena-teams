@@ -200,21 +200,15 @@
   object-fit: contain;
 }
 
-.rec-reason-with-users {
+.rec-sub-right {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .rec-users {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-
-  .hero-icon.small {
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-  }
+  gap: 3px;
 }

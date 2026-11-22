@@ -8,6 +8,7 @@ import { AscensionRank, Investment } from '../../features/lineups/models';
   template: `
     <span
       class="hero-icon"
+      [class.xs]="size() === 'xs'"
       [class.small]="size() === 'small'"
       [class.medium]="size() === 'medium'"
       [class.large]="size() === 'large'"
@@ -36,6 +37,7 @@ import { AscensionRank, Investment } from '../../features/lineups/models';
       position: relative;
       box-sizing: border-box;
     }
+    .hero-icon.xs { width: 20px; height: 20px; border-radius: 5px; }
     .hero-icon.small { width: 30px; height: 30px; border-radius: 7px; }
     .hero-icon.medium { width: 48px; height: 48px; border-radius: 9px; }
     .hero-icon.large { width: 64px; height: 64px; border-radius: 11px; }
@@ -48,7 +50,7 @@ import { AscensionRank, Investment } from '../../features/lineups/models';
 export class HeroIconComponent {
   readonly name = input.required<string>();
   readonly imageUrl = input<string | null>();
-  readonly size = input<'small' | 'medium' | 'large'>('small');
+  readonly size = input<'xs' | 'small' | 'medium' | 'large'>('small');
   readonly ascension = input<AscensionRank | null>(null);
   readonly investment = input<Investment | null>(null);
   readonly icons = inject(HeroIconService);
