@@ -3621,12 +3621,12 @@ def _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta):
             slot_cands = []
             for h in slots:
                 cands = {}
-                cur_mse = float(h.get("mse") if h.get("mse") is not None else 0.05)
+                cur_mse = float(h.get("mse") if h.get("mse") is not None else 500.0)
                 cands[h["id"]] = (cur_mse, h["slug"], h["name"])
                 for alt in h.get("visual_alternatives") or []:
                     aid = alt.get("id")
                     amse = alt.get("mse")
-                    if aid is not None and amse is not None and float(amse) <= 0.135:
+                    if aid is not None and amse is not None and float(amse) <= 2600.0:
                         if aid not in cands or float(amse) < cands[aid][0]:
                             cands[aid] = (float(amse), alt.get("slug"), alt.get("name"))
                 slot_cands.append(cands)
@@ -3641,8 +3641,8 @@ def _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta):
                 inv_pool[col] = aid
             # Add n_slots dummy columns (high fallback cost) so infeasible swaps never force garbage.
             n_cols = n_real + n_slots
-            BIG = 10.0
-            FALLBACK = 0.22
+            BIG = 1e6
+            FALLBACK = 3500.0
             cost = [[BIG] * n_cols for _ in range(n_slots)]
             for i, cands in enumerate(slot_cands):
                 for aid, (mse_val, _sl, _nm) in cands.items():
@@ -3673,16 +3673,17 @@ def _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta):
                         h["reassigned_from_duplicate"] = True
 
         # 2. Flag low-confidence or off-meta-watchlist hero slots for quick review.
+        # Note: hero MSE values are on a 0..3000+ pixel-squared scale.
         for h in slots:
             mse = float(h.get("mse") if h.get("mse") is not None else 0.0)
-            alts = h.get("visual_alternatives") or []
+            alts = [a for a in (h.get("visual_alternatives") or []) if a.get("id") != h.get("id")]
             alt_mse = float(alts[0]["mse"]) if (alts and alts[0].get("mse") is not None) else None
             reasons = []
-            if mse >= 0.085:
-                reasons.append(f"high visual distance ({mse:.3f})")
-            if alt_mse is not None and 0.0 <= (alt_mse - mse) < 0.004 and mse >= 0.035:
+            if mse >= 2200.0:
+                reasons.append(f"high visual distance ({mse:.0f})")
+            if alt_mse is not None and 0.0 <= (alt_mse - mse) < 25.0 and mse >= 900.0:
                 reasons.append(f"close to {alts[0].get('name', 'alt')}")
-            if (h.get("slug") or "").lower() in _OFFMETA_WATCHLIST and mse >= 0.045:
+            if (h.get("slug") or "").lower() in _OFFMETA_WATCHLIST and mse >= 900.0:
                 reasons.append("rarely-used hero match — verify portrait")
             if h.get("reassigned_from_duplicate"):
                 reasons.append("swapped to avoid duplicate hero across teams")
