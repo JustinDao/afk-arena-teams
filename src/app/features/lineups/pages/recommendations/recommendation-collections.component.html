@@ -1,5 +1,5 @@
 <section aria-label="Recommended collections">
-  <p class="rules">The next collection to build or upgrade, per class. Only Level and Mythic nodes count, and only modes that use collections apply.</p>
+  <p class="rules">The next collection to build, per class. Only Level and Mythic nodes count, and only modes that use collections apply.</p>
 
   @if (overall().length) {
     <section class="rec-panel rec-overall" aria-label="Overall priority">
@@ -15,7 +15,6 @@
             <div class="rec-main">
               <div class="rec-title-line">
                 <strong>{{ view.name }}</strong>
-                <span class="rec-action" [class.is-build]="view.recommendation.kind === 'build'">{{ view.recommendation.kind === 'build' ? 'Build' : 'Upgrade' }}</span>
                 <span class="rec-category">{{ view.recommendation.collectionClass }}</span>
                 @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
               </div>
@@ -60,7 +59,6 @@
                 <div class="rec-main">
                   <div class="rec-title-line">
                     <strong>{{ view.name }}</strong>
-                    <span class="rec-action" [class.is-build]="view.recommendation.kind === 'build'">{{ view.recommendation.kind === 'build' ? 'Build' : 'Upgrade' }}</span>
                     @if (view.target) { <span class="rec-target">{{ view.target }}</span> }
                   </div>
                   <div class="rec-sub-line">
