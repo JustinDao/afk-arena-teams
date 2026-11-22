@@ -237,7 +237,8 @@ describe('Recommendations pages', () => {
     await setup({ id: 'u1' });
     const [warrior] = (await render(RecommendationCollectionsComponent)).componentInstance.groups();
     expect(warrior.label).toBe('Warrior');
-    expect(warrior.items[0].target).toBe('1 Level node · CDA ×2 · CRIT');
+    expect(warrior.items[0].name).toContain('· Lv 2');
+    expect(warrior.items[0].target).toBe('CDA ×2 · CRIT');
     expect(warrior.items[0].reason).toBe('Fully unlocks 1 top team');
   });
 

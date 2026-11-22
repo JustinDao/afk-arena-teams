@@ -8,7 +8,7 @@
         <span class="rec-panel-sub">Top {{ overall().length }} across all classes</span>
       </div>
       <ol class="rec-list">
-        @for (view of overall(); track view.recommendation.catalogId; let first = $first; let idx = $index) {
+        @for (view of overall(); track view.key; let first = $first; let idx = $index) {
           <li class="rec-row" [class.best]="first">
             <span class="rec-rank">{{ idx + 1 }}</span>
             <img class="rec-icon" [src]="view.iconUrl" alt="" width="42" height="42">
@@ -44,7 +44,7 @@
         </div>
         @if (group.items.length) {
           <ol class="rec-list">
-            @for (view of group.items; track view.recommendation.catalogId; let first = $first; let idx = $index) {
+            @for (view of group.items; track view.key; let first = $first; let idx = $index) {
               <li class="rec-row" [class.best]="first">
                 <span class="rec-rank">{{ idx + 1 }}</span>
                 <img class="rec-icon" [src]="view.iconUrl" alt="" width="42" height="42">

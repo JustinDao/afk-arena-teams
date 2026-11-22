@@ -7,6 +7,7 @@ import { ModeCount, modeCountsFor, reasonFor } from './recommendation-views';
 import { RecommendationsState } from './recommendations.state';
 
 interface CollectionRecommendationView {
+  readonly key: string;
   readonly recommendation: CollectionRecommendation;
   readonly name: string;
   readonly iconUrl: string;
@@ -34,10 +35,12 @@ export class RecommendationCollectionsComponent {
       const item = COLLECTION_CATALOG.find((entry) => entry.id === recommendation.catalogId);
       if (!item) return [];
       const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
+      const level = recommendation.levelNodes + 1;
       return [{
+        key: `${recommendation.catalogId}-${recommendation.levelNodes}`,
         recommendation,
-        name: item.name,
-        iconUrl: collectionIconUrl(item.id, recommendation.levelNodes + 1, recommendation.mythicStats.length),
+        name: `${item.name} · Lv ${level}`,
+        iconUrl: collectionIconUrl(item.id, level, recommendation.mythicStats.length),
         reason: reasonFor(recommendation, modeCounts),
         target: this.targetFor(recommendation),
         modeCounts,
@@ -60,7 +63,6 @@ export class RecommendationCollectionsComponent {
 
   private targetFor(recommendation: CollectionRecommendation): string {
     const parts: string[] = [];
-    if (recommendation.levelNodes > 0) parts.push(countLabel(recommendation.levelNodes, 'Level node'));
     const counts = new Map<string, number>();
     for (const stat of recommendation.mythicStats) counts.set(stat, (counts.get(stat) ?? 0) + 1);
     for (const [stat, count] of counts) {
