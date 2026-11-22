@@ -100,6 +100,8 @@ export class SubmitPageComponent implements OnDestroy {
     target: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
     damage: new FormControl('', { nonNullable: true }),
+    floor: new FormControl('', { nonNullable: true }),
+    stars: new FormControl('', { nonNullable: true }),
     totalTime: new FormControl('', { nonNullable: true }),
     rcLevel: new FormControl('', { nonNullable: true }),
     placementType: new FormControl<'' | 'rank' | 'percent'>('', { nonNullable: true }),
@@ -115,7 +117,7 @@ export class SubmitPageComponent implements OnDestroy {
   });
   readonly calculatedTotalDamage = computed(() => {
     const draft = this.store.draft();
-    if (!draft || draft.mode !== 'cursed-realm') return '';
+    if (!draft || (draft.mode !== 'cursed-realm' && draft.mode !== 'hunting-fields-contract')) return '';
     const dmgs = draft.forms.map((f) => parseDamage(f.damage ?? '')).filter((d): d is number => d !== null && d > 0);
     if (!dmgs.length) return '';
     return formatDamage(dmgs.reduce((sum, d) => sum + d, 0));
@@ -260,9 +262,10 @@ export class SubmitPageComponent implements OnDestroy {
   private resetSubmissionForm(): void {
     const draft = this.store.draft();
     if (!draft) return;
-    const hasRoundDamage = draft.mode === 'cursed-realm' && draft.forms.some((f) => Boolean(f.damage?.trim()));
+    const hasRoundDamage = (draft.mode === 'cursed-realm' || draft.mode === 'hunting-fields-contract')
+      && draft.forms.some((f) => Boolean(f.damage?.trim()));
     const hasTotalTime = draft.mode === 'nightmare-corridor' && typeof draft.result['totalTime'] === 'string' && !draft.forms.some((f) => Boolean(f.time.trim()));
-    if (draft.mode === 'cursed-realm') {
+    if (draft.mode === 'cursed-realm' || draft.mode === 'hunting-fields-contract') {
       this.resultEntryMode.set(hasRoundDamage ? 'per-round' : 'total');
     } else if (draft.mode === 'nightmare-corridor') {
       this.resultEntryMode.set(hasTotalTime ? 'total' : 'per-round');
@@ -271,6 +274,8 @@ export class SubmitPageComponent implements OnDestroy {
       target: draft.target,
       notes: draft.notes,
       damage: typeof draft.result['damage'] === 'string' ? draft.result['damage'] : '',
+      floor: typeof draft.result['floor'] === 'string' || typeof draft.result['floor'] === 'number' ? String(draft.result['floor']) : '',
+      stars: typeof draft.result['stars'] === 'string' || typeof draft.result['stars'] === 'number' ? String(draft.result['stars']) : '',
       totalTime: typeof draft.result['totalTime'] === 'string' ? draft.result['totalTime'] : '',
       rcLevel: String(this.store.heroLevel() ?? ''),
       placementType:

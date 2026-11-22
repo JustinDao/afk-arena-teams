@@ -379,6 +379,11 @@ def _list_sample_images():
         ("ts-noname-2026-11-fog-6t-teams.png,ts-noname-2026-11-fog-6t-lookup.png", "Nov 2026 TS Fog (Swamp) 6-Team + Lookup Sheet (2 Images)"),
         ("ts-noname-2026-11-fog-5t-teams.png,ts-noname-2026-11-fog-5t-lookup.png", "Nov 2026 TS Fog (Swamp) 5-Team + Lookup Sheet (2 Images)"),
         ("ts-theafkguys-2026-11-volcano.jpeg", "Nov 2026 TheAFKGuys TS Fire (Volcano) — 7T + Whale/Dolphin/Budget 5T"),
+        ("trift-s16-mugen-2026.png", "Temporal Rift S16 — Mugen / ManuelAlcayaga & Rakudayyy Guide (3000×4500)"),
+        ("hfc-wrizz-no-earrings-rakudayyy-2026.png", "HFC — Wrizz + No Earrings Buff Guide by Rakudayyy (2406×6160)"),
+        ("df-trials-11-12-senseibonsai-2025.jpeg", "Dragonforge Trials 11 & 12 — F2P 3-Star Clears by SenseiBonsai (2014×2160)"),
+        ("hoe-kayky-2026-p1.png,hoe-kayky-2026-p2.png,hoe-kayky-2026-p3.png", "Heroes of Esperia — Top 22 7-Team Guide by Kayky1003 (3 Slides)"),
+        ("abex-s17-xionslash-2026.jpeg", "AbEx S17 — Boss Comps & Collections by Xionslash007 (6747×5865)"),
     ]
     out = []
     for rel, label in candidates:

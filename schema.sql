@@ -69,8 +69,9 @@ create table game_modes (
   id          smallint generated always as identity primary key,
   slug        text unique not null,            -- 'twisted-realm', 'nightmare-corridor', ...
   name        text not null,
-  target_kind text not null check (target_kind in ('boss', 'debuff', 'none')),
+  target_kind text not null check (target_kind in ('boss', 'debuff', 'stage', 'none')),
   enabled     boolean not null default false,  -- flip to true when the mode goes live
+  include_in_overall_recommendations boolean not null default false,
   sort_order  smallint not null default 0,
   -- Declarative mode rules read by the app, for example:
   -- {
@@ -1289,18 +1290,23 @@ insert into pets (id, slug, name, pet_type) values
 on conflict (id) do update set
   slug = excluded.slug, name = excluded.name, pet_type = excluded.pet_type;
 
-insert into game_modes (slug, name, target_kind, enabled, sort_order, config) values
- ('twisted-realm',      'Twisted Realm',      'boss',   true, 1, '{"formations":[{"key":"team","label":"Team"}],"collections_enabled":true,"rules":"One team per run. Heroes are level-matched to the account Resonating Crystal level; record that shared hero level with the lineup. Gear and ascension still count. The boss rotates every couple of days.","result_fields":[{"key":"damage","label":"Damage dealt","type":"damage","placeholder":"e.g. 1.84B","required":true}]}'),
- ('nightmare-corridor', 'Nightmare Corridor', 'boss',   true, 2, '{"target_label":"Cycle anchor (6th boss)","target_all":"All cycles","formations":[{"key":"astral-devourer","label":"Astral Devourer"},{"key":"dual-mantle","label":"Dual-Mantle"},{"key":"cursed-capricornus","label":"Cursed Capricornus"},{"key":"netherspinner","label":"Netherspinner"},{"key":"molten-crystaline-worm","label":"Molten Crystaline Worm"},{"key":"cindercrow-specter","label":"Cindercrow Specter"}],"collections_enabled":true,"merc_max_per_submission":1,"unique_heroes_across_formations":true,"rules":"Six teams, one for each boss in the cycle. Select the cycle by its 6th boss. Only Resonating Crystal heroes and up to one mercenary across the lineup. Record each boss kill time.","result_fields":[]}'),
- ('cursed-realm',       'Cursed Realm',       'boss',   true, 3, '{"formations":[{"key":"sg1","label":"SG1"},{"key":"sg2","label":"SG2"},{"key":"sg3","label":"SG3"},{"key":"sg4","label":"SG4"},{"key":"sg5","label":"SG5"},{"key":"boss","label":"Boss"}],"collections_enabled":false,"merc_max_per_submission":1,"unique_heroes_across_formations":true,"rules":"Six formations: five Shadow Guards and the boss. Heroes are level 360 with no artifact or union bonuses, up to one mercenary across the full lineup, and a hero can only appear once per run.","result_fields":[{"key":"damage","label":"Total damage across all six fights","type":"damage","placeholder":"e.g. 5.6B","required":true}]}'),
- ('treasure-scramble',  'Treasure Scramble',  'debuff', true, 4, '{"variable_formations":{"min":2,"max":7,"default":7},"collections_enabled":false,"merc_max_per_submission":0,"unique_heroes_across_formations":true,"rules":"A lineup contains two to seven teams, depending on the division, for one debuff cycle. Heroes are level 360 with no artifact bonuses, mercenaries are not allowed, and a hero can only appear once per run.","result_fields":[]}'),
- ('arena-of-heroes',    'Arena of Heroes',    'none',   false, 10, '{}'),
- ('legends-challenger', 'Legends'' Challenger','none',  false, 11, '{}'),
- ('temporal-rift',      'Temporal Rift',      'none',   false, 12, '{}')   -- season-long run with a hero pool; needs its own result fields (floor reached)
+insert into game_modes (slug, name, target_kind, enabled, include_in_overall_recommendations, sort_order, config) values
+ ('twisted-realm',      'Twisted Realm',      'boss',   false, false, 1, '{"formations":[{"key":"team","label":"Team"}],"collections_enabled":true,"rules":"One team per run. Heroes are level-matched to the account Resonating Crystal level; record that shared hero level with the lineup. Gear and ascension still count. The boss rotates every couple of days.","result_fields":[{"key":"damage","label":"Damage dealt","type":"damage","placeholder":"e.g. 1.84B","required":true}]}'),
+ ('nightmare-corridor', 'Nightmare Corridor', 'boss',   true,  true,  2, '{"target_label":"Cycle anchor (6th boss)","target_all":"All cycles","formations":[{"key":"astral-devourer","label":"Astral Devourer"},{"key":"dual-mantle","label":"Dual-Mantle"},{"key":"cursed-capricornus","label":"Cursed Capricornus"},{"key":"netherspinner","label":"Netherspinner"},{"key":"molten-crystaline-worm","label":"Molten Crystaline Worm"},{"key":"cindercrow-specter","label":"Cindercrow Specter"}],"collections_enabled":true,"merc_max_per_submission":1,"unique_heroes_across_formations":true,"rules":"Six teams, one for each boss in the cycle. Select the cycle by its 6th boss. Only Resonating Crystal heroes and up to one mercenary across the lineup. Record each boss kill time.","result_fields":[]}'),
+ ('cursed-realm',       'Cursed Realm',       'boss',   true,  true,  3, '{"formations":[{"key":"sg1","label":"SG1"},{"key":"sg2","label":"SG2"},{"key":"sg3","label":"SG3"},{"key":"sg4","label":"SG4"},{"key":"sg5","label":"SG5"},{"key":"boss","label":"Boss"}],"collections_enabled":false,"merc_max_per_submission":1,"unique_heroes_across_formations":true,"rules":"Six formations: five Shadow Guards and the boss. Heroes are level 360 with no artifact or union bonuses, up to one mercenary across the full lineup, and a hero can only appear once per run.","result_fields":[{"key":"damage","label":"Total damage across all six fights","type":"damage","placeholder":"e.g. 5.6B","required":true}]}'),
+ ('treasure-scramble',  'Treasure Scramble',  'debuff', true,  true,  4, '{"variable_formations":{"min":2,"max":7,"default":7},"collections_enabled":false,"merc_max_per_submission":0,"unique_heroes_across_formations":true,"rules":"A lineup contains two to seven teams, depending on the division, for one debuff cycle. Heroes are level 360 with no artifact bonuses, mercenaries are not allowed, and a hero can only appear once per run.","result_fields":[]}'),
+ ('heroes-of-esperia',  'Heroes of Esperia',  'none',   true,  false, 5, '{"target_label":"Season","target_all":"All seasons","variable_formations":{"min":1,"max":7,"default":7},"collections_enabled":true,"merc_max_per_submission":0,"unique_heroes_across_formations":true,"allow_partial_formations":true,"rules":"Up to seven PvP teams for Heroes of Esperia. Mercenaries are not allowed and a hero can only appear once per lineup.","result_fields":[]}'),
+ ('temporal-rift',      'Temporal Rift',      'none',   true,  false, 6, '{"target_label":"Season","target_all":"All seasons","variable_formations":{"min":1,"max":5,"default":5},"collections_enabled":true,"merc_max_per_submission":0,"unique_heroes_across_formations":true,"allow_partial_formations":true,"rules":"Season-long run using up to five teams. Record the floor reached and any beacon/trait enhancer notes.","result_fields":[{"key":"floor","label":"Floor reached","type":"int","placeholder":"e.g. 300"}]}'),
+ ('hunting-fields-contract', 'Hunting Fields Contract', 'boss', true, false, 7, '{"target_label":"Contract","target_all":"All contracts","formations":[{"key":"team-1","label":"Team 1"},{"key":"team-2","label":"Team 2"}],"collections_enabled":true,"merc_max_per_submission":0,"unique_heroes_across_formations":true,"allow_partial_formations":true,"rules":"Always two teams under the active Hunting Fields Contract buff or trait restriction (e.g. No Earrings, Ranger Buff). Record per-team or total boss damage.","result_fields":[{"key":"damage","label":"Total damage","type":"damage","placeholder":"e.g. 72B"}]}'),
+ ('dragonforge-trials', 'Dragonforge Trials', 'stage',  false, false, 8, '{"target_label":"Stage","target_all":"All stages","variable_formations":{"min":1,"max":3,"default":1},"collections_enabled":true,"merc_max_per_submission":1,"unique_heroes_across_formations":true,"allow_partial_formations":true,"rules":"1 team for Trials 1-2, 2 teams (paths) for Trials 3-6, and 3 teams for Trials 7-12. Record stars earned (1-3) and Resonating Crystal level for low-RC clears.","result_fields":[{"key":"stars","label":"Stars earned","type":"select","options":[1,2,3]}]}'),
+ ('abyssal-expedition', 'Abyssal Expedition', 'boss',   true,  false, 9, '{"target_label":"Boss / Phase","target_all":"All bosses","variable_formations":{"min":1,"max":6,"default":3},"collections_enabled":true,"merc_max_per_submission":0,"unique_heroes_across_formations":false,"allow_partial_formations":true,"rules":"Boss and gate compositions grouped by relic branch or phase. Heroes may repeat across competing compositions.","result_fields":[{"key":"damage","label":"Boss damage","type":"damage","placeholder":"e.g. 120B"}]}'),
+ ('arena-of-heroes',    'Arena of Heroes',    'none',   false, false, 10, '{}'),
+ ('legends-challenger', 'Legends'' Challenger','none',  false, false, 11, '{}')
 on conflict (slug) do update set
   name = excluded.name,
   target_kind = excluded.target_kind,
   enabled = excluded.enabled,
+  include_in_overall_recommendations = excluded.include_in_overall_recommendations,
   sort_order = excluded.sort_order,
   config = excluded.config;
 
@@ -1362,7 +1368,23 @@ join (values
   ('nightmare-corridor','the-unhinged','The Unhinged'),
   ('nightmare-corridor','wraith-reaver','Wraith Reaver'),
   ('treasure-scramble','fire','Fire'), ('treasure-scramble','frost','Frost'), ('treasure-scramble','forest','Forest'),
-  ('treasure-scramble','fog','Fog'), ('treasure-scramble','fountain','Fountain')
+  ('treasure-scramble','fog','Fog'), ('treasure-scramble','fountain','Fountain'),
+  ('heroes-of-esperia','current-season','Current Season'),
+  ('temporal-rift','s16','S16'),
+  ('temporal-rift','s17','S17'),
+  ('hunting-fields-contract','wrizz-no-earrings','Wrizz — No Earrings'),
+  ('hunting-fields-contract','adrax-no-earrings','Adrax — No Earrings'),
+  ('hunting-fields-contract','adrax-ranger-buff','Adrax — Ranger Buff'),
+  ('hunting-fields-contract','adrax-mage-buff','Adrax — Mage Buff'),
+  ('hunting-fields-contract','adrax-tank-buff','Adrax — Tank Buff'),
+  ('dragonforge-trials','trial-1','Trial 1'), ('dragonforge-trials','trial-2','Trial 2'),
+  ('dragonforge-trials','trial-3','Trial 3'), ('dragonforge-trials','trial-4','Trial 4'),
+  ('dragonforge-trials','trial-5','Trial 5'), ('dragonforge-trials','trial-6','Trial 6'),
+  ('dragonforge-trials','trial-7','Trial 7'), ('dragonforge-trials','trial-8','Trial 8'),
+  ('dragonforge-trials','trial-9','Trial 9'), ('dragonforge-trials','trial-10','Trial 10'),
+  ('dragonforge-trials','trial-11','Trial 11'), ('dragonforge-trials','trial-12','Trial 12'),
+  ('abyssal-expedition','s18-final-boss','S18 — Final Boss'),
+  ('abyssal-expedition','s18-gate-bosses','S18 — Gate Bosses')
 ) as t(mode_slug, slug, name) on t.mode_slug = m.slug
 on conflict (mode_id, slug) do update set name = excluded.name;
 
@@ -1568,7 +1590,10 @@ language sql stable security definer set search_path = public as $$
     select m.id, m.slug
     from game_modes m, params
     where m.enabled
-      and (params.slugs is null or cardinality(params.slugs) = 0 or m.slug = any(params.slugs))
+      and (
+        ((params.slugs is null or cardinality(params.slugs) = 0) and m.include_in_overall_recommendations)
+        or m.slug = any(params.slugs)
+      )
   ),
   me as (select * from user_roster where user_id = auth.uid()),
   pool as (select p.* from recommendation_pool p join sel on sel.id = p.mode_id),
@@ -1725,7 +1750,10 @@ language sql stable security definer set search_path = public as $$
     select m.id, m.slug
     from game_modes m, params
     where m.enabled
-      and (params.slugs is null or cardinality(params.slugs) = 0 or m.slug = any(params.slugs))
+      and (
+        ((params.slugs is null or cardinality(params.slugs) = 0) and m.include_in_overall_recommendations)
+        or m.slug = any(params.slugs)
+      )
   ),
   me as (select * from user_roster where user_id = auth.uid()),
   mine as (
@@ -1911,7 +1939,10 @@ language sql stable security definer set search_path = public as $$
     select m.id, m.slug
     from game_modes m, params
     where m.enabled
-      and (params.slugs is null or cardinality(params.slugs) = 0 or m.slug = any(params.slugs))
+      and (
+        ((params.slugs is null or cardinality(params.slugs) = 0) and m.include_in_overall_recommendations)
+        or m.slug = any(params.slugs)
+      )
   ),
   me as (select * from user_roster where user_id = auth.uid()),
   my_pets as (select * from user_pet_roster where user_id = auth.uid()),

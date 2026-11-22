@@ -34,7 +34,8 @@ if (hasCv2) {
   console.warn('[dev-start] (Optional) Set up Python dependencies to enable /submit/from-image recognition API.');
 }
 
-const ngProc = spawn('npx', ['ng', 'serve'], {
+const ngArgs = ['ng', 'serve', ...process.argv.slice(2)];
+const ngProc = spawn('npx', ngArgs, {
   stdio: 'inherit',
   shell: process.platform === 'win32',
 });

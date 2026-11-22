@@ -893,7 +893,11 @@ def _load_pet_chibi_templates():
                 continue
             im = cv2.imread(str(p))
             if im is not None:
-                templates.append((int(pid_str), cv2.resize(im, (48, 48), interpolation=cv2.INTER_AREA).astype(np.float32)))
+                tight = _tight_white_bg_sprite(im)
+                if tight is not None:
+                    templates.append((int(pid_str), tight))
+                else:
+                    templates.append((int(pid_str), cv2.resize(im, (48, 48), interpolation=cv2.INTER_AREA).astype(np.float32)))
     _PET_CHIBI_CACHE = templates
     return templates
 
@@ -933,7 +937,7 @@ def _match_theafkguys_chibi_pet(img, team, pet_meta):
         return None
     H, W = img.shape[:2]
     sx, sy = W / 3577.0, H / 2986.0
-    if team.get("set_index", 0) == 0:
+    if team.get("set_index", 0) == 0 or team.get("layout") == "abex_4x2_grid":
         px, py, pw, ph = team.get("pet_box") or [
             team["hero_boxes"][-1][0] + team["hero_boxes"][-1][2] + round(10 * sx),
             max(0, team["hero_boxes"][0][1] - round(8 * sy)),
@@ -1857,7 +1861,7 @@ def solve_teams(
 
             inv_result = (
                 None
-                if layout in ("ts_compact_7", "theafkguys_ts_grid")
+                if layout in ("ts_compact_7", "theafkguys_ts_grid", "abex_4x2_grid")
                 else detect_hero_investment(img, hbox)
             )
 
@@ -1924,11 +1928,12 @@ def solve_teams(
         p_ranked = pet_rank_by_team.get(t_idx, [])
         pet_out = None
         pet_warning = None
-        if layout == "theafkguys_ts_grid":
+        if layout in ("theafkguys_ts_grid", "abex_4x2_grid"):
             chibi_ranked = _match_theafkguys_chibi_pet(img, team, pet_meta)
             if chibi_ranked:
                 best_d, best_pid = chibi_ranked[0]
-                if best_d <= 2400.0:
+                chibi_cutoff = 3300.0 if layout == "abex_4x2_grid" else 2400.0
+                if best_d <= chibi_cutoff:
                     p_info = pet_meta[best_pid]
                     runner_d = chibi_ranked[1][0] if len(chibi_ranked) > 1 else None
                     pet_out = {
@@ -3066,10 +3071,18 @@ def infer_mode_and_lineup_matches(
         ("treasure-scramble", "Treasure Scramble", "forest", "Forest", 4),
         ("treasure-scramble", "Treasure Scramble", "fog", "Fog", 4),
         ("treasure-scramble", "Treasure Scramble", "fountain", "Fountain", 4),
-        ("twisted-realm", "Twisted Realm", "ice-shemira", "Ice Shemira", 1),
-        ("twisted-realm", "Twisted Realm", "burning-brute", "Burning Brute", 1),
-        ("twisted-realm", "Twisted Realm", "kane", "Kane", 1),
-        ("twisted-realm", "Twisted Realm", "grotesque-mage", "Grotesque Mage", 1),
+        ("heroes-of-esperia", "Heroes of Esperia", "current-season", "Current Season", 5),
+        ("temporal-rift", "Temporal Rift", "s16", "S16", 5),
+        ("temporal-rift", "Temporal Rift", "s17", "S17", 5),
+        ("hunting-fields-contract", "Hunting Fields Contract", "wrizz-no-earrings", "Wrizz — No Earrings", 2),
+        ("hunting-fields-contract", "Hunting Fields Contract", "adrax-no-earrings", "Adrax — No Earrings", 2),
+        ("hunting-fields-contract", "Hunting Fields Contract", "adrax-ranger-buff", "Adrax — Ranger Buff", 2),
+        ("dragonforge-trials", "Dragonforge Trials", "trial-12", "Trial 12", 3),
+        ("dragonforge-trials", "Dragonforge Trials", "trial-11", "Trial 11", 3),
+        ("dragonforge-trials", "Dragonforge Trials", "trial-10", "Trial 10", 3),
+        ("dragonforge-trials", "Dragonforge Trials", "trial-9", "Trial 9", 3),
+        ("abyssal-expedition", "Abyssal Expedition", "s18-final-boss", "S18 — Final Boss", 3),
+        ("abyssal-expedition", "Abyssal Expedition", "s18-gate-bosses", "S18 — Gate Bosses", 3),
     ]
 
     mode_candidates = []
@@ -3129,10 +3142,26 @@ def infer_mode_and_lineup_matches(
             elif 2 <= team_count <= 6 and not is_staggered:
                 struct_score += 0.22
                 reasons.append(f"{team_count}-team multi-formation layout is compatible with Treasure Scramble (2-7 teams).")
-        elif m_slug == "twisted-realm":
-            if team_count == 1:
-                struct_score += 0.25
-                reasons.append("Single 5-hero + pet formation matches Twisted Realm single-boss format.")
+        elif m_slug == "heroes-of-esperia":
+            if team_count == 5 and not is_staggered:
+                struct_score += 0.24
+                reasons.append("5-team PvP formation structure fits Heroes of Esperia.")
+        elif m_slug == "temporal-rift":
+            if 1 <= team_count <= 5 and not is_staggered:
+                struct_score += 0.22
+                reasons.append(f"{team_count}-team formation layout fits Temporal Rift (up to 5 teams).")
+        elif m_slug == "hunting-fields-contract":
+            if 1 <= team_count <= 4 and not is_staggered:
+                struct_score += 0.28
+                reasons.append(f"{team_count}-comp layout matches Hunting Fields Contract.")
+        elif m_slug == "dragonforge-trials":
+            if 1 <= team_count <= 3:
+                struct_score += 0.22
+                reasons.append(f"{team_count}-path formation fits a Dragonforge Trials stage.")
+        elif m_slug == "abyssal-expedition":
+            if 1 <= team_count <= 7 and not is_staggered:
+                struct_score += 0.18
+                reasons.append(f"{team_count}-team boss/relic composition layout fits Abyssal Expedition.")
 
         if best_ref and ref_sim >= 0.25:
             matched_h = sum(ra["hero_overlap_count"] for ra in best_ref["round_alignments"])
@@ -3142,7 +3171,7 @@ def infer_mode_and_lineup_matches(
                 f"Matches reference lineup '{best_ref['title']}' ({matched_h}/{total_h} heroes across {len(best_ref['round_alignments'])} round(s), {round(ref_sim * 100, 1)}% round similarity).",
             )
 
-        ocr_bonus = (0.12 if m_slug in ocr_modes else 0.0) + (0.25 if t_slug in ocr_targets else 0.0)
+        ocr_bonus = (0.28 if m_slug in ocr_modes else 0.0) + (0.25 if t_slug in ocr_targets else 0.0)
         combined_conf = round(
             min(0.99, max(0.02, 0.72 * ref_sim + 0.28 * min(1.0, struct_score * 2.4) + ocr_bonus)),
             3,
@@ -3354,6 +3383,267 @@ def infer_mode_and_lineup_matches(
     }
 
 
+def _detect_guide_layout_kind(img):
+    """Lightweight top-banner OCR to classify non-CR/NC/TS community guide layouts."""
+    H, W = img.shape[:2]
+    ocr = _get_ocr_engine()
+    if ocr is None:
+        return None, ""
+    top = img[: min(H, max(220, round(H * 0.22))), :]
+    if max(top.shape[:2]) > 1600:
+        s = 1600.0 / max(top.shape[:2])
+        top = cv2.resize(top, (round(top.shape[1] * s), round(top.shape[0] * s)))
+    try:
+        res, _ = ocr(top)
+    except Exception:
+        return None, ""
+    text = " ".join(r[1] for r in (res or [])).upper()
+    if "HUNTING" in text or "CONTRACT" in text or "NO EARRINGS" in text:
+        return "hfc", text
+    if "TEMPORAL" in text or "RIFT" in text:
+        return "temporal_rift", text
+    if "ABEX" in text or "AB&X" in text:
+        return "abex_grid", text
+    if "TRIAL" in text or "DRAGONFORGE" in text or "FIRST 3-STAR" in text:
+        return "dragonforge_history", text
+    return None, text
+
+
+def _group_boxes_into_rows(boxes, y_tol=28):
+    rows = []
+    for b in sorted(boxes, key=lambda x: (x[1], x[0])):
+        cy = b[1] + b[3] * 0.5
+        if not rows or abs(cy - float(np.mean([r[1] + r[3] * 0.5 for r in rows[-1]]))) > y_tol:
+            rows.append([b])
+        else:
+            rows[-1].append(b)
+    return [sorted(r, key=lambda x: x[0]) for r in rows]
+
+
+def assemble_hfc_cards(img, model):
+    """Assemble stacked Hunting Fields Contract cards (e.g. 2406x6160 SickMyDuck & Rakudayyy)."""
+    H, W = img.shape[:2]
+    if model is None:
+        return []
+    raw_boxes, raw_scores = [], []
+    y_start = round(H * 0.28)
+    for y0 in range(y_start, H - 150, 650):
+        y1 = min(H, y0 + 1100)
+        crop = img[y0:y1, :]
+        res = model.predict(source=crop, imgsz=1280, conf=0.15, iou=0.45, max_det=100, device="cpu", verbose=False)[0]
+        for (bx1, by1, bx2, by2), s in zip(res.boxes.xyxy.cpu().tolist(), res.boxes.conf.cpu().tolist()):
+            raw_boxes.append([bx1, by1 + y0, bx2, by2 + y0])
+            raw_scores.append(float(s))
+    norm = normalize_yolo_boxes(raw_boxes, raw_scores, img.shape, min_px=100)
+    # Hero portraits are >= 170px wide in 2406w; pet icons sit on the right (x > 0.72*W)
+    hero_cands = [b for b, _ in norm if b[0] < W * 0.72 and 170 <= b[2] <= 320 and 170 <= b[3] <= 320]
+    pet_cands = [b for b, _ in norm if b[0] >= W * 0.72 and 130 <= b[2] <= 290 and 130 <= b[3] <= 290]
+    rows = [r for r in _group_boxes_into_rows(hero_cands, y_tol=90) if len(r) >= 4]
+    teams = []
+    for idx, row in enumerate(rows):
+        h_boxes = row[:5]
+        ry = float(np.median([b[1] + b[3] * 0.5 for b in h_boxes]))
+        row_pets = sorted([p for p in pet_cands if abs((p[1] + p[3] * 0.5) - ry) <= 210], key=lambda p: p[1])
+        teams.append({
+            "round": 1,
+            "layout": "hfc_cards",
+            "set_index": idx,
+            "set_label": f"Comp {idx + 1}",
+            "hero_boxes": h_boxes,
+            "coll_boxes": None,
+            "pet_box": row_pets[0] if row_pets else None,
+            "_hfc_pet_boxes": row_pets[:2],
+            "_ocr_hints": {"modes": ["hunting-fields-contract"], "targets": ["wrizz-no-earrings"]},
+        })
+    return teams
+
+
+def assemble_abex_4x2_grid(img, model=None):
+    """Assemble 4x2 AbEx Boss Comps grid (TheAFKGuys white-background bordered template)."""
+    H, W = img.shape[:2]
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Detect thick horizontal and vertical black border lines dynamically
+    h_lines = np.where((gray < 40).mean(axis=1) > 0.75)[0]
+    h_splits = [
+        int(np.mean(r))
+        for r in np.split(h_lines, np.where(np.diff(h_lines) > 10)[0] + 1)
+        if len(r) > 5
+    ] if len(h_lines) else []
+    v_lines = np.where((gray[round(H * 0.28) :, :] < 40).mean(axis=0) > 0.75)[0]
+    v_splits = [
+        int(np.mean(r))
+        for r in np.split(v_lines, np.where(np.diff(v_lines) > 10)[0] + 1)
+        if len(r) > 5
+    ] if len(v_lines) else []
+
+    if len(h_splits) >= 2:
+        row_bounds = [(h_splits[0], h_splits[1]), (h_splits[1], H)]
+    else:
+        row_bounds = [(round(0.25 * H), round(0.63 * H)), (round(0.63 * H), H)]
+
+    if len(v_splits) >= 3:
+        xs = [0, v_splits[0], v_splits[1], v_splits[2], W]
+        col_bounds = [(xs[i], xs[i + 1]) for i in range(4)]
+    else:
+        col_bounds = [(round(c * W / 4), round((c + 1) * W / 4)) for c in range(4)]
+
+    teams = []
+    for r_idx, (y0, y1) in enumerate(row_bounds):
+        for c_idx, (x0, x1) in enumerate(col_bounds):
+            if r_idx == 1 and c_idx == 3:
+                continue  # Bottom-right cell is the Collections summary panel
+            cell_w = x1 - x0
+            # Locate the primary 5-hero bar (height ~160..240px on white bg) in the top of the cell
+            scan_y0 = y0 + round((y1 - y0) * 0.08)
+            scan_y1 = min(y1, y0 + round((y1 - y0) * 0.30))
+            sub = gray[scan_y0:scan_y1, x0 + round(cell_w * 0.06) : x0 + round(cell_w * 0.72)]
+            if sub.size == 0:
+                continue
+            ys = np.where((sub < 225).mean(axis=1) > 0.50)[0]
+            if len(ys) == 0:
+                continue
+            y_runs = [
+                r
+                for r in np.split(ys, np.where(np.diff(ys) > 5)[0] + 1)
+                if 130 <= (r[-1] - r[0] + 1) <= 280
+            ]
+            if not y_runs:
+                continue
+            best_yr = max(y_runs, key=len)
+            hy = scan_y0 + int(best_yr[0])
+            hh = int(best_yr[-1] - best_yr[0] + 1)
+
+            # Snap exact x-start and stride of the 5 contiguous square hero portraits
+            bar_x0 = x0 + round(cell_w * 0.03)
+            bar_x1 = min(x1, x0 + round(cell_w * 0.78))
+            bar = gray[hy + 12 : min(H, hy + hh - 12), bar_x0:bar_x1]
+            xs_dark = np.where((bar < 225).mean(axis=0) > 0.45)[0] if bar.size else np.array([])
+            if len(xs_dark) > 0:
+                x_start = bar_x0 + int(xs_dark[0])
+                x_end = bar_x0 + int(xs_dark[-1]) + 1
+                total_w = x_end - x_start
+                # If total_w spans ~5 square icons (excluding adjacent chibi pet), divide into 5 equal slots
+                if hh * 4.6 <= total_w <= hh * 5.25:
+                    stride = total_w / 5.0
+                else:
+                    stride = float(hh)
+            else:
+                x_start = x0 + round(cell_w * 0.095)
+                stride = float(hh)
+
+            hw = round(stride)
+            hero_boxes = [[round(x_start + i * stride), hy, hw, hh] for i in range(5)]
+            # Pet chibi sits immediately to the right of slot 5 on the same row; keep clear of black border
+            pet_x = hero_boxes[-1][0] + hw + round(hw * 0.06)
+            pet_w = min(round(hw * 1.15), max(0, (x1 - 30) - pet_x))
+            pet_box = [pet_x, max(0, hy - round(hh * 0.06)), pet_w, round(hh * 1.12)] if pet_w >= 80 else None
+
+            t_idx = len(teams)
+            teams.append({
+                "round": 1,
+                "layout": "abex_4x2_grid",
+                "set_index": t_idx,
+                "set_label": f"Comp {t_idx + 1}",
+                "hero_boxes": hero_boxes,
+                "coll_boxes": None,
+                "pet_box": pet_box,
+                "_ocr_hints": {"modes": ["abyssal-expedition"], "targets": ["s18-final-boss"]},
+            })
+    return teams
+
+
+def assemble_dragonforge_history(img, model):
+    """Assemble Dragonforge Trials Battle History screenshots (single or 2-up side-by-side)."""
+    H, W = img.shape[:2]
+    if model is None:
+        return []
+    halves = [(0, W // 2, "Trial 11"), (W // 2, W, "Trial 12")] if W >= 1600 and H >= 1600 else [(0, W, "Trial")]
+    teams = []
+    for s_idx, (x0, x1, default_label) in enumerate(halves):
+        y0, y1 = round(0.28 * H), round(0.84 * H)
+        crop = img[y0:y1, x0:x1]
+        res = model.predict(source=crop, imgsz=1280, conf=0.20, iou=0.45, max_det=150, device="cpu", verbose=False)[0]
+        r_boxes = [[bx1 + x0, by1 + y0, bx2 + x0, by2 + y0] for bx1, by1, bx2, by2 in res.boxes.xyxy.cpu().tolist()]
+        r_scores = [float(s) for s in res.boxes.conf.cpu().tolist()]
+        norm = normalize_yolo_boxes(r_boxes, r_scores, img.shape, min_px=38)
+        hero_cands = [b for b, _ in norm if 42 <= b[2] <= 95 and 42 <= b[3] <= 95]
+        rows = [r for r in _group_boxes_into_rows(hero_cands, y_tol=20) if len(r) >= 5]
+        # Keep only the 5 ally heroes to the LEFT of the play button in each row;
+        # trim top Lvl bar and bottom star bar so template matching focuses on the portrait.
+        for r_i, row in enumerate(rows[:3]):
+            trimmed = [
+                [
+                    b[0] + round(b[2] * 0.06),
+                    b[1] + round(b[3] * 0.16),
+                    max(24, round(b[2] * 0.88)),
+                    max(24, round(b[3] * 0.68)),
+                ]
+                for b in row[:5]
+            ]
+            teams.append({
+                "round": r_i + 1,
+                "layout": "dragonforge_history",
+                "set_index": s_idx,
+                "set_label": default_label,
+                "hero_boxes": trimmed,
+                "coll_boxes": None,
+                "pet_box": None,
+                "_ocr_hints": {"modes": ["dragonforge-trials"], "targets": ["trial-11", "trial-12"]},
+            })
+    return teams
+
+
+def _attach_temporal_rift_pets(img, model, solved_teams, matcher, type_tensors, pet_meta):
+    """Extract primary + alt pets from the left sub-grid column of Mugen/Rakudayyy Temporal Rift guides."""
+    H, W = img.shape[:2]
+    left_w = min(1048, W)
+    for t in solved_teams:
+        if t.get("pet") is not None:
+            continue
+        h_boxes = [h.get("bbox") for h in t.get("heroes", []) if h.get("bbox")]
+        if not h_boxes:
+            continue
+        hy = float(np.median([b[1] for b in h_boxes]))
+        y0 = max(0, round(hy - 220))
+        y1 = min(H, round(hy + 120))
+        pet_boxes = []
+        if model is not None:
+            res = model.predict(source=img[y0:y1, 0:left_w], imgsz=640, conf=0.20, device="cpu", verbose=False)[0]
+            raw = [
+                [round(b[0]), round(b[1] + y0), round(b[2] - b[0]), round(b[3] - b[1])]
+                for b in res.boxes.xyxy.cpu().tolist()
+            ]
+            # Primary row of left sub-grid sits around y = hy - 150 .. hy - 20; pets sit at x >= 760
+            row_cands = [b for b in raw if 85 <= b[2] <= 125 and 85 <= b[3] <= 125 and (hy - 165) <= b[1] <= (hy - 15)]
+            pet_boxes = sorted([b for b in row_cands if b[0] >= 760], key=lambda b: b[0])
+        if not pet_boxes:
+            pet_boxes = [[792, max(0, round(hy - 105)), 108, 106]]
+
+        matched = []
+        for pb in pet_boxes[:2]:
+            rks = matcher.rank_candidates_in_box(img, pb, "pet", type_tensors, scales=(0.92, 1.0, 1.08), pad_ratio=0.14, stride=2)
+            if rks:
+                best = rks[0]
+                pid = best["id"]
+                meta = next((v for v in pet_meta.values() if v.get("id") == pid), {})
+                matched.append((pb, best, meta))
+        if matched:
+            pb0, best0, meta0 = matched[0]
+            primary_slug = meta0.get("slug", str(best0["id"]))
+            opts = [m[2].get("slug", str(m[1]["id"])) for m in matched]
+            t["pet"] = {
+                "id": best0["id"],
+                "slug": primary_slug,
+                "name": best0["name"],
+                "options": list(dict.fromkeys(opts)),
+                "confidence": round(max(0.1, 1.0 - best0["mse"] / 12000.0), 3),
+                "needs_review": best0["mse"] > 5000,
+                "visual_alternatives": [],
+                "bbox": pb0,
+            }
+
+
 def detect_and_assemble_teams_for_image(
     img,
     model,
@@ -3370,18 +3660,27 @@ def detect_and_assemble_teams_for_image(
     H, W = img.shape[:2]
     if is_hero_lookup_sheet_image(img):
         return []
+    guide_kind, guide_ocr_text = _detect_guide_layout_kind(img)
+    if guide_kind == "hfc":
+        teams_geom = assemble_hfc_cards(img, model)
+    elif guide_kind == "abex_grid":
+        teams_geom = assemble_abex_4x2_grid(img, model)
+    elif guide_kind == "dragonforge_history":
+        teams_geom = assemble_dragonforge_history(img, model)
     # 0. Multi-column 3x6 Nightmare Corridor / Cursed Realm grid (e.g. 3888x5955 5w6pegdl2o1i1.png)
-    if W >= 3400 and H >= 5000:
+    elif W >= 3400 and H >= 5000:
         teams_geom = assemble_multi_column_nc_grid(img, None)
     # 0.5. 4x2 TheAFKGuys TS grid (e.g. 3577x2986)
     elif W >= 3200 and 2400 <= H <= 3400:
         teams_geom = assemble_theafkguys_ts_grid(img)
-    # 1. Tall 2-column community guide (e.g. 3000x6000 nc-mugen-2026-10-infernal-overlord.png)
+    # 1. Tall 2-column community guide (e.g. 3000x6000 nc-mugen-2026-10 or 3000x4500 trift-s16-mugen-2026)
     elif H >= 3000 and W >= 2400:
         raw_boxes, raw_scores = [], []
-        for y0 in range(400, H - 300, 700):
+        y_step = 600 if guide_kind == "temporal_rift" else 700
+        y_end = H - 150 if guide_kind == "temporal_rift" else H - 300
+        for y0 in range(400, y_end, y_step):
             y1 = min(H, y0 + 1100)
-            x0, x1 = 1048, min(W, 2248)
+            x0, x1 = 1048, min(W, 2350 if guide_kind == "temporal_rift" else 2248)
             crop = img[y0:y1, x0:x1]
             res = model.predict(
                 source=crop,
@@ -3411,7 +3710,7 @@ def detect_and_assemble_teams_for_image(
             c_band = [
                 b
                 for b, _ in norm
-                if 85 <= b[2] <= 115 and (h_y_med + 180) <= b[1] <= (h_y_med + 320)
+                if 85 <= b[2] <= 118 and (h_y_med + 130) <= b[1] <= (h_y_med + 340)
             ]
             if len(h_band) < 3 or len(c_band) < 3:
                 continue
@@ -3467,7 +3766,43 @@ def detect_and_assemble_teams_for_image(
     )
     if W >= 3200 and 2400 <= H <= 3400:
         _extract_theafkguys_variants(img, solved_teams, matcher, type_tensors, hero_meta, pet_meta)
-    if H >= 3000 and 2400 <= W < 3400:
+    if guide_kind == "temporal_rift":
+        for t in solved_teams:
+            t["_ocr_hints"] = {"modes": ["temporal-rift"], "targets": ["s16"]}
+        _attach_temporal_rift_pets(img, model, solved_teams, matcher, type_tensors, pet_meta)
+    elif guide_kind == "hfc":
+        for i, t in enumerate(solved_teams):
+            t["_ocr_hints"] = {"modes": ["hunting-fields-contract"], "targets": ["wrizz-no-earrings"]}
+            pet_boxes = teams_geom[i].get("_hfc_pet_boxes", []) if i < len(teams_geom) else []
+            if pet_boxes:
+                matched_pets = []
+                for pb in pet_boxes[:2]:
+                    rks = matcher.rank_candidates_in_box(img, pb, "pet", type_tensors, scales=(0.90, 0.98, 1.06), pad_ratio=0.14, stride=2)
+                    if rks:
+                        best = rks[0]
+                        pid = best["id"]
+                        meta = next((v for v in pet_meta.values() if v.get("id") == pid), {})
+                        matched_pets.append((pb, best, meta))
+                if matched_pets:
+                    pb0, best0, meta0 = matched_pets[0]
+                    opts = [m[2].get("slug", str(m[1]["id"])) for m in matched_pets]
+                    t["pet"] = {
+                        "id": best0["id"],
+                        "slug": meta0.get("slug", str(best0["id"])),
+                        "name": best0["name"],
+                        "options": list(dict.fromkeys(opts)),
+                        "confidence": round(max(0.1, 1.0 - best0["mse"] / 12000.0), 3),
+                        "needs_review": best0["mse"] > 5000,
+                        "visual_alternatives": [],
+                        "bbox": pb0,
+                    }
+    elif guide_kind == "abex_grid":
+        for t in solved_teams:
+            t["_ocr_hints"] = {"modes": ["abyssal-expedition"], "targets": ["s18-final-boss"]}
+    elif guide_kind == "dragonforge_history":
+        for t in solved_teams:
+            t["_ocr_hints"] = {"modes": ["dragonforge-trials"], "targets": ["trial-11", "trial-12"]}
+    elif H >= 3000 and 2400 <= W < 3400:
         left_rounds = decode_left_panel_rounds(
             img, matcher, type_tensors, hero_meta, pet_meta
         )
@@ -3786,7 +4121,14 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             hints["targets"] = [t for t in hints["targets"] if t in allowed_t]
 
     for t in solved_teams:
-        t["_ocr_hints"] = hints
+        existing = t.get("_ocr_hints") or {}
+        if existing.get("modes") or existing.get("targets"):
+            t["_ocr_hints"] = {
+                "modes": list(dict.fromkeys([*(existing.get("modes") or []), *hints.get("modes", [])])),
+                "targets": list(dict.fromkeys([*(existing.get("targets") or []), *hints.get("targets", [])])),
+            }
+        else:
+            t["_ocr_hints"] = hints
 
     # 2. Left-side per-round NC kill times & CR damage numbers
     is_tall_dual = H >= 3000 and 2400 <= W < 3400

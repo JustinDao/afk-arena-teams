@@ -71,6 +71,7 @@ h3,
 
 .modes {
   display: flex;
+  flex-wrap: wrap;
   max-width: 100%;
   min-width: 0;
   overflow-y: hidden;
@@ -82,6 +83,12 @@ h3,
   scroll-snap-type: x proximity;
   scrollbar-color: var(--app-primary) transparent;
   scrollbar-width: thin;
+}
+
+@media (max-width: 720px) {
+  .modes {
+    flex-wrap: nowrap;
+  }
 }
 
 .modes::-webkit-scrollbar {

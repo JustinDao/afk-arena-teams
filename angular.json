@@ -59,6 +59,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "preview": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.example.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -71,6 +82,9 @@
             },
             "development": {
               "buildTarget": "lineups:build:development"
+            },
+            "preview": {
+              "buildTarget": "lineups:build:preview"
             }
           },
           "defaultConfiguration": "development"

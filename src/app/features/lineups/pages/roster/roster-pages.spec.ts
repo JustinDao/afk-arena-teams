@@ -87,9 +87,9 @@ describe('roster pages', () => {
     const router = TestBed.inject(Router);
     const store = TestBed.inject(LineupsStore);
 
-    await harness.navigateByUrl('/tr');
-    expect(router.url).toBe('/twisted-realm');
-    expect(store.mode()).toBe('twisted-realm');
+    await harness.navigateByUrl('/cr');
+    expect(router.url).toBe('/cursed-realm');
+    expect(store.mode()).toBe('cursed-realm');
     await harness.navigateByUrl('/ts');
     expect(router.url).toBe('/treasure-scramble');
     expect(store.mode()).toBe('treasure-scramble');

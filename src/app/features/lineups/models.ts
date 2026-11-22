@@ -244,6 +244,8 @@ export interface SubmissionFormValue {
   readonly target: string;
   readonly notes: string;
   readonly damage: string;
+  readonly floor?: string;
+  readonly stars?: string;
   readonly rcLevel?: string;
   readonly placementType: '' | 'rank' | 'percent';
   readonly placementValue: string;
@@ -258,19 +260,6 @@ export interface GameReferenceData {
 export const FORMATION_LAYOUT = [2, 3] as const;
 
 export const MODES: readonly ModeConfig[] = [
-  {
-    slug: 'twisted-realm',
-    short: 'TR',
-    name: 'Twisted Realm',
-    targetLabel: 'Boss',
-    targetAll: 'All bosses',
-    targets: ['Kane', 'Demonic Entity', 'The Unhinged', 'Ice Shemira', 'Burning Brute', 'Grotesque Mage', 'Dune Destroyer'],
-    rules: 'One team per run. Heroes are level-matched to the account Resonating Crystal level; gear and ascension still count. The boss rotates every couple of days.',
-    formations: [{ key: 'team', label: 'Team' }],
-    collectionsEnabled: true,
-    allowPartialFormations: true,
-    fields: [{ k: 'damage', l: 'Damage dealt', t: 'damage', ph: 'e.g. 1.84B' }],
-  },
   {
     slug: 'nightmare-corridor',
     short: 'NC',
@@ -361,9 +350,72 @@ export const MODES: readonly ModeConfig[] = [
     allowPartialFormations: true,
     fields: [],
   },
+  {
+    slug: 'heroes-of-esperia',
+    short: 'HoE',
+    name: 'Heroes of Esperia',
+    targetLabel: 'Season',
+    targetAll: 'All seasons',
+    targets: ['Current Season'],
+    rules: 'Up to seven PvP teams for Heroes of Esperia. Mercenaries are not allowed and a hero can only appear once per lineup.',
+    variable: { min: 1, max: 7, default: 7 },
+    uniqueAcross: true,
+    mercMax: 0,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
+    fields: [],
+  },
+  {
+    slug: 'temporal-rift',
+    short: 'TRift',
+    name: 'Temporal Rift',
+    targetLabel: 'Season',
+    targetAll: 'All seasons',
+    targets: ['S16', 'S17'],
+    rules: 'Season-long run using up to five teams. Record the floor reached and any beacon/trait enhancer notes.',
+    variable: { min: 1, max: 5, default: 5 },
+    uniqueAcross: true,
+    mercMax: 0,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
+    fields: [{ k: 'floor', l: 'Floor reached', t: 'int', ph: 'e.g. 300' }],
+  },
+  {
+    slug: 'hunting-fields-contract',
+    short: 'HFC',
+    name: 'Hunting Fields Contract',
+    targetLabel: 'Contract',
+    targetAll: 'All contracts',
+    targets: ['Wrizz — No Earrings', 'Adrax — No Earrings', 'Adrax — Ranger Buff', 'Adrax — Mage Buff', 'Adrax — Tank Buff'],
+    rules: 'Always two teams under the active Hunting Fields Contract buff or trait restriction (e.g. No Earrings, Ranger Buff). Record per-team or total boss damage.',
+    formations: [
+      { key: 'team-1', label: 'Team 1' },
+      { key: 'team-2', label: 'Team 2' },
+    ],
+    uniqueAcross: true,
+    mercMax: 0,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
+    fields: [{ k: 'damage', l: 'Total damage', t: 'damage', ph: 'e.g. 72B' }],
+  },
+  {
+    slug: 'abyssal-expedition',
+    short: 'AbEx',
+    name: 'Abyssal Expedition',
+    targetLabel: 'Boss / Phase',
+    targetAll: 'All bosses',
+    targets: ['S18 — Final Boss', 'S18 — Gate Bosses'],
+    rules: 'Boss and gate compositions grouped by relic branch or phase. Heroes may repeat across competing compositions.',
+    variable: { min: 1, max: 6, default: 3 },
+    uniqueAcross: false,
+    mercMax: 0,
+    collectionsEnabled: true,
+    allowPartialFormations: true,
+    fields: [{ k: 'damage', l: 'Boss damage', t: 'damage', ph: 'e.g. 120B' }],
+  },
 ];
 
-export const UPCOMING_MODES = ['Arena of Heroes', "Legends' Challenger", 'Temporal Rift'] as const;
+export const UPCOMING_MODES = [] as const;
 
 export const RECOMMENDATION_CATEGORIES = [
   { key: 'standard-4f', label: '4F' },

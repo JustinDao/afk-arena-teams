@@ -78,9 +78,16 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                     H, W = img.shape[:2]
                     hbs = [h["bbox"] for h in heroes if h.get("bbox") and len(h["bbox"]) == 4]
                     if hbs:
+                        avg_hw = sum(b[2] for b in hbs) / len(hbs)
+                        pb = (team.get("pet") or {}).get("bbox")
+                        right_edge = max(b[0] + b[2] for b in hbs)
+                        if pb and len(pb) == 4:
+                            right_edge = max(right_edge, pb[0] + pb[2] + 40)
+                        else:
+                            right_edge += max(260, round(avg_hw * 1.8))
                         x0 = max(0, min(b[0] for b in hbs) - 40)
                         y0 = max(0, min(b[1] for b in hbs) - 60)
-                        x1 = min(W, max(b[0] + b[2] for b in hbs) + 260)
+                        x1 = min(W, right_edge)
                         y1 = min(H, max(b[1] + b[3] for b in hbs) + 120)
                     else:
                         x0, y0, x1, y1 = 0, 0, W, min(H, 600)
@@ -101,6 +108,13 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                             "top3": top3,
                         })
 
+                    pet = team.get("pet") or {}
+                    pet_entry = {
+                        "name": pet.get("name"),
+                        "options": pet.get("options") or ([pet.get("slug")] if pet.get("slug") else []),
+                        "confidence": round(float(pet.get("confidence") or 0.0), 2),
+                    } if pet.get("name") else None
+
                     items.append({
                         "id": item_id,
                         "crop": crop_rel,
@@ -114,6 +128,7 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                         "team_num": t_idx + 1,
                         "sus_heroes": sus_heroes,
                         "reprocessed": True,
+                        "pet": pet_entry,
                         "heroes": hero_entries,
                     })
 

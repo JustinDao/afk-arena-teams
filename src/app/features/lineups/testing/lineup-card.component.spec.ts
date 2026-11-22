@@ -14,7 +14,7 @@ describe('LineupCardComponent', () => {
       providers: [provideRouter([])],
     }).compileComponents();
     const fixture = TestBed.createComponent(LineupCardComponent);
-    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'twisted-realm')!;
+    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'cursed-realm')!;
     const submission = {
       ...sample,
       forms: sample.forms.map((formation) => ({
@@ -88,7 +88,7 @@ describe('LineupCardComponent', () => {
     const originalOrientation = preferences.orientation();
     if (preferences.orientation() !== 'front-right') preferences.toggleOrientation();
     const fixture = TestBed.createComponent(LineupCardComponent);
-    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'twisted-realm')!;
+    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'cursed-realm')!;
     const submission = {
       ...sample,
       forms: sample.forms.map((formation) => ({
@@ -149,7 +149,7 @@ describe('LineupCardComponent', () => {
       providers: [provideRouter([])],
     }).compileComponents();
     const fixture = TestBed.createComponent(LineupCardComponent);
-    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'twisted-realm')!;
+    const sample = SAMPLE_SUBMISSIONS.find(({ mode }) => mode === 'cursed-realm')!;
     const submission = {
       ...sample,
       forms: sample.forms.map((formation) => ({
@@ -186,7 +186,7 @@ describe('LineupCardComponent', () => {
     const card = await loader.getHarness(LineupCardHarness);
 
     expect(await card.title()).toBe(submission.target);
-    expect(fixture.nativeElement.querySelector('.tag')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tag')?.textContent?.trim()).toBe('merc');
     expect(fixture.nativeElement.querySelector('.hero')?.style.getPropertyValue('--hero-faction-color')).toBe('#83cfff');
     expect(fixture.nativeElement.querySelector('app-pet-badge')).not.toBeNull();
     await card.clickVote();

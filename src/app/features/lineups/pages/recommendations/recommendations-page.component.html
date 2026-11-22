@@ -13,7 +13,7 @@
     } @else {
       <div class="row-wrap" role="group" aria-label="Modes to recommend for">
         <span class="muted">Modes</span>
-        <button mat-button class="chip" [attr.aria-pressed]="state.selectedModes().length === 0" (click)="state.toggleMode(null)">All</button>
+        <button mat-button class="chip" [attr.aria-pressed]="state.selectedModes().length === 0" (click)="state.toggleMode(null)">Overall (NC / CR / TS)</button>
         @for (mode of store.modes(); track mode.slug) {
           <button mat-button class="chip" [attr.aria-pressed]="state.modeSelected(mode.slug)" (click)="state.toggleMode(mode.slug)">{{ mode.name }}</button>
         }

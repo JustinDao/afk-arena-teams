@@ -1166,7 +1166,9 @@ export class LineupsStore {
 
     const forms = draft.forms.map((form) => {
       const parsedTime = draft.mode === 'nightmare-corridor' ? parseDuration(form.time) : null;
-      const parsedDmg = draft.mode === 'cursed-realm' ? parseDamage(form.damage ?? '') : null;
+      const parsedDmg = draft.mode === 'cursed-realm' || draft.mode === 'hunting-fields-contract'
+        ? parseDamage(form.damage ?? '')
+        : null;
       return {
         key: form.key,
         label: form.label,
@@ -1188,7 +1190,7 @@ export class LineupsStore {
         }]),
       };
     });
-    if (draft.mode === 'cursed-realm' && result['damage'] === undefined) {
+    if ((draft.mode === 'cursed-realm' || draft.mode === 'hunting-fields-contract') && result['damage'] === undefined) {
       const roundDamages = forms.map((f) => f.damage).filter((d): d is number => d !== null && d > 0);
       if (roundDamages.length > 0) {
         result['damage'] = roundDamages.reduce((sum, d) => sum + d, 0);
@@ -1296,11 +1298,18 @@ export class LineupsStore {
       const total = submission.forms.reduce((sum, f) => sum + (f.timeSeconds ?? 0), 0);
       return `${countLabel(submission.forms.length, 'boss kill time')} (${formatDuration(total)} total)`;
     }
-    if (submission.mode === 'treasure-scramble') {
+    if (submission.mode === 'treasure-scramble' || submission.mode === 'heroes-of-esperia') {
       if (result['placement'] === undefined) return 'Result not reported';
       return result['placementType'] === 'rank'
         ? `Rank ${result['placement']}`
         : `Top ${result['placement']}%`;
+    }
+    if (submission.mode === 'temporal-rift') {
+      return result['floor'] === undefined ? 'Floor not reported' : `Floor ${result['floor']}`;
+    }
+    if (submission.mode === 'dragonforge-trials') {
+      if (result['stars'] === undefined) return 'Stars not reported';
+      return countLabel(Number(result['stars']), 'star');
     }
     if (result['damage'] === undefined) return 'Damage not reported';
     return `${this.formatDamage(Number(result['damage']))} damage${submission.mode === 'cursed-realm' ? ' in total' : ''}`;

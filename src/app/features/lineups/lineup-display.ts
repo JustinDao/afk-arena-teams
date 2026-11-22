@@ -33,11 +33,18 @@ export function resultLine(submission: Submission): string {
     const total = submission.forms.reduce((sum, f) => sum + (f.timeSeconds ?? 0), 0);
     return `${countLabel(submission.forms.length, 'boss kill time')} (${formatDuration(total)} total)`;
   }
-  if (submission.mode === 'treasure-scramble') {
+  if (submission.mode === 'treasure-scramble' || submission.mode === 'heroes-of-esperia') {
     if (result['placement'] === undefined) return 'Result not reported';
     return result['placementType'] === 'rank'
       ? `Rank ${result['placement']}`
       : `Top ${result['placement']}%`;
+  }
+  if (submission.mode === 'temporal-rift') {
+    return result['floor'] === undefined ? 'Floor not reported' : `Floor ${result['floor']}`;
+  }
+  if (submission.mode === 'dragonforge-trials') {
+    if (result['stars'] === undefined) return 'Stars not reported';
+    return countLabel(Number(result['stars']), 'star');
   }
   if (result['damage'] === undefined) return 'Damage not reported';
   return `${formatDamage(Number(result['damage']))} damage${submission.mode === 'cursed-realm' ? ' in total' : ''}`;

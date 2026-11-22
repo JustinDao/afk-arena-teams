@@ -308,7 +308,10 @@
                   <span class="hero-debug">MSE ${h.mse} · top3: ${escapeHtml((h.top3 || []).join(', '))}</span>
                 </div>
               `).join('')}
-              ${item.pet ? `<div class="hero-row"><span><strong>Pet:</strong> ${escapeHtml(item.pet)}</span></div>` : ''}
+              <div class="hero-row">
+                <span class="hero-name">Pet: ${item.pet ? escapeHtml(typeof item.pet === 'string' ? item.pet : item.pet.name) : 'None'}</span>
+                <span class="hero-debug">${item.pet && typeof item.pet === 'object' ? `conf ${item.pet.confidence}${(item.pet.options || []).length > 1 ? ' · alts: ' + escapeHtml(item.pet.options.join(' > ')) : ''}` : ''}</span>
+              </div>
             </div>
             <div class="actions">
               <button class="btn-real ${rev.status === 'real' ? 'active' : ''}" data-action="real">Real / Keep</button>

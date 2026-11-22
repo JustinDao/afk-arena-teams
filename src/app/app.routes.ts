@@ -1,35 +1,50 @@
 import { Routes } from '@angular/router';
 
 export const MODE_PATHS: Readonly<Record<string, string>> = {
-  'twisted-realm': '/twisted-realm',
   'treasure-scramble': '/treasure-scramble',
   'cursed-realm': '/cursed-realm',
   'nightmare-corridor': '/nightmare-corridor',
+  'heroes-of-esperia': '/heroes-of-esperia',
+  'temporal-rift': '/temporal-rift',
+  'hunting-fields-contract': '/hunting-fields-contract',
+  'abyssal-expedition': '/abyssal-expedition',
 };
 
 export const MODE_SLUGS_BY_PATH: Readonly<Record<string, string>> = {
-  tr: 'twisted-realm',
-  'twisted-realm': 'twisted-realm',
   ts: 'treasure-scramble',
   'treasure-scramble': 'treasure-scramble',
   cr: 'cursed-realm',
   'cursed-realm': 'cursed-realm',
   nc: 'nightmare-corridor',
   'nightmare-corridor': 'nightmare-corridor',
+  hoe: 'heroes-of-esperia',
+  'heroes-of-esperia': 'heroes-of-esperia',
+  trift: 'temporal-rift',
+  'temporal-rift': 'temporal-rift',
+  hfc: 'hunting-fields-contract',
+  'hunting-fields-contract': 'hunting-fields-contract',
+  abex: 'abyssal-expedition',
+  'abyssal-expedition': 'abyssal-expedition',
 };
 
 const lineupsPage = () => import('./features/lineups/pages/lineups-page.component').then((m) => m.LineupsPageComponent);
 
 export const APP_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'nightmare-corridor' },
-  { path: 'tr', pathMatch: 'full', redirectTo: 'twisted-realm' },
   { path: 'ts', pathMatch: 'full', redirectTo: 'treasure-scramble' },
   { path: 'cr', pathMatch: 'full', redirectTo: 'cursed-realm' },
   { path: 'nc', pathMatch: 'full', redirectTo: 'nightmare-corridor' },
-  { path: 'twisted-realm', loadComponent: lineupsPage, data: { mode: 'twisted-realm' } },
+  { path: 'hoe', pathMatch: 'full', redirectTo: 'heroes-of-esperia' },
+  { path: 'trift', pathMatch: 'full', redirectTo: 'temporal-rift' },
+  { path: 'hfc', pathMatch: 'full', redirectTo: 'hunting-fields-contract' },
+  { path: 'abex', pathMatch: 'full', redirectTo: 'abyssal-expedition' },
   { path: 'treasure-scramble', loadComponent: lineupsPage, data: { mode: 'treasure-scramble' } },
   { path: 'cursed-realm', loadComponent: lineupsPage, data: { mode: 'cursed-realm' } },
   { path: 'nightmare-corridor', loadComponent: lineupsPage, data: { mode: 'nightmare-corridor' } },
+  { path: 'heroes-of-esperia', loadComponent: lineupsPage, data: { mode: 'heroes-of-esperia' } },
+  { path: 'temporal-rift', loadComponent: lineupsPage, data: { mode: 'temporal-rift' } },
+  { path: 'hunting-fields-contract', loadComponent: lineupsPage, data: { mode: 'hunting-fields-contract' } },
+  { path: 'abyssal-expedition', loadComponent: lineupsPage, data: { mode: 'abyssal-expedition' } },
   {
     path: 'lineup/:id',
     loadComponent: () => import('./features/lineups/pages/lineup-detail-page.component').then((m) => m.LineupDetailPageComponent),

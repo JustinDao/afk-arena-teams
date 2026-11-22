@@ -165,7 +165,7 @@ describe('LineupsStore', () => {
   });
 
   it('allows omitted and partially filled rounds in every mode, but requires at least one hero', async () => {
-    for (const mode of ['twisted-realm', 'nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
+    for (const mode of ['nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
       store.openDraft();
       store.changeDraftMode(mode);
       const target = mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane';
@@ -182,7 +182,7 @@ describe('LineupsStore', () => {
         target,
         notes: '',
         damage: '',
-        rcLevel: mode === 'twisted-realm' ? '600' : '',
+        rcLevel: '',
         placementType: '',
         placementValue: '',
       });
@@ -197,12 +197,12 @@ describe('LineupsStore', () => {
     }
 
     store.openDraft();
-    store.changeDraftMode('twisted-realm');
+    store.changeDraftMode('cursed-realm');
     await store.submitDraft({
       target: 'Kane',
       notes: '',
       damage: '',
-      rcLevel: '550',
+      rcLevel: '',
       placementType: '',
       placementValue: '',
     });
@@ -224,7 +224,7 @@ describe('LineupsStore', () => {
     store.setTeamCount(7);
     expect(store.visibleSubmissions().length).toBeLessThan(all);
     expect(store.visibleSubmissions().every(({ submission }) => submission.forms.length === 7)).toBeTrue();
-    store.setMode('twisted-realm');
+    store.setMode('cursed-realm');
     expect(store.teamCount()).toBeNull();
   });
 
@@ -250,8 +250,8 @@ describe('LineupsStore', () => {
     }
   });
 
-  it('includes a pet and level on every Twisted Realm and Treasure Scramble example team', () => {
-    const examples = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'twisted-realm' || mode === 'treasure-scramble');
+  it('includes a pet and level on every Treasure Scramble example team', () => {
+    const examples = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'treasure-scramble');
     expect(examples.length).toBeGreaterThan(0);
     for (const example of examples) {
       expect(example.forms.every(({ petId, petLevel }) => petId !== null && petLevel !== null)).toBeTrue();
@@ -286,17 +286,13 @@ describe('LineupsStore', () => {
     ]);
   });
 
-  it('records Resonating Crystal level for Twisted Realm and uses TS placement as its metric', () => {
-    const twistedRealm = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'twisted-realm');
-    expect(twistedRealm.every(({ heroLevel }) => heroLevel !== null)).toBeTrue();
-    expect(twistedRealm.flatMap(({ forms }) => forms.flatMap(({ heroes }) => heroes)).every(({ merc }) => !merc)).toBeTrue();
-
+  it('uses TS placement as its metric', () => {
     const treasureExamples = SAMPLE_SUBMISSIONS.filter(({ mode }) => mode === 'treasure-scramble');
     expect(treasureExamples.map(resultLine)).toEqual(['Top 1%', 'Rank 37']);
   });
 
   it('allows submissions without reporting results in any mode', async () => {
-    for (const mode of ['twisted-realm', 'nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
+    for (const mode of ['nightmare-corridor', 'cursed-realm', 'treasure-scramble']) {
       store.openDraft();
       store.changeDraftMode(mode);
       store.updateDraftTarget(mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane');
@@ -312,7 +308,7 @@ describe('LineupsStore', () => {
         target: mode === 'nightmare-corridor' ? 'Netherspinner' : mode === 'treasure-scramble' ? 'Fire' : 'Kane',
         notes: '',
         damage: '',
-        rcLevel: mode === 'twisted-realm' ? '600' : '',
+        rcLevel: '',
         placementType: '',
         placementValue: '',
       });
@@ -327,23 +323,23 @@ describe('LineupsStore', () => {
 
   it('keeps custom collection builds as submission snapshots without adding them to roster inventory', async () => {
     store.openDraft();
-    store.changeDraftMode('twisted-realm');
-    store.updateDraftTarget('Kane');
+    store.changeDraftMode('nightmare-corridor');
+    store.updateDraftTarget('Netherspinner');
     store.heroes().slice(0, 5).forEach(({ id }) => store.pickHero(id));
     store.startDraftCollectionSnapshot(0);
     store.updateDraftCollectionSnapshot(0, 1, [{ slotIndex: 0, stat: 'atk', tier: 'mythic' }]);
 
     await store.submitDraft({
-      target: 'Kane',
+      target: 'Netherspinner',
       notes: '',
-      damage: '100M',
-      rcLevel: '5000',
+      damage: '',
+      rcLevel: '',
       placementType: 'rank',
       placementValue: '',
     });
 
     const submission = store.submissions()[0];
-    expect(submission.heroLevel).toBe(5000);
+    expect(submission.heroLevel).toBeNull();
     expect(store.heroLevel()).toBeNull();
     expect(submission.forms[0].heroes[0].collection).toEqual({
       catalogId: 1,
