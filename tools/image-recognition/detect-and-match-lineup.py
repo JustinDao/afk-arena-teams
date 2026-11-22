@@ -566,7 +566,7 @@ def assemble_staggered_teams(img, norm_boxes):
     cand.sort(key=lambda b: b[1])
     rounds_raw = []
     for b in cand:
-        if not rounds_raw or (b[1] - rounds_raw[-1][-1][1]) > round(115 * scale):
+        if not rounds_raw or (b[1] - rounds_raw[-1][-1][1]) > round(180 * scale):
             rounds_raw.append([b])
         else:
             rounds_raw[-1].append(b)
@@ -610,6 +610,13 @@ def assemble_staggered_teams(img, norm_boxes):
 
         y_0 = left_col[0][1]
         if (
+            len(left_col) == 1
+            and len(right_col) >= 2
+            and (left_col[0][1] - right_col[0][1]) > 1.7 * dy
+            and y_0 > 2 * dy
+        ):
+            y_0 = y_0 - 2 * dy
+        elif (
             len(left_col) == 2
             and (left_col[1][1] - left_col[0][1]) < 1.5 * dy
             and right_col[-1][1] < left_col[-1][1]
