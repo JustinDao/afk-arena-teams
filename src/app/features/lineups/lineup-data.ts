@@ -131,14 +131,6 @@ add('treasure-scramble', 'Frost', 39, 7, { placementType: 'rank', placement: 37 
   'Elijah & Lailah;Brutus;Randle;Aurelia;Saitama',
 ));
 
-add('heroes-of-esperia', 'Current Season', 84, 2, {}, treasureFormations(
-  'Lucius (Awakened);Gavus (Awakened);Aurelia;Misha;Jerome',
-  'Envydiel (Awakened);Lan;Knox;Alvida;Palmer',
-  'Shemira (Awakened);Lucilla;Liberta;Daemia;Ivan',
-  'Sung Jinwoo;Skylan;Lyca (Awakened);Lysander;Lavatune',
-  'Hybris;Fawkes (Awakened);Pippa (Awakened);Begris;Shuna',
-), '5-team HoE meta setup. Use Sung Jinwoo/Skylan against stall comps and avoid putting your main carry in pos 4 vs Lysander.');
-
 add('temporal-rift', 'S16', 112, 3, { floor: 300 }, [
   formation('t1', 'Team 1', 'Adrian & Elyse|409e36;Misfortis|303e61;Belinda (Awakened)|409e60;Lavatune|4012e62;Shuna|309e36', 'Trickery Chest'),
   formation('t2', 'Team 2', 'Alvida|409e36;Gavus (Awakened)|309e60;Aurelia|409e62;Mira|209e30;Melion|409e61', 'Nightfall Pegasus'),
