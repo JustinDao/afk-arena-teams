@@ -242,19 +242,26 @@ def detect_hero_investment(img, hbox):
     if sw < 160:
         return None
 
+    # Skip layouts that never render Mugen-style portrait investment badges (e.g. Groody grids).
+    img_h, img_w = img.shape[:2]
+    if img_w >= 3200 and img_h >= 4000:
+        return None
+
     dmask = tmpls["dmask"]
     si_val, si_sc = _match_investment_badge(
-        strip[:, : min(82, sw)], tmpls["si"], dmask, min_score=0.45, digit_weight=0.30
+        strip[:, : min(82, sw)], tmpls["si"], dmask, min_score=0.52, digit_weight=0.30
     )
     fn_val, fn_sc = _match_investment_badge(
-        strip[:, min(54, sw) : min(136, sw)], tmpls["furn"], dmask, min_score=0.44, digit_weight=0.50
+        strip[:, min(54, sw) : min(136, sw)], tmpls["furn"], dmask, min_score=0.52, digit_weight=0.50
     )
     en_tier, en_sc = _match_investment_badge(
-        strip[:, min(108, sw) : sw], tmpls["eng"], dmask, min_score=0.45, digit_weight=0.30
+        strip[:, min(108, sw) : sw], tmpls["eng"], dmask, min_score=0.52, digit_weight=0.30
     )
 
-    # Require at least one confident badge so non-badge screenshots don't false-positive.
-    if si_val == 0 and fn_val == 0 and en_tier == 0:
+    # Require at least one high-confidence badge (>= 0.73) so non-badge screenshots
+    # (Groody, mcwhare, TheAFKGuys, max ~0.71) never hallucinate fake SI 0 / 12F investments.
+    best_sc = max(si_sc, fn_sc, en_sc)
+    if best_sc < 0.73 or (si_val == 0 and fn_val == 0 and en_tier == 0):
         return None
 
     en_override = (
@@ -265,11 +272,11 @@ def detect_hero_investment(img, hbox):
     eng_val = en_override if en_override is not None else en_tier
     code = f"{si_val:02d}{fn_val}e{eng_val}"
     return {
-        "si": si_val,
+        "si": si_val if si_val > 0 else None,
         "furn": fn_val,
         "eng": eng_val,
         "code": code,
-        "confidence": round(max(si_sc, fn_sc, en_sc), 3),
+        "confidence": round(best_sc, 3),
     }
 
 
