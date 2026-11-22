@@ -27,6 +27,8 @@ export class RosterHeroesComponent {
   readonly factionFilter = signal('');
   readonly classFilter = signal('');
   readonly typeFilter = signal<HeroAttribute | ''>('');
+  readonly searchQuery = signal('');
+  readonly normalizedSearchQuery = computed(() => this.searchQuery().trim().toLocaleLowerCase());
   readonly addingHero = signal(false);
   readonly editingHeroId = signal<number | null>(null);
   readonly editingHero = computed(() => {
@@ -42,9 +44,13 @@ export class RosterHeroesComponent {
     heroClass: this.classFilter(),
     type: this.typeFilter(),
   }, this.heroIcons));
-  readonly ownedFilteredHeroes = computed(() =>
-    this.filteredHeroes().filter((hero) => this.store.roster()[hero.id]),
-  );
+  readonly ownedFilteredHeroes = computed(() => {
+    const query = this.normalizedSearchQuery();
+    return this.filteredHeroes().filter((hero) =>
+      this.store.roster()[hero.id]
+      && (!query || displayHeroName(hero).toLocaleLowerCase().includes(query)),
+    );
+  });
   readonly busy = computed(() =>
     this.auth.configured && (!this.store.backendReady() || this.store.rosterDetailsLoading()),
   );
@@ -54,6 +60,10 @@ export class RosterHeroesComponent {
     if (!(input instanceof HTMLInputElement) || input.value.trim() === '') return null;
     const value = Number(input.value);
     return Number.isInteger(value) ? value : null;
+  }
+
+  setSearch(event: Event): void {
+    if (event.target instanceof HTMLInputElement) this.searchQuery.set(event.target.value);
   }
 
   displayName(hero: Hero): string {

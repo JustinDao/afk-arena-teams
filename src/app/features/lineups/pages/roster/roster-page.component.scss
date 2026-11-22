@@ -257,6 +257,19 @@
   background: var(--app-panel);
 }
 
+.roster-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-2);
+  margin-top: var(--app-space-2);
+}
+
+.roster-hero-search {
+  width: min(100%, 280px);
+  margin-top: 0;
+}
+
 .hero-box.captioned {
   grid-template-columns: repeat(auto-fill, 96px);
   gap: var(--app-space-2);

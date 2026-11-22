@@ -341,4 +341,44 @@ describe('roster pages', () => {
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_stats_icon/atk_m.webp',
     );
   });
+
+  it('filters owned heroes by name when searching on the hero roster page', async () => {
+    const harness = await RouterTestingHarness.create();
+    await navigateTo(harness, '/roster/heroes', RosterHeroesComponent);
+    const store = TestBed.inject(LineupsStore);
+    const rowan = store.heroes().find(({ name }) => name === 'Rowan');
+    const lyca = store.heroes().find(({ name }) => name === 'Lyca');
+    expect(rowan).toBeDefined();
+    expect(lyca).toBeDefined();
+    if (!rowan || !lyca) return;
+
+    store.toggleHero(rowan.id);
+    store.toggleHero(lyca.id);
+    harness.detectChanges();
+
+    const searchInput = harness.routeNativeElement?.querySelector('#roster-hero-search') as HTMLInputElement | null;
+    expect(searchInput).not.toBeNull();
+    if (!searchInput) return;
+
+    searchInput.value = 'row';
+    searchInput.dispatchEvent(new Event('input'));
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.querySelector('[title="Rowan"]')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('[title="Lyca"]')).toBeNull();
+
+    searchInput.value = 'zzz-no-match';
+    searchInput.dispatchEvent(new Event('input'));
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.querySelector('[title="Rowan"]')).toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('No owned heroes match these filters.');
+
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.querySelector('[title="Rowan"]')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('[title="Lyca"]')).not.toBeNull();
+  });
 });
