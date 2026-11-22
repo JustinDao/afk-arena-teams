@@ -77,6 +77,90 @@ COLLECTION_NODE_TIERS = (
 )
 TENSOR_TEMPLATE_SIZE = 64
 _TENSOR_CACHE = {}
+_HERO_EMB_MODEL = False
+_HERO_EMB_CACHE = {}
+
+
+def _get_hero_emb_model():
+    global _HERO_EMB_MODEL
+    if _HERO_EMB_MODEL is not False:
+        return _HERO_EMB_MODEL
+    try:
+        import torch
+        from torchvision import models
+
+        weights = models.MobileNet_V3_Small_Weights.DEFAULT
+        base = models.mobilenet_v3_small(weights=weights)
+        base.eval()
+
+        class _Embedder(torch.nn.Module):
+            def __init__(self, net):
+                super().__init__()
+                self.features = net.features
+                self.pool = net.avgpool
+
+            def forward(self, x):
+                f = self.pool(self.features(x)).flatten(1)
+                return torch.nn.functional.normalize(f, p=2, dim=1)
+
+        _HERO_EMB_MODEL = (_Embedder(base), torch)
+    except Exception:
+        _HERO_EMB_MODEL = None
+    return _HERO_EMB_MODEL
+
+
+def _embed_bgr_batch(bgr_list):
+    bundle = _get_hero_emb_model()
+    if bundle is None or not bgr_list:
+        return None
+    model, torch = bundle
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 3, 1, 1)
+    std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 3, 1, 1)
+    arrs = []
+    for bgr in bgr_list:
+        h, w = bgr.shape[:2]
+        # Center crop 8%..92% to reduce corner badge influence
+        y0, y1 = max(0, round(h * 0.08)), min(h, round(h * 0.92))
+        x0, x1 = max(0, round(w * 0.08)), min(w, round(w * 0.92))
+        sub = bgr[y0:y1, x0:x1] if (y1 - y0 >= 12 and x1 - x0 >= 12) else bgr
+        rgb = cv2.cvtColor(cv2.resize(sub, (128, 128), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
+        arrs.append(rgb.astype(np.float32).transpose(2, 0, 1) / 255.0)
+    batch = (np.stack(arrs, axis=0) - mean) / std
+    with torch.no_grad():
+        embs = model(torch.from_numpy(batch)).cpu().numpy().astype(np.float32)
+    return embs
+
+
+def _get_hero_template_embeddings(items, cache_root=None):
+    key = (id(items), len(items))
+    if key in _HERO_EMB_CACHE:
+        return _HERO_EMB_CACHE[key]
+    if cache_root is None:
+        cache_root = Path.home() / ".cache" / "afk-icon-detector-benchmark" / "identity-assets"
+    cache_file = cache_root / f"hero_emb_mv3s_n{len(items)}.npy"
+    if cache_file.is_file():
+        try:
+            embs = np.load(str(cache_file))
+            if embs.shape[0] == len(items):
+                _HERO_EMB_CACHE[key] = embs
+                return embs
+        except Exception:
+            pass
+    bgrs = [it[0]["image"][:, :, :3].astype(np.uint8) for it in items]
+    chunks = []
+    for i in range(0, len(bgrs), 64):
+        e = _embed_bgr_batch(bgrs[i : i + 64])
+        if e is None:
+            return None
+        chunks.append(e)
+    embs = np.concatenate(chunks, axis=0)
+    try:
+        cache_root.mkdir(parents=True, exist_ok=True)
+        np.save(str(cache_file), embs)
+    except Exception:
+        pass
+    _HERO_EMB_CACHE[key] = embs
+    return embs
 _NODE_ASSET_CACHE = {}
 
 
@@ -920,12 +1004,27 @@ def rank_candidates_in_box(
     if t_name == "hero" and float(best_per_idx.min()) > 2200.0:
         _run_scales((0.78, 0.84, 1.16, 1.24), max(pad_ratio, 0.32))
 
+    # Local MobileNetV3-Small embedding tie-breaker for high-MSE hero slots
+    # Keep best_per_idx as raw pixel MSE so downstream garbage-team filters remain calibrated;
+    # apply the CNN blend to rank_scores for sorting/selection.
+    rank_scores = best_per_idx.copy()
+    if t_name == "hero" and float(best_per_idx.min()) > 1500.0:
+        hx0, hy0 = max(0, round(bx)), max(0, round(by))
+        hx1, hy1 = min(img.shape[1], round(bx + bw)), min(img.shape[0], round(by + bh))
+        if hx1 - hx0 >= 16 and hy1 - hy0 >= 16:
+            hero_embs = _get_hero_template_embeddings(items)
+            if hero_embs is not None:
+                q_emb = _embed_bgr_batch([img[hy0:hy1, hx0:hx1]])
+                if q_emb is not None:
+                    cos_dist = np.clip(1.0 - (hero_embs @ q_emb[0]), 0.0, 2.0)
+                    rank_scores = 0.25 * best_per_idx + 0.75 * (cos_dist * 4000.0)
+
     scored_items = []
     for idx in range(len(items)):
         c = items[idx][0]
         cid = c["id"]
         mse_val = float(best_per_idx[idx])
-        eff_mse = mse_val
+        eff_mse = float(rank_scores[idx])
         if (
             allowed_class is not None
             and t_name == "collection"

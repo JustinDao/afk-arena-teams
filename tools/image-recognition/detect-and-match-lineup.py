@@ -784,12 +784,26 @@ def assemble_theafkguys_ts_grid(img):
         )
 
     calc_sets = [
-        (1, "Set 2 — 5-Team Whale Setup (1st Calculation)", 2786, [2035, 2117, 2199, 2281, 2363]),
-        (2, "Set 3 — 5-Team Dolphin Setup (1st Calculation)", 3155, [2035, 2117, 2199, 2281, 2363]),
-        (3, "Set 4 — 5-Team Budget Setup (1st Calculation)", 2786, [2545, 2627, 2709, 2791, 2873]),
+        (1, "Set 2 — 5-Team Whale Setup (1st Calculation)", 2786, [2035, 2117, 2199, 2281, 2363], (0.62, 0.84, 0.76, 0.87)),
+        (2, "Set 3 — 5-Team Dolphin Setup (1st Calculation)", 3155, [2035, 2117, 2199, 2281, 2363], (0.62, 0.84, 0.87, 0.99)),
+        (3, "Set 4 — 5-Team Budget Setup (1st Calculation)", 2786, [2545, 2627, 2709, 2791, 2873], (0.82, 0.99, 0.76, 0.87)),
     ]
     cw = round(48 * sx)
-    for set_idx, set_label, raw_x0, raw_ys in calc_sets:
+    for set_idx, set_label, raw_x0, raw_ys, (yf0, yf1, xf0, xf1) in calc_sets:
+        ya, yb = max(0, round(yf0 * H)), min(H, round(yf1 * H))
+        xa, xb = max(0, round(xf0 * W)), min(W, round(xf1 * W))
+        sub_c = gray_full[ya:yb, xa:xb]
+        detected_rows = []
+        if sub_c.size > 0:
+            ys_c = np.where((sub_c < 215).mean(axis=1) > 0.45)[0]
+            if len(ys_c) > 0:
+                runs_c = [
+                    r
+                    for r in np.split(ys_c, np.where(np.diff(ys_c) > 3)[0] + 1)
+                    if 28 <= (r[-1] - r[0] + 1) <= 66
+                ]
+                if len(runs_c) >= 5:
+                    detected_rows = runs_c[-5:]
         x0 = round(raw_x0 * sx)
         x1 = min(W, x0 + round(256 * sx))
         strip_std = (
@@ -799,18 +813,42 @@ def assemble_theafkguys_ts_grid(img):
         )
         search_r = round(45 * sy)
         for r_idx, raw_y in enumerate(raw_ys):
-            y0 = round(raw_y * sy)
-            if strip_std is not None:
-                best_y, best_s = y0, 0.0
-                for y in range(max(4, y0 - search_r), min(H - cw - 1, y0 + search_r)):
-                    inside = float(strip_std[y + 4 : y + cw - 4].mean())
-                    above = float(strip_std[max(0, y - 14) : max(1, y - 2)].mean())
-                    s = inside - 1.2 * above
-                    if s > best_s:
-                        best_s, best_y = s, y
-                y0 = best_y
-            hero_boxes = [[x0 + round(i * 52 * sx), y0, cw, cw] for i in range(5)]
-            pet_box = [x0 + round(5 * 52 * sx), y0, cw, cw]
+            row_cw = cw
+            if detected_rows:
+                rr = detected_rows[r_idx]
+                y0 = ya + int(rr[0])
+                row_cw = max(32, min(62, int(rr[-1] - rr[0] + 1) - 1))
+                # Snap horizontal 5-hero bar inside [xa:xb]
+                bar_c = gray_full[y0 + 4 : min(H, y0 + row_cw - 4), xa:xb]
+                row_x0 = x0
+                stride_c = 52.0 * sx
+                if bar_c.size > 0:
+                    xs_c = np.where((bar_c < 225).mean(axis=0) > 0.50)[0]
+                    if len(xs_c) > 0:
+                        xr_list = [
+                            xr
+                            for xr in np.split(xs_c, np.where(np.diff(xs_c) > 12)[0] + 1)
+                            if (xr[-1] - xr[0] + 1) >= row_cw * 3.5
+                        ]
+                        if xr_list:
+                            xr = max(xr_list, key=len)
+                            row_x0 = xa + int(xr[0])
+                            stride_c = max(float(row_cw), (int(xr[-1] - xr[0] + 1)) / 5.0)
+                hero_boxes = [[round(row_x0 + i * stride_c), y0, row_cw, row_cw] for i in range(5)]
+                pet_box = [round(row_x0 + 5 * stride_c), y0, row_cw, row_cw]
+            else:
+                y0 = round(raw_y * sy)
+                if strip_std is not None:
+                    best_y, best_s = y0, 0.0
+                    for y in range(max(4, y0 - search_r), min(H - cw - 1, y0 + search_r)):
+                        inside = float(strip_std[y + 4 : y + cw - 4].mean())
+                        above = float(strip_std[max(0, y - 14) : max(1, y - 2)].mean())
+                        s = inside - 1.2 * above
+                        if s > best_s:
+                            best_s, best_y = s, y
+                    y0 = best_y
+                hero_boxes = [[x0 + round(i * 52 * sx), y0, cw, cw] for i in range(5)]
+                pet_box = [x0 + round(5 * 52 * sx), y0, cw, cw]
             teams.append(
                 {
                     "round": r_idx + 1,
@@ -3506,8 +3544,20 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             hints["targets"].append("frost")
         if "fountain" in hdr_text or "pure realm" in hdr_text:
             hints["targets"].append("fountain")
+        if "kane" in hdr_text:
+            hints["targets"].append("kane")
         if "fire" in hdr_text or "volcano" in hdr_text:
             hints["targets"].append("fire")
+
+        # Mode-aware target filtering to avoid cross-mode false OCR hits (e.g. Infernal Overlord or Fire in CR)
+        mode_valid_targets = {
+            "cursed-realm": {"demonic-entity", "burning-brute", "ice-shemira", "kane", "grotesque-mage", "dune-destroyer"},
+            "nightmare-corridor": {"soulchain-knight", "infernal-overlord", "netherspinner"},
+            "treasure-scramble": {"fire", "frost", "forest", "fog", "fountain"},
+        }
+        if len(hints["modes"]) == 1 and hints["modes"][0] in mode_valid_targets:
+            allowed_t = mode_valid_targets[hints["modes"][0]]
+            hints["targets"] = [t for t in hints["targets"] if t in allowed_t]
 
     for t in solved_teams:
         t["_ocr_hints"] = hints
