@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import { countLabel } from '../../plural';
-import { formatInvestment, rosterInvestment } from '../../investment';
+import { formatInvestment, isAscensionAtLeast, rosterInvestment } from '../../investment';
 import { ASCENSION_RANKS, AscensionRank, displayHeroName, Hero, HeroRecommendation, RECOMMENDATION_CATEGORIES, RosterEntry } from '../../models';
 import { LineupsStore } from '../../lineups.store';
 import { ModeCount, modeCountsFor, reasonFor } from './recommendation-views';
@@ -55,14 +55,16 @@ export class RecommendationHeroesComponent {
       const hero = heroes.get(recommendation.heroId);
       if (!hero) return [];
       const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
+      const entry = roster[hero.id];
+      const targetAscension = this.targetAscensionFor(entry, recommendation);
       return [{
         recommendation,
         hero,
         name: displayHeroName(hero),
         categoryLabel: CATEGORY_LABELS.get(recommendation.category) ?? recommendation.category,
         reason: reasonFor(recommendation, modeCounts),
-        current: this.currentFor(roster[hero.id], recommendation),
-        target: this.targetFor(recommendation),
+        current: this.currentFor(entry, recommendation, targetAscension),
+        target: this.targetFor(recommendation, targetAscension),
         modeCounts,
       }];
     });
@@ -93,13 +95,25 @@ export class RecommendationHeroesComponent {
     return ASCENSION_RANKS.indexOf(rank) < ASCENSION_RANKS.indexOf(minRank) ? minRank : rank;
   }
 
-  private currentFor(entry: RosterEntry | undefined, recommendation: HeroRecommendation): string {
+  private targetAscensionFor(entry: RosterEntry | undefined, recommendation: HeroRecommendation): AscensionRank | null {
+    const targetAscension = this.effectiveAscension(recommendation);
+    if (!targetAscension) return null;
+    if (recommendation.kind === 'invest' && isAscensionAtLeast(entry?.ascension, targetAscension)) {
+      return null;
+    }
+    return targetAscension;
+  }
+
+  private currentFor(
+    entry: RosterEntry | undefined,
+    recommendation: HeroRecommendation,
+    targetAscension: AscensionRank | null,
+  ): string {
     if (recommendation.kind !== 'invest' || !entry) return '';
     const inv = rosterInvestment(entry);
     const code = inv && (inv.si !== null || inv.furn !== null || inv.eng !== null) ? formatInvestment(inv) : '';
-    const targetAscension = this.effectiveAscension(recommendation);
     if (code) {
-      if (targetAscension && entry.ascension && entry.ascension !== targetAscension) {
+      if (targetAscension && entry.ascension) {
         return `${code} · ${SHORT_ASCENSION_LABELS[entry.ascension]}`;
       }
       return code;
@@ -107,11 +121,10 @@ export class RecommendationHeroesComponent {
     return entry.ascension ? SHORT_ASCENSION_LABELS[entry.ascension] : '';
   }
 
-  private targetFor(recommendation: HeroRecommendation): string {
+  private targetFor(recommendation: HeroRecommendation, targetAscension: AscensionRank | null): string {
     const parts: string[] = [];
     const code = this.formatRecommendationInvestment(recommendation.investment);
     if (code) parts.push(code);
-    const targetAscension = this.effectiveAscension(recommendation);
     if (targetAscension) parts.push(SHORT_ASCENSION_LABELS[targetAscension]);
     return parts.join(' · ');
   }

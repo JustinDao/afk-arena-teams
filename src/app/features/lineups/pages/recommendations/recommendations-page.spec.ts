@@ -202,6 +202,32 @@ describe('Recommendations pages', () => {
     }
   });
 
+  it('omits ascension from current and target when an invest hero is already at or past the target ascension', async () => {
+    localStorage.setItem('ll.roster', JSON.stringify({
+      [heroes[0].id]: { inv: '309e30', ascension: 'ascended_5' },
+      [heroes[1].id]: { inv: '309e30', ascension: 'ascended_1' },
+    }));
+    try {
+      loadRecommendations.and.resolveTo([
+        recommendation(heroes[0].id, 'invest', { rank: 1, investment: { si: 30, furn: 9, eng: 61 }, ascension: 'ascended_1' }),
+        recommendation(heroes[1].id, 'invest', { rank: 2, investment: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1' }),
+      ]);
+      await setup({ id: 'u1' });
+      const fixture = await render(RecommendationHeroesComponent);
+      const [pastItem, equalItem] = fixture.componentInstance.groups()[0].items;
+
+      expect(pastItem.current).toBe('309e30');
+      expect(pastItem.target).toBe('309e61');
+      expect(equalItem.current).toBe('309e30');
+      expect(equalItem.target).toBe('309e60');
+      expect(fixture.nativeElement.textContent).toContain('309e30 → 309e61');
+      expect(fixture.nativeElement.textContent).not.toContain('A5*');
+      expect(fixture.nativeElement.textContent).not.toContain('A1*');
+    } finally {
+      localStorage.removeItem('ll.roster');
+    }
+  });
+
   it('groups collection recommendations by class and describes the target build', async () => {
     const warriorPick: CollectionRecommendation = {
       catalogId: 1, collectionClass: 'Warrior', rank: 1, kind: 'upgrade', score: 1, completeCount: 1, nearCount: 0,
