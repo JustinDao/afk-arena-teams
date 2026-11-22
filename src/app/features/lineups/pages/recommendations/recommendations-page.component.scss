@@ -73,9 +73,14 @@
 }
 
 .rec-list {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0;
   padding: 0;
   list-style: none;
+  scrollbar-color: var(--app-line) transparent;
+  scrollbar-width: thin;
 }
 
 .rec-row {

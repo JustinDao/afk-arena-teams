@@ -19,7 +19,7 @@ interface RecommendationView {
 }
 
 const CATEGORY_LABELS = new Map<string, string>(RECOMMENDATION_CATEGORIES.map(({ key, label }) => [key, label]));
-const OVERALL_LIMIT = 5;
+const OVERALL_LIMIT = 10;
 const SHORT_ASCENSION_LABELS: Readonly<Record<AscensionRank, string>> = {
   epic: 'E',
   epic_plus: 'E+',

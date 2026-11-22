@@ -429,7 +429,7 @@ export class UserDataService {
     if (!supabase) return [];
     const { data, error } = await supabase.rpc('recommend_builds', {
       p_mode_slugs: modes.length ? modes : null,
-      p_limit: 5,
+      p_limit: 10,
     });
     if (error) throw new Error(`Could not load recommendations: ${error.message}`);
     return ((data ?? []) as RecommendationRow[]).map((row) => ({
@@ -453,7 +453,7 @@ export class UserDataService {
     if (!supabase) return [];
     const { data, error } = await supabase.rpc('recommend_collections', {
       p_mode_slugs: modes.length ? modes : null,
-      p_limit: 5,
+      p_limit: 10,
     });
     if (error) throw new Error(`Could not load collection recommendations: ${error.message}`);
     return ((data ?? []) as CollectionRecommendationRow[]).map((row) => ({
@@ -475,7 +475,7 @@ export class UserDataService {
     if (!supabase) return [];
     const { data, error } = await supabase.rpc('recommend_pets', {
       p_mode_slugs: modes.length ? modes : null,
-      p_limit: 5,
+      p_limit: 10,
     });
     if (error) throw new Error(`Could not load pet recommendations: ${error.message}`);
     return ((data ?? []) as PetRecommendationRow[]).map((row) => ({

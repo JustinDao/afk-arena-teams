@@ -16,7 +16,7 @@ interface CollectionRecommendationView {
 }
 
 const COLLECTION_CLASSES: readonly CollectionCatalogItem['class'][] = ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'];
-const OVERALL_LIMIT = 5;
+const OVERALL_LIMIT = 10;
 
 @Component({
   selector: 'app-recommendation-collections',
