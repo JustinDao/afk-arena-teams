@@ -3697,7 +3697,7 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             x0 = max(0, round(hx0) - 30)
             x1 = min(W, round(right_x) + 40)
             y0 = max(0, round(hy + hw * 2.80))
-            y1 = min(H, round(hy + hw * 4.75))
+            y1 = min(H, round(hy + hw * 5.30))
             if x1 <= x0 + 20 or y1 <= y0 + 20:
                 continue
             try:
@@ -3706,29 +3706,64 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
                 continue
             if not res:
                 continue
-            # Sort OCR boxes top-to-bottom, left-to-right so "Damage:" + "48b" join cleanly.
-            ordered = sorted(
-                ((sum(p[1] for p in b) / 4.0, sum(p[0] for p in b) / 4.0, txt.strip()) for b, txt, _s in res if txt),
-                key=lambda item: (round(item[0] / 25.0), item[1]),
-            )
-            joined = " ".join(item[2] for item in ordered)
-            m_dmg = re.search(r"damage\s*:?\s*(\d+(?:\.\d+)?)\s*([bBmM])?\b", joined, re.I)
-            if m_dmg:
-                val = float(m_dmg.group(1))
-                unit = (m_dmg.group(2) or "b").lower()
-                mult = 1_000_000_000 if unit == "b" else 1_000_000
-                dmg = round(val * mult)
-                t["damage"] = dmg
-                t["damage_display"] = _format_damage_short(dmg)
-                continue
-            m_time = re.search(r"time\s*:?\s*(\d{1,3}(?:\.\d+)?)\s*s\b", joined, re.I)
-            if not m_time:
-                m_time = re.search(r"time\s*:?\s*(\d{1,3}(?:\.\d+)?)\b", joined, re.I)
-            if m_time:
-                val = float(m_time.group(1))
-                if 1 <= val <= 120:
-                    t["kill_time_seconds"] = val
-                    t["kill_time"] = f"{m_time.group(1)}s"
+            items = [
+                (sum(p[1] for p in b) / 4.0, sum(p[0] for p in b) / 4.0, txt.strip())
+                for b, txt, _s in res
+                if txt and txt.strip()
+            ]
+            # Match "Damage:" or "Time:" either inline or paired with the value box on the same row.
+            found = False
+            for ly, lx, ltxt in items:
+                m_inline_dmg = re.search(r"damage\s*:?\s*(\d+(?:\.\d+)?)\s*([bBmM])?\b", ltxt, re.I)
+                if m_inline_dmg:
+                    val = float(m_inline_dmg.group(1))
+                    unit = (m_inline_dmg.group(2) or "b").lower()
+                    dmg = round(val * (1_000_000_000 if unit == "b" else 1_000_000))
+                    t["damage"] = dmg
+                    t["damage_display"] = _format_damage_short(dmg)
+                    found = True
+                    break
+                if re.search(r"\bdamage\b", ltxt, re.I):
+                    same_row = sorted(
+                        ((vx, vtxt) for vy, vx, vtxt in items if vx > lx and abs(vy - ly) <= 28),
+                        key=lambda p: p[0],
+                    )
+                    for _vx, vtxt in same_row:
+                        m_val = re.search(r"(\d+(?:\.\d+)?)\s*([bBmM])?\b", vtxt, re.I)
+                        if m_val:
+                            val = float(m_val.group(1))
+                            unit = (m_val.group(2) or "b").lower()
+                            dmg = round(val * (1_000_000_000 if unit == "b" else 1_000_000))
+                            t["damage"] = dmg
+                            t["damage_display"] = _format_damage_short(dmg)
+                            found = True
+                            break
+                    if found:
+                        break
+                m_inline_time = re.search(r"time\s*:?\s*(\d{1,3}(?:\.\d+)?)\s*s?\b", ltxt, re.I)
+                if m_inline_time:
+                    val = float(m_inline_time.group(1))
+                    if 1 <= val <= 120:
+                        t["kill_time_seconds"] = val
+                        t["kill_time"] = f"{m_inline_time.group(1)}s"
+                        found = True
+                        break
+                if re.search(r"\btime\b", ltxt, re.I):
+                    same_row = sorted(
+                        ((vx, vtxt) for vy, vx, vtxt in items if vx > lx and abs(vy - ly) <= 28),
+                        key=lambda p: p[0],
+                    )
+                    for _vx, vtxt in same_row:
+                        m_val = re.search(r"(\d{1,3}(?:\.\d+)?)\s*s?\b", vtxt, re.I)
+                        if m_val:
+                            val = float(m_val.group(1))
+                            if 1 <= val <= 120:
+                                t["kill_time_seconds"] = val
+                                t["kill_time"] = f"{m_val.group(1)}s"
+                                found = True
+                                break
+                    if found:
+                        break
         return
     if is_ts_compact:
         return
@@ -3753,8 +3788,8 @@ def _extract_guide_results_and_target_hints(img, solved_teams):
             continue
         prev_hy = max((h for h in sorted_hys if h < hy - 20), default=None)
         next_hy = min((h for h in sorted_hys if h > hy + 20), default=None)
-        y0 = max(0, round((prev_hy + hy) / 2) if prev_hy is not None else round(hy - 280))
-        y1 = min(H, round((hy + next_hy) / 2) if next_hy is not None else round(hy + 420))
+        y0 = max(0, round((prev_hy + hy) / 2) - 60 if prev_hy is not None else round(hy - 280))
+        y1 = min(H, round((hy + next_hy) / 2) - 60 if next_hy is not None else round(hy + 420))
 
         band_texts = []
         for box, txt, _sc in left_res:
