@@ -102,6 +102,7 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                         alts = [a.get("name") for a in (h.get("visual_alternatives") or []) if a.get("name")]
                         top3 = [h.get("name")] + [a for a in alts if a != h.get("name")][:2]
                         hero_entries.append({
+                            "slot": (int(h["slot"]) + 1) if h.get("slot") is not None else None,
                             "name": h.get("name", "Unknown"),
                             "sus": bool(h.get("low_confidence") or h.get("needs_review")),
                             "sp": bool(sp_hero_id is not None and h.get("id") == sp_hero_id),

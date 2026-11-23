@@ -1915,13 +1915,15 @@ def solve_teams(
             if slot_options:
                 h_entry_dict["slot_options"] = slot_options
             hx, hy, hw, hh = hbox
-            pad_e = max(4, round(min(hw, hh) * 0.12))
+            pad_e = max(4, round(min(hw, hh) * 0.18))
             inner = img[
                 max(0, hy + pad_e) : min(img.shape[0], hy + hh - pad_e),
                 max(0, hx + pad_e) : min(img.shape[1], hx + hw - pad_e),
             ]
-            if inner.size > 0 and float(inner.std()) < 20.0:
-                continue
+            if inner.size > 0:
+                inner_gray = cv2.cvtColor(inner, cv2.COLOR_BGR2GRAY) if inner.ndim == 3 else inner
+                if float(inner_gray.std()) < 16.0:
+                    continue
             team_heroes.append(h_entry_dict)
 
         p_choice = pet_by_team.get(t_idx)
@@ -3460,21 +3462,45 @@ def assemble_hfc_cards(img, model):
         ry = float(np.median([b[1] + b[3] * 0.5 for b in ref_boxes]))
         top_y = max(0, round(ry - icon_w * 0.5))
 
-        # Snap 5 hero boxes to exact columns, refining with nearby YOLO detections
+        # Snap 5 hero boxes to exact columns with canonical icon_w size,
+        # gently refining (x, y) only when a well-sized YOLO box agrees.
         h_boxes = []
         for fx in hero_x_fracs:
             cx_exp = fx * W + icon_w * 0.5
-            near = [b for b in hero_row_boxes if abs((b[0] + b[2] * 0.5) - cx_exp) <= 0.048 * W]
+            near = [
+                b for b in hero_row_boxes
+                if abs((b[0] + b[2] * 0.5) - cx_exp) <= 0.030 * W
+                and 0.85 * icon_w <= b[2] <= 1.15 * icon_w
+                and 0.85 * icon_w <= b[3] <= 1.15 * icon_w
+            ]
             if near:
                 best = min(near, key=lambda b: abs((b[0] + b[2] * 0.5) - cx_exp))
-                h_boxes.append([best[0], best[1], best[2], best[3]])
+                bcx = best[0] + best[2] * 0.5
+                bcy = best[1] + best[3] * 0.5
+                bx = max(0, min(W - icon_w, round(bcx - icon_w * 0.5)))
+                by = max(0, min(H - icon_w, round(bcy - icon_w * 0.5)))
+                h_boxes.append([bx, by, icon_w, icon_w])
             else:
                 h_boxes.append([round(fx * W), top_y, icon_w, icon_w])
 
-        # Pet box(es) on the right (x >= 0.72 * W)
+        # Pet box(es) on the right (x >= 0.72 * W); reject false-positive header/empty boxes
+        def _is_valid_pet_box(b):
+            px, py, pw, ph = [int(round(v)) for v in b]
+            pad_p = max(4, round(min(pw, ph) * 0.18))
+            patch = img[max(0, py + pad_p):min(H, py + ph - pad_p), max(0, px + pad_p):min(W, px + pw - pad_p)]
+            if patch.size == 0:
+                return False
+            g = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+            return float(g.std()) >= 18.0
+
         row_pets = sorted(
-            [b for b in all_cands if b[0] >= W * 0.72 and abs((b[1] + b[3] * 0.5) - ry) <= 0.095 * W],
-            key=lambda p: p[1],
+            [
+                b for b in all_cands
+                if b[0] >= W * 0.72
+                and abs((b[1] + b[3] * 0.5) - ry) <= 0.068 * W
+                and _is_valid_pet_box(b)
+            ],
+            key=lambda p: abs((p[1] + p[3] * 0.5) - ry),
         )
         pet_box = row_pets[0] if row_pets else [round(pet_x_frac * W), top_y, icon_w, icon_w]
 
@@ -4122,10 +4148,10 @@ def _detect_sp_hero(img, solved_teams):
                 # Rakudayyy HFC places the gold <SP> diamond either centered below the portrait
                 # (no-notes cards) OR on the bottom-right corner (cards with notes below).
                 rx0 = max(0, bx + round(bw * 0.05))
-                rx1 = min(W, bx + round(bw * 1.28))
-                ry0 = max(0, by + round(bh * 0.55))
+                rx1 = min(W, bx + round(bw * 1.35))
+                ry0 = max(0, by + round(bh * 0.50))
                 ry1 = min(H, by + round(bh * 1.85))
-                scale_fracs = (0.28, 0.34, 0.40, 0.48, 0.56)
+                scale_fracs = (0.30, 0.36, 0.42, 0.48, 0.56, 0.64)
             else:
                 # Groody, TheAFKGuys, and in-game screenshots place the gold <SP> diamond
                 # overlapping the bottom-right corner of the portrait.
@@ -4140,10 +4166,11 @@ def _detect_sp_hero(img, solved_teams):
             patch = img[ry0:ry1, rx0:rx1]
             ph, pw = patch.shape[:2]
 
+            tmpl_aspect = tmpl.shape[1] / max(1, tmpl.shape[0])
             max_corr = 0.0
             for frac in scale_fracs:
                 th = max(12, round(bh * frac))
-                tw = max(12, round(th * 1.38))
+                tw = max(12, round(th * tmpl_aspect))
                 if th >= ph or tw >= pw:
                     continue
                 resized = cv2.resize(tmpl, (tw, th), interpolation=cv2.INTER_AREA)
