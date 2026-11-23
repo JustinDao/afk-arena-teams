@@ -418,6 +418,11 @@ export const RECOMMENDATION_CATEGORIES = [
 
 export type RecommendationCategory = (typeof RECOMMENDATION_CATEGORIES)[number]['key'];
 
+export interface ModeEventCoverage {
+  readonly used: number;
+  readonly total: number;
+}
+
 export interface HeroRecommendation {
   readonly heroId: number;
   readonly category: RecommendationCategory;
@@ -429,6 +434,7 @@ export interface HeroRecommendation {
   readonly investment: Investment | null;
   readonly ascension: AscensionRank | null;
   readonly byMode: Readonly<Record<string, number>>;
+  readonly byModeEvents?: Readonly<Record<string, ModeEventCoverage>>;
   readonly submissionIds: readonly number[];
 }
 

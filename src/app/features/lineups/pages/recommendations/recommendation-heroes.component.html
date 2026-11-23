@@ -32,7 +32,9 @@
                 @if (view.modeCounts.length) {
                   <span class="rec-modes">
                     @for (mode of view.modeCounts; track mode.slug) {
-                      <span [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                      <span [attr.title]="mode.events ? mode.events.used + ' of ' + mode.events.total + ' events · ' + countLabel(mode.count, 'team') : countLabel(mode.count, 'team')">
+                        {{ mode.short }} {{ mode.events ? mode.events.used + '/' + mode.events.total : mode.count }}
+                      </span>
                     }
                   </span>
                 }
@@ -71,7 +73,9 @@
                     @if (view.modeCounts.length) {
                       <span class="rec-modes">
                         @for (mode of view.modeCounts; track mode.slug) {
-                          <span [attr.title]="countLabel(mode.count, 'team')">{{ mode.short }} {{ mode.count }}</span>
+                          <span [attr.title]="mode.events ? mode.events.used + ' of ' + mode.events.total + ' events · ' + countLabel(mode.count, 'team') : countLabel(mode.count, 'team')">
+                            {{ mode.short }} {{ mode.events ? mode.events.used + '/' + mode.events.total : mode.count }}
+                          </span>
                         }
                       </span>
                     }

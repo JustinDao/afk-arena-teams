@@ -54,7 +54,7 @@ export class RecommendationHeroesComponent {
     return this.state.heroes().flatMap((recommendation) => {
       const hero = heroes.get(recommendation.heroId);
       if (!hero) return [];
-      const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes());
+      const modeCounts = modeCountsFor(recommendation.byMode, this.store.modes(), recommendation.byModeEvents);
       const entry = roster[hero.id];
       const targetAscension = this.targetAscensionFor(entry, recommendation);
       return [{

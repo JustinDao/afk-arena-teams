@@ -108,6 +108,7 @@ interface RecommendationRow {
   rec_engraving: number | null;
   rec_ascension: AscensionRank | null;
   by_mode: Record<string, number> | null;
+  by_mode_events?: Record<string, { used: number; total: number }> | null;
   submission_ids: number[] | null;
 }
 
@@ -122,6 +123,7 @@ interface CollectionRecommendationRow {
   rec_level_nodes: number;
   rec_mythic_stats: string[] | null;
   by_mode: Record<string, number> | null;
+  by_mode_events?: Record<string, { used: number; total: number }> | null;
   submission_ids: number[] | null;
   top_hero_ids?: number[] | null;
 }
@@ -136,6 +138,7 @@ interface PetRecommendationRow {
   near_count: number;
   rec_level: number;
   by_mode: Record<string, number> | null;
+  by_mode_events?: Record<string, { used: number; total: number }> | null;
   submission_ids: number[] | null;
 }
 
@@ -474,6 +477,7 @@ export class UserDataService {
         : { si: row.rec_si, furn: row.rec_furniture, eng: row.rec_engraving },
       ascension: row.rec_ascension,
       byMode: row.by_mode ?? {},
+      byModeEvents: row.by_mode_events ?? undefined,
       submissionIds: row.submission_ids ?? [],
     }));
   }
