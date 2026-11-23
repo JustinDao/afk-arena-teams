@@ -2091,6 +2091,12 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
         return float((d < 26).mean()) > thresh
 
     def decode_hero_cell(x0, y0, w, h):
+        cell_patch = left_panel[
+            max(0, y0 + 6) : min(left_panel.shape[0], y0 + h - 6),
+            max(0, x0 + 6) : min(left_panel.shape[1], x0 + w - 6),
+        ]
+        if is_bg_region(cell_patch, thresh=0.80):
+            return "empty", []
         s_rank = matcher.rank_candidates_in_box(
             left_panel,
             [x0, y0, w, h],
@@ -2370,6 +2376,8 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
             for c_idx in range(5):
                 cx0, _ = c_segs[c_idx]
                 mode, slugs = decode_hero_cell(cx0, y0, h, h)
+                if mode == "empty" or not slugs:
+                    continue
                 hero_slots.append(
                     {
                         "slot": c_idx,
