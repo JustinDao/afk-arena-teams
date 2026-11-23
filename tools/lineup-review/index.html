@@ -216,9 +216,9 @@
   <main id="list"></main>
 
   <script>
-    const STORAGE_KEY = 'afk_sample_review_v5';
+    let STORAGE_KEY = 'afk_sample_review_v5';
     let ITEMS = [];
-    let reviews = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    let reviews = {};
 
     function saveReviews() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews));
@@ -304,8 +304,8 @@
             <div class="hero-list">
               ${item.heroes.map((h, idx) => `
                 <div class="hero-row ${h.sus ? 'sus' : ''}">
-                  <span class="hero-name">${h.slot ?? (idx + 1)}. ${escapeHtml(h.name)}${h.sp ? ' <span class="pill" style="background:#d48c14;color:#1b1200;font-weight:800;">SP</span>' : ''}${h.sus ? ' (SUS)' : ''}</span>
-                  <span class="hero-debug">MSE ${h.mse} · top3: ${escapeHtml((h.top3 || []).join(', '))}</span>
+                  <span class="hero-name">${h.slot ?? (idx + 1)}. ${escapeHtml(h.name)}${h.sp ? ' <span class="pill" style="background:#d48c14;color:#1b1200;font-weight:800;">SP</span>' : ''}${h.investment ? ' <span class="pill">' + escapeHtml(h.investment) + '</span>' : ''}${h.collection ? ' <span class="pill">' + escapeHtml(h.collection) + '</span>' : ''}${h.sus ? ' (SUS)' : ''}</span>
+                  <span class="hero-debug">${h.subs && h.subs.length ? 'subs: ' + escapeHtml(h.subs.join(', ')) + ' · ' : ''}MSE ${h.mse} · top3: ${escapeHtml((h.top3 || []).join(', '))}</span>
                 </div>
               `).join('')}
               <div class="hero-row">
@@ -376,10 +376,15 @@
       render();
     });
 
-    fetch('data.json')
+    fetch('data.json', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
         ITEMS = data;
+        const sig = data.length
+          ? `${data.length}:${data[0].id}:${data[0].post_url || ''}:${data[data.length - 1].post_url || ''}`
+          : 'empty';
+        STORAGE_KEY = `afk_sample_review_v6:${sig}`;
+        reviews = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         populateFilters();
         render();
       });

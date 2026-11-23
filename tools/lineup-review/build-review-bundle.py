@@ -80,15 +80,20 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                     if hbs:
                         avg_hw = sum(b[2] for b in hbs) / len(hbs)
                         pb = (team.get("pet") or {}).get("bbox")
-                        right_edge = max(b[0] + b[2] for b in hbs)
+                        left_edge = min(b[0] for b in hbs) - 40
+                        right_edge = max(b[0] + b[2] for b in hbs) + 40
                         if pb and len(pb) == 4:
+                            left_edge = min(left_edge, pb[0] - 24)
                             right_edge = max(right_edge, pb[0] + pb[2] + 40)
                         else:
+                            # Leave extra left padding for layouts with left-side pet banners (e.g. ts_compact_7)
+                            if team.get("layout") == "ts_compact_7":
+                                left_edge = min(left_edge, min(b[0] for b in hbs) - max(90, round(avg_hw * 1.4)))
                             right_edge += max(260, round(avg_hw * 1.8))
-                        x0 = max(0, min(b[0] for b in hbs) - 40)
-                        y0 = max(0, min(b[1] for b in hbs) - max(60, round(avg_hw * 0.30)))
+                        x0 = max(0, left_edge)
+                        y0 = max(0, min(b[1] for b in hbs) - max(60, round(avg_hw * 0.60)))
                         x1 = min(W, right_edge)
-                        y1 = min(H, max(b[1] + b[3] for b in hbs) + max(120, round(avg_hw * 0.80)))
+                        y1 = min(H, max(b[1] + b[3] for b in hbs) + max(120, round(avg_hw * 0.90)))
                     else:
                         x0, y0, x1, y1 = 0, 0, W, min(H, 600)
 
@@ -101,11 +106,31 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                     for h in heroes:
                         alts = [a.get("name") for a in (h.get("visual_alternatives") or []) if a.get("name")]
                         top3 = [h.get("name")] + [a for a in alts if a != h.get("name")][:2]
+                        inv_obj = h.get("investment") or {}
+                        inv_parts = []
+                        if inv_obj.get("ascension"):
+                            inv_parts.append(str(inv_obj["ascension"]))
+                        if inv_obj.get("code"):
+                            inv_parts.append(str(inv_obj["code"]))
+                        elif any(inv_obj.get(k) is not None for k in ("si", "furniture", "engraving")):
+                            si = inv_obj.get("si")
+                            fu = inv_obj.get("furniture")
+                            en = inv_obj.get("engraving")
+                            inv_parts.append(f"{si or 0}/{fu or 0}/e{en or 0}")
+                        coll_obj = h.get("collection") or {}
+                        coll_str = None
+                        if coll_obj.get("name"):
+                            lvl = coll_obj.get("level")
+                            coll_str = f"{coll_obj['name']}" + (f" Lv{lvl}" if lvl else "")
+                        slot_opts = [s for s in (h.get("slot_options") or []) if s != h.get("slug")]
                         hero_entries.append({
                             "slot": (int(h["slot"]) + 1) if h.get("slot") is not None else None,
                             "name": h.get("name", "Unknown"),
                             "sus": bool(h.get("low_confidence") or h.get("needs_review")),
                             "sp": bool(sp_hero_id is not None and h.get("id") == sp_hero_id),
+                            "investment": " · ".join(inv_parts) if inv_parts else None,
+                            "collection": coll_str,
+                            "subs": slot_opts,
                             "mse": round(float(h["mse"])) if h.get("mse") is not None else None,
                             "confidence": round(float(h.get("confidence") or 0.0), 2),
                             "top3": top3,

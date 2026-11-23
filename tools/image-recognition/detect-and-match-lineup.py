@@ -676,22 +676,31 @@ def assemble_ts_compact_7_teams(img):
         sub_hero_boxes = []
         for cx in col_xs:
             slot_subs = []
-            for sub_y in (ry + round(78 * sy), ry + round(114 * sy)):
+            for row_idx_s, sub_y in enumerate((ry + round(60 * sy), ry + round(96 * sy))):
                 x_left = cx
                 x_mid = cx + round(19 * sx)
-                x_right = cx + round(39 * sx)
-                p_left = img[sub_y : sub_y + sub_w, x_left : x_left + sub_w]
-                p_mid = img[sub_y : sub_y + sub_w, x_mid : x_mid + sub_w]
-                p_right = img[sub_y : sub_y + sub_w, x_right : x_right + sub_w]
-                if (
-                    p_left.shape[:2] == (sub_w, sub_w)
-                    and p_right.shape[:2] == (sub_w, sub_w)
-                    and p_left.std() > 34.0
-                    and p_right.std() > 34.0
-                ):
+                x_right = cx + round(41 * sx)
+                # For row 0 (dy=60), the top ~16px overlaps the primary portrait's bottom edge,
+                # so test variance strictly in the lower half below the primary portrait (y >= ry + hw + 2).
+                check_y0 = max(sub_y, ry + hw + round(2 * sy)) if row_idx_s == 0 else sub_y
+                # Use non-overlapping outer strips (leftmost 16px, rightmost 16px) to distinguish
+                # side-by-side (left+right) vs single-left vs single-centered (mid).
+                def _strip_std(sx0, sw):
+                    chk = img[check_y0 : sub_y + sub_w, sx0 : sx0 + sw]
+                    return float(chk.std()) if chk.size > 0 else 0.0
+
+                outer_w = max(8, round(15 * sx))
+                has_l = (sub_y + sub_w <= H) and _strip_std(x_left, outer_w) > 28.0
+                has_r = (sub_y + sub_w <= H) and _strip_std(x_right + sub_w - outer_w, outer_w) > 28.0
+                has_m = (sub_y + sub_w <= H) and _strip_std(x_mid + round(6 * sx), max(10, sub_w - round(12 * sx))) > 30.0
+                if has_l and has_r:
                     slot_subs.append([x_left, sub_y, sub_w, sub_w])
                     slot_subs.append([x_right, sub_y, sub_w, sub_w])
-                elif p_mid.shape[:2] == (sub_w, sub_w) and p_mid.std() > 34.0:
+                elif has_l:
+                    slot_subs.append([x_left, sub_y, sub_w, sub_w])
+                elif has_r:
+                    slot_subs.append([x_right, sub_y, sub_w, sub_w])
+                elif has_m:
                     slot_subs.append([x_mid, sub_y, sub_w, sub_w])
             sub_hero_boxes.append(slot_subs)
         teams.append(
