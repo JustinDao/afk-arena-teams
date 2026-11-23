@@ -3421,38 +3421,113 @@ def _group_boxes_into_rows(boxes, y_tol=28):
 
 
 def assemble_hfc_cards(img, model):
-    """Assemble stacked Hunting Fields Contract cards (e.g. 2406x6160 SickMyDuck & Rakudayyy)."""
+    """Assemble stacked Hunting Fields Contract cards (scale-invariant across 1031w..2819w Rakudayyy guides)."""
     H, W = img.shape[:2]
     if model is None:
         return []
     raw_boxes, raw_scores = [], []
-    y_start = round(H * 0.28)
-    for y0 in range(y_start, H - 150, 650):
-        y1 = min(H, y0 + 1100)
+    y_start = round(H * 0.33)
+    win_h = max(320, round(W * 0.46))
+    step_y = max(200, round(W * 0.28))
+    for y0 in range(y_start, max(y_start + 1, H - round(W * 0.08)), step_y):
+        y1 = min(H, y0 + win_h)
         crop = img[y0:y1, :]
         res = model.predict(source=crop, imgsz=1280, conf=0.15, iou=0.45, max_det=100, device="cpu", verbose=False)[0]
         for (bx1, by1, bx2, by2), s in zip(res.boxes.xyxy.cpu().tolist(), res.boxes.conf.cpu().tolist()):
             raw_boxes.append([bx1, by1 + y0, bx2, by2 + y0])
             raw_scores.append(float(s))
-    norm = normalize_yolo_boxes(raw_boxes, raw_scores, img.shape, min_px=100)
-    # Hero portraits are >= 170px wide in 2406w; pet icons sit on the right (x > 0.72*W)
-    hero_cands = [b for b, _ in norm if b[0] < W * 0.72 and 170 <= b[2] <= 320 and 170 <= b[3] <= 320]
-    pet_cands = [b for b, _ in norm if b[0] >= W * 0.72 and 130 <= b[2] <= 290 and 130 <= b[3] <= 290]
-    rows = [r for r in _group_boxes_into_rows(hero_cands, y_tol=90) if len(r) >= 4]
+
+    icon_w = round(0.112 * W)
+    min_px = max(48, round(0.072 * W))
+    max_px = round(0.155 * W)
+    norm = normalize_yolo_boxes(raw_boxes, raw_scores, img.shape, min_px=min_px)
+
+    # All portrait-sized icons (heroes + pets) across the card body
+    all_cands = [b for b, _ in norm if W * 0.08 <= b[0] <= W * 0.88 and min_px <= b[2] <= max_px and min_px <= b[3] <= max_px]
+    rows = [r for r in _group_boxes_into_rows(all_cands, y_tol=round(0.055 * W)) if len(r) >= 2]
+
+    hero_x_fracs = (0.107, 0.232, 0.380, 0.505, 0.630)
+    pet_x_frac = 0.778
+    ocr = _get_ocr_engine()
+
     teams = []
     for idx, row in enumerate(rows):
-        h_boxes = row[:5]
-        ry = float(np.median([b[1] + b[3] * 0.5 for b in h_boxes]))
-        row_pets = sorted([p for p in pet_cands if abs((p[1] + p[3] * 0.5) - ry) <= 210], key=lambda p: p[1])
+        # Compute vertical center of the row using hero-column boxes when available
+        hero_row_boxes = [b for b in row if b[0] < W * 0.72]
+        ref_boxes = hero_row_boxes if hero_row_boxes else row
+        ry = float(np.median([b[1] + b[3] * 0.5 for b in ref_boxes]))
+        top_y = max(0, round(ry - icon_w * 0.5))
+
+        # Snap 5 hero boxes to exact columns, refining with nearby YOLO detections
+        h_boxes = []
+        for fx in hero_x_fracs:
+            cx_exp = fx * W + icon_w * 0.5
+            near = [b for b in hero_row_boxes if abs((b[0] + b[2] * 0.5) - cx_exp) <= 0.048 * W]
+            if near:
+                best = min(near, key=lambda b: abs((b[0] + b[2] * 0.5) - cx_exp))
+                h_boxes.append([best[0], best[1], best[2], best[3]])
+            else:
+                h_boxes.append([round(fx * W), top_y, icon_w, icon_w])
+
+        # Pet box(es) on the right (x >= 0.72 * W)
+        row_pets = sorted(
+            [b for b in all_cands if b[0] >= W * 0.72 and abs((b[1] + b[3] * 0.5) - ry) <= 0.095 * W],
+            key=lambda p: p[1],
+        )
+        pet_box = row_pets[0] if row_pets else [round(pet_x_frac * W), top_y, icon_w, icon_w]
+
+        # OCR the card header strip directly above the hero row for comp label & damage (~35.5B)
+        comp_label = f"Comp {idx + 1}"
+        comp_dmg = None
+        if ocr is not None:
+            hy0 = max(0, round(top_y - 0.175 * W))
+            hy1 = max(hy0 + 10, round(top_y - 0.045 * W))
+            hx0 = max(0, round(0.08 * W))
+            hx1 = min(W, round(0.92 * W))
+            hdr_crop = img[hy0:hy1, hx0:hx1]
+            if hdr_crop.size > 0:
+                try:
+                    hres, _ = ocr(hdr_crop, use_cls=False)
+                except Exception:
+                    hres = None
+                if hres:
+                    ordered = sorted(
+                        ((sum(p[0] for p in b) / 4.0, txt.strip()) for b, txt, _s in hres if txt and txt.strip()),
+                        key=lambda x: x[0],
+                    )
+                    full_hdr = " ".join(t for _, t in ordered)
+                    dmg_matches = list(re.finditer(r"~?\s*(\d+(?:\.\d+)?)\s*([bBmM])\b", full_hdr))
+                    # Pick the rightmost match with >= 5B (skips comp labels like "COMP 1B" / "COMP 2B")
+                    for m_dmg in reversed(dmg_matches):
+                        val = float(m_dmg.group(1))
+                        unit = m_dmg.group(2).lower()
+                        if unit == "b" and val < 5.0:
+                            continue
+                        mult = 1_000_000_000 if unit == "b" else 1_000_000
+                        comp_dmg = round(val * mult)
+                        break
+                    # Clean label without trailing damage
+                    clean_lbl = re.sub(r"~?\s*\d{2,}(?:\.\d+)?\s*[bBmM]\b", "", full_hdr).strip(" -~")
+                    if len(clean_lbl) >= 4:
+                        comp_label = clean_lbl
+
+        # Reject spurious gap/border rows that have neither a valid card header nor >= 3 icon boxes
+        has_card_hdr = bool(comp_dmg) or bool(re.search(r"comp|bis|buff|alt|variant|carry|f2p|team", comp_label, re.I))
+        if len(row) < 3 and not has_card_hdr:
+            continue
+        if teams and abs(ry - (teams[-1]["hero_boxes"][0][1] + teams[-1]["hero_boxes"][0][3] * 0.5)) < 0.28 * W:
+            continue
+
         teams.append({
             "round": 1,
             "layout": "hfc_cards",
-            "set_index": idx,
-            "set_label": f"Comp {idx + 1}",
+            "set_index": len(teams),
+            "set_label": comp_label,
             "hero_boxes": h_boxes,
             "coll_boxes": None,
-            "pet_box": row_pets[0] if row_pets else None,
-            "_hfc_pet_boxes": row_pets[:2],
+            "pet_box": pet_box,
+            "_hfc_pet_boxes": row_pets[:2] if row_pets else [pet_box],
+            "_hfc_damage": comp_dmg,
             "_ocr_hints": {"modes": ["hunting-fields-contract"], "targets": ["wrizz-no-earrings"]},
         })
     return teams
@@ -3773,6 +3848,10 @@ def detect_and_assemble_teams_for_image(
     elif guide_kind == "hfc":
         for i, t in enumerate(solved_teams):
             t["_ocr_hints"] = {"modes": ["hunting-fields-contract"], "targets": ["wrizz-no-earrings"]}
+            if i < len(teams_geom) and teams_geom[i].get("_hfc_damage"):
+                dmg = teams_geom[i]["_hfc_damage"]
+                t["damage"] = dmg
+                t["damage_display"] = _format_damage_short(dmg)
             pet_boxes = teams_geom[i].get("_hfc_pet_boxes", []) if i < len(teams_geom) else []
             if pet_boxes:
                 matched_pets = []
@@ -3792,6 +3871,7 @@ def detect_and_assemble_teams_for_image(
                         "name": best0["name"],
                         "options": list(dict.fromkeys(opts)),
                         "confidence": round(max(0.1, 1.0 - best0["mse"] / 12000.0), 3),
+                        "mse": round(float(best0["mse"]), 2),
                         "needs_review": best0["mse"] > 5000,
                         "visual_alternatives": [],
                         "bbox": pb0,
