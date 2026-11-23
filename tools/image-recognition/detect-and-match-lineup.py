@@ -2110,10 +2110,10 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
         br_empty = is_bg_region(br_patch)
 
         if not tr_empty and mse_single > 1500:
-            q_sz = round(min(w, h) * 0.50)
+            q_sz = round(min(w, h) * 0.56)
             tl_q = matcher.rank_candidates_in_box(
                 left_panel,
-                [x0 - 4, y0 - 4, q_sz, q_sz],
+                [x0 - 6, y0 - 14, q_sz, q_sz],
                 hero_t_name,
                 type_tensors,
                 scales=(0.86, 0.96, 1.06),
@@ -2122,7 +2122,7 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
             )[0]
             tr_q = matcher.rank_candidates_in_box(
                 left_panel,
-                [x0 + w - q_sz + 4, y0 - 4, q_sz, q_sz],
+                [x0 + w - q_sz + 6, y0 - 14, q_sz, q_sz],
                 hero_t_name,
                 type_tensors,
                 scales=(0.86, 0.96, 1.06),
@@ -2176,9 +2176,9 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 return f"multi_{len(q_list)}", [hero_meta[q["id"]]["slug"] for q in q_list]
 
         if tr_empty or bl_empty:
-            d_sz = round(min(w, h) * 0.62)
-            tl_box = [x0 - 5, y0 - 5, d_sz, d_sz]
-            br_box = [x0 + w - d_sz + 5, y0 + h - d_sz + 5, d_sz, d_sz]
+            d_sz = round(min(w, h) * 0.60)
+            tl_box = [x0 - 6, y0 - 9, d_sz, d_sz]
+            br_box = [x0 + w - d_sz + 6, y0 + h - d_sz + 6, d_sz, d_sz]
             tl_rank = matcher.rank_candidates_in_box(
                 left_panel,
                 tl_box,
@@ -2198,6 +2198,33 @@ def decode_left_panel_rounds(img, matcher, type_tensors, hero_meta, pet_meta):
                 stride=2,
             )
             mse_diag = 0.5 * (tl_rank[0]["mse"] + br_rank[0]["mse"])
+            # Also test a 3-hero diagonal cascade (top-left -> center -> bottom-right) when both off-diagonal corners are empty.
+            if tr_empty and bl_empty and mse_single > 1500:
+                d3_sz = round(min(w, h) * 0.54)
+                d3_boxes = [
+                    [x0 - 8, y0 - 10, d3_sz, d3_sz],
+                    [x0 + round((w - d3_sz) / 2), y0 + round((h - d3_sz) / 2), d3_sz, d3_sz],
+                    [x0 + w - d3_sz + 8, y0 + h - d3_sz + 10, d3_sz, d3_sz],
+                ]
+                d3_res = [
+                    matcher.rank_candidates_in_box(
+                        left_panel,
+                        db,
+                        hero_t_name,
+                        type_tensors,
+                        scales=(0.86, 0.96, 1.06),
+                        pad_ratio=0.24,
+                        stride=2,
+                    )[0]
+                    for db in d3_boxes
+                ]
+                mse_diag3 = float(np.mean([x["mse"] for x in d3_res]))
+                if (
+                    mse_diag3 < min(mse_diag * 0.92, mse_single * 0.82)
+                    and len({x["id"] for x in d3_res}) == 3
+                ):
+                    return "split_3", [hero_meta[x["id"]]["slug"] for x in d3_res]
+
             if (tr_empty and mse_diag < mse_single * 0.98) or (
                 bl_empty and mse_diag < mse_single * 0.82
             ):
