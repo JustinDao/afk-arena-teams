@@ -670,6 +670,10 @@ def assemble_ts_compact_7_teams(img):
             if float(np.mean([p.std() for p in patches])) > 22.0:
                 row_ys.append(ry)
     sub_w = round(36 * sx)
+    # Estimate parchment card background color from the blank right margin of the first row
+    bg_sample = img[row_ys[0] : row_ys[0] + hw, round(660 * sx) : round(720 * sx)] if row_ys else img[:40, :40]
+    parchment_bg = np.median(bg_sample.reshape(-1, 3), axis=0).astype(np.float32) if bg_sample.size > 0 else np.array([165.0, 195.0, 215.0], dtype=np.float32)
+
     teams = []
     for r_idx, ry in enumerate(row_ys):
         hero_boxes = [[cx, ry, hw, hw] for cx in col_xs]
@@ -680,28 +684,35 @@ def assemble_ts_compact_7_teams(img):
                 x_left = cx
                 x_mid = cx + round(19 * sx)
                 x_right = cx + round(41 * sx)
-                # For row 0 (dy=60), the top ~16px overlaps the primary portrait's bottom edge,
-                # so test variance strictly in the lower half below the primary portrait (y >= ry + hw + 2).
-                check_y0 = max(sub_y, ry + hw + round(2 * sy)) if row_idx_s == 0 else sub_y
-                # Use non-overlapping outer strips (leftmost 16px, rightmost 16px) to distinguish
-                # side-by-side (left+right) vs single-left vs single-centered (mid).
-                def _strip_std(sx0, sw):
-                    chk = img[check_y0 : sub_y + sub_w, sx0 : sx0 + sw]
-                    return float(chk.std()) if chk.size > 0 else 0.0
+                if sub_y + sub_w > H:
+                    continue
+                # For row 0 (dy=60), check strictly below the primary portrait (y >= ry + hw + 4)
+                # so primary portrait pixels never trigger false subs.
+                check_y0 = max(sub_y + round(4 * sy), ry + hw + round(4 * sy)) if row_idx_s == 0 else sub_y + round(6 * sy)
+                check_y1 = sub_y + sub_w - round(4 * sy)
+                if check_y1 <= check_y0:
+                    continue
 
-                outer_w = max(8, round(15 * sx))
-                has_l = (sub_y + sub_w <= H) and _strip_std(x_left, outer_w) > 28.0
-                has_r = (sub_y + sub_w <= H) and _strip_std(x_right + sub_w - outer_w, outer_w) > 28.0
-                has_m = (sub_y + sub_w <= H) and _strip_std(x_mid + round(6 * sx), max(10, sub_w - round(12 * sx))) > 30.0
-                if has_l and has_r:
+                def _fg_frac(sx0, sw):
+                    chk = img[check_y0:check_y1, sx0 : sx0 + sw]
+                    if chk.size == 0:
+                        return 0.0
+                    d = np.max(np.abs(chk.astype(np.float32) - parchment_bg), axis=2)
+                    return float((d > 30.0).mean())
+
+                outer_w = max(8, round(14 * sx))
+                fg_l = _fg_frac(x_left + round(2 * sx), outer_w)
+                fg_r = _fg_frac(x_right + sub_w - outer_w - round(2 * sx), outer_w)
+                fg_m = _fg_frac(x_mid + round(6 * sx), max(10, sub_w - round(12 * sx)))
+                if fg_l >= 0.45 and fg_r >= 0.45:
                     slot_subs.append([x_left, sub_y, sub_w, sub_w])
                     slot_subs.append([x_right, sub_y, sub_w, sub_w])
-                elif has_l:
-                    slot_subs.append([x_left, sub_y, sub_w, sub_w])
-                elif has_r:
-                    slot_subs.append([x_right, sub_y, sub_w, sub_w])
-                elif has_m:
+                elif fg_m >= 0.45 and fg_l < 0.45 and fg_r < 0.45:
                     slot_subs.append([x_mid, sub_y, sub_w, sub_w])
+                elif fg_l >= 0.45:
+                    slot_subs.append([x_left, sub_y, sub_w, sub_w])
+                elif fg_r >= 0.45:
+                    slot_subs.append([x_right, sub_y, sub_w, sub_w])
             sub_hero_boxes.append(slot_subs)
         teams.append(
             {
