@@ -4174,12 +4174,19 @@ def _detect_sp_hero(img, solved_teams):
                 if th >= ph or tw >= pw:
                     continue
                 resized = cv2.resize(tmpl, (tw, th), interpolation=cv2.INTER_AREA)
-                res = cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED)
+                yy, xx = np.mgrid[0:th, 0:tw]
+                cy, cx = (th - 1) / 2.0, (tw - 1) / 2.0
+                dmask = (
+                    (np.abs(xx - cx) / max(1.0, cx) + np.abs(yy - cy) / max(1.0, cy)) <= 0.92
+                ).astype(np.uint8) * 255
+                dmask3 = cv2.merge([dmask, dmask, dmask])
+                res = cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED, mask=dmask3)
+                res = np.nan_to_num(res, nan=0.0, posinf=0.0, neginf=0.0)
                 _, max_val, _, _ = cv2.minMaxLoc(res)
                 if max_val > max_corr:
                     max_corr = float(max_val)
 
-            if max_corr >= 0.55 and max_corr > best_score:
+            if max_corr >= 0.58 and max_corr > best_score:
                 best_score = max_corr
                 best_h = h
 
