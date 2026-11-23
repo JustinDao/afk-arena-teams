@@ -15,7 +15,7 @@ import { FormationBoardComponent, FormationBoardPet, FormationBoardSlot } from '
 import { HeroInvestmentEditorComponent } from '../components/hero-investment-editor/hero-investment-editor.component';
 import { defaultAscensionForInvestment } from '../investment';
 import { COLLECTION_NODE_STATS } from '../collection-catalog';
-import { AscensionRank, DraftFormation, displayHeroName, Hero, ModeConfig, Pet } from '../models';
+import { AscensionRank, DraftFormation, displayHeroName, Hero, isSpCapableHero, ModeConfig, Pet } from '../models';
 import { LineupsStore } from '../lineups.store';
 import { formatDamage, formatDuration, parseDamage, parseDuration } from '../lineup-display';
 import { LineupViewPreferencesService } from '../lineup-view-preferences.service';
@@ -45,6 +45,7 @@ export class SubmitPageComponent implements OnDestroy {
   readonly store = inject(LineupsStore);
   readonly lineupView = inject(LineupViewPreferencesService);
   readonly auth = inject(AuthService);
+  readonly displayHeroName = displayHeroName;
   readonly nodeStatsCatalog = COLLECTION_NODE_STATS;
   private readonly heroIcons = inject(HeroIconService);
   private readonly router = inject(Router);
@@ -95,6 +96,22 @@ export class SubmitPageComponent implements OnDestroy {
       level: form.petLevel,
     };
   });
+
+  readonly spCapableDraftHeroes = computed<readonly Hero[]>(() => {
+    const draft = this.store.draft();
+    if (!draft) return [];
+    const byId = new Map(this.store.heroes().map((h) => [h.id, h]));
+    return draft.forms[draft.cur].slots
+      .map((s) => (s.hid !== null ? byId.get(s.hid) : undefined))
+      .filter((h): h is Hero => Boolean(h && isSpCapableHero(h)));
+  });
+
+  setDraftSpHero(event: Event): void {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const id = select.value ? Number(select.value) : null;
+    this.store.updateDraftSpHero(Number.isFinite(id) ? id : null);
+  }
 
   readonly submissionForm = new FormGroup({
     target: new FormControl('', { nonNullable: true }),

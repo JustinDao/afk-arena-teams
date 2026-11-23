@@ -22,6 +22,7 @@ import {
   ModeConfig,
   MODES,
   displayHeroName,
+  isSpCapableHero,
   Pet,
   PET_MAX_LEVEL,
   petMaxLevel,
@@ -78,6 +79,8 @@ function makeEmptyFormation(key: string, label: string): DraftFormation {
 export class LineupsStore {
   private readonly modeSignal = signal('nightmare-corridor');
   private readonly targetSignal = signal<string | null>(null);
+  private readonly targetBossSignal = signal<string | null>(null);
+  private readonly targetBuffSignal = signal<string | null>(null);
   private readonly teamCountSignal = signal<number | null>(null);
   private readonly useRosterSignal = signal(false);
   private readonly matchSignal = signal<'strict' | 'partial'>('strict');
@@ -128,6 +131,8 @@ export class LineupsStore {
 
   readonly mode = this.modeSignal.asReadonly();
   readonly target = this.targetSignal.asReadonly();
+  readonly targetBoss = this.targetBossSignal.asReadonly();
+  readonly targetBuff = this.targetBuffSignal.asReadonly();
   readonly teamCount = this.teamCountSignal.asReadonly();
   readonly useRoster = this.useRosterSignal.asReadonly();
   readonly match = this.matchSignal.asReadonly();
@@ -165,6 +170,8 @@ export class LineupsStore {
     const rosterSize = Object.keys(roster).length;
     const currentMode = this.modeSignal();
     const selectedTarget = this.targetSignal();
+    const selectedBoss = this.targetBossSignal();
+    const selectedBuff = this.targetBuffSignal();
     const teamCount = this.teamCountSignal();
     const useRoster = this.useRosterSignal() && rosterSize > 0;
     const checkInvestment = this.checkInvestmentSignal();
@@ -175,8 +182,18 @@ export class LineupsStore {
 
     const petRoster = this.petRosterSignal();
     const rows = this.submissionsSignal()
-      .filter((submission) => submission.mode === currentMode && (!selectedTarget || submission.target === selectedTarget)
-        && (teamCount === null || submission.forms.length === teamCount))
+      .filter((submission) => {
+        if (submission.mode !== currentMode) return false;
+        if (teamCount !== null && submission.forms.length !== teamCount) return false;
+        if (currentMode === 'hunting-fields-contract' && (selectedBoss || selectedBuff)) {
+          const [boss, buff] = submission.target.split(' — ');
+          if (selectedBoss && boss?.trim() !== selectedBoss) return false;
+          if (selectedBuff && buff?.trim() !== selectedBuff) return false;
+        } else if (selectedTarget && submission.target !== selectedTarget) {
+          return false;
+        }
+        return true;
+      })
     .map((submission) => this.evaluateSubmission(
       submission, roster, petRoster, this.heroLevelSignal(), useRoster, checkInvestment, votes, scope,
     ));
@@ -308,6 +325,8 @@ export class LineupsStore {
     this.getMode(slug);
     this.modeSignal.set(slug);
     this.targetSignal.set(null);
+    this.targetBossSignal.set(null);
+    this.targetBuffSignal.set(null);
     this.teamCountSignal.set(null);
     this.scopeSignal.set('all');
   }
@@ -318,6 +337,14 @@ export class LineupsStore {
 
   setTarget(target: string | null): void {
     this.targetSignal.set(target || null);
+  }
+
+  setTargetBoss(boss: string | null): void {
+    this.targetBossSignal.set(boss || null);
+  }
+
+  setTargetBuff(buff: string | null): void {
+    this.targetBuffSignal.set(buff || null);
   }
 
   setMatch(match: 'strict' | 'partial'): void {
@@ -751,6 +778,7 @@ export class LineupsStore {
             slot_label: form.label,
             pet_id: form.petId,
             pet_level: form.petLevel,
+            sp_hero_id: form.spHeroId ?? null,
             time_seconds: form.timeSeconds,
             damage: form.damage,
             notes: form.notes || null,
@@ -873,6 +901,7 @@ export class LineupsStore {
         slots: form.slots.map((slot) => ({ ...slot })),
       }));
     }
+    for (const form of forms) this.syncFormationSp(form);
     const firstNonEmpty = forms.findIndex((f) => f.slots.some((s) => s.hid !== null));
     return {
       mode: imported.mode,
@@ -962,9 +991,11 @@ export class LineupsStore {
 
   clearSlot(index: number): void {
     this.updateDraft((draft) => {
-      draft.forms[draft.cur].slots[index] = {
+      const formation = draft.forms[draft.cur];
+      formation.slots[index] = {
         hid: null, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
       };
+      this.syncFormationSp(formation);
     });
   }
 
@@ -988,8 +1019,30 @@ export class LineupsStore {
       formation.slots[slotIndex] = {
         hid: heroId, merc: false, inv: '', ascension: null, collectionId: '', collectionSnapshot: null,
       };
+      this.syncFormationSp(formation);
       draft.slot = formation.slots.findIndex(({ hid }) => hid === null);
     });
+  }
+
+  updateDraftSpHero(heroId: number | null): void {
+    this.updateDraft((draft) => {
+      draft.forms[draft.cur].spHeroId = heroId;
+    });
+  }
+
+  private syncFormationSp(formation: DraftFormation): void {
+    const heroesById = new Map(this.heroesSignal().map((h) => [h.id, h]));
+    const spIds = formation.slots
+      .map((s) => (s.hid !== null ? heroesById.get(s.hid) : undefined))
+      .filter((h): h is Hero => Boolean(h && isSpCapableHero(h)))
+      .map((h) => h.id);
+    if (spIds.length === 1) {
+      formation.spHeroId = spIds[0];
+    } else if (spIds.length === 0) {
+      formation.spHeroId = null;
+    } else if (formation.spHeroId == null || !spIds.includes(formation.spHeroId)) {
+      formation.spHeroId = null;
+    }
   }
 
   updateDraftFormationField(field: 'investment' | 'mercenary', value: string | boolean, slotIndex: number): void {
@@ -1082,6 +1135,7 @@ export class LineupsStore {
             slot_label: form.label,
             pet_id: form.petId,
             pet_level: form.petLevel,
+            sp_hero_id: form.spHeroId ?? null,
             time_seconds: form.timeSeconds,
             damage: form.damage,
             notes: form.notes || null,
@@ -1175,6 +1229,7 @@ export class LineupsStore {
         beast: this.petName(form.petId) ?? '',
         petId: form.petId,
         petLevel: form.petLevel,
+        spHeroId: form.spHeroId ?? null,
         timeSeconds: parsedTime !== null ? Math.max(1, Math.round(parsedTime)) : null,
         damage: parsedDmg !== null && parsedDmg > 0 ? parsedDmg : null,
         notes: form.notes?.trim() ?? '',
@@ -1213,6 +1268,16 @@ export class LineupsStore {
 
   evaluatedSubmission(id: number): EvaluatedSubmission | null {
     const submission = this.submissionsSignal().find((entry) => entry.id === id);
+    if (!submission) return null;
+    return this.evaluateSubmission(submission, {}, {}, null, false, false, this.votesSignal(), 'all');
+  }
+
+  /** Loads and evaluates a single lineup by ID without waiting for the full submissions feed. */
+  async loadSubmissionById(id: number): Promise<EvaluatedSubmission | null> {
+    const existing = this.evaluatedSubmission(id);
+    if (existing) return existing;
+    if (!this.data.configured) return null;
+    const submission = await this.data.loadSubmissionById(id);
     if (!submission) return null;
     return this.evaluateSubmission(submission, {}, {}, null, false, false, this.votesSignal(), 'all');
   }

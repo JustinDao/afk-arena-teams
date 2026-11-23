@@ -7,7 +7,26 @@
   <section class="toolbar">
     <div class="toolbar-top">
       <div class="toolbar-filters">
-        @if (store.mode() === 'nightmare-corridor') {
+        @if (store.mode() === 'hunting-fields-contract') {
+          <label class="check target-select">
+            Boss
+            <select [value]="store.targetBoss() ?? ''" (change)="setTargetBoss($event)">
+              <option value="">All bosses</option>
+              @for (boss of hfcBosses(); track boss) {
+                <option [value]="boss">{{ boss }}</option>
+              }
+            </select>
+          </label>
+          <label class="check target-select">
+            Buff
+            <select [value]="store.targetBuff() ?? ''" (change)="setTargetBuff($event)">
+              <option value="">All buffs</option>
+              @for (buff of hfcBuffs(); track buff) {
+                <option [value]="buff">{{ buff }}</option>
+              }
+            </select>
+          </label>
+        } @else if (store.mode() === 'nightmare-corridor') {
           <label class="check target-select">
             {{ store.activeMode().targetLabel }}
             <select [value]="store.target() ?? ''" (change)="setTarget($event)">
@@ -84,7 +103,7 @@
   @if (!auth.configured || store.backendReady()) {
     <div class="results-bar">
       <span class="results-count">{{ countLabel(store.visibleSubmissions().length, 'lineup') }}</span>
-      @if (hasActiveFilters()) {
+      @if (hasActiveFilters() && store.visibleSubmissions().length > 0) {
         <button mat-button type="button" class="btn clear-filters" (click)="clearFilters()">Clear filters</button>
       }
     </div>

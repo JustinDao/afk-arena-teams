@@ -8,9 +8,15 @@
         <a mat-button class="btn" routerLink="/">Back to lineups</a>
       </div>
     </div>
+    @if (auth.configured && !auth.user()) {
+      <div class="roster-filter-row" role="status" style="margin-bottom: var(--app-space-3); padding: var(--app-space-2) var(--app-space-3); border: 1px solid var(--app-line); border-radius: var(--app-radius-sm); background: var(--app-panel); display: flex; align-items: center; justify-content: space-between; gap: var(--app-space-2); flex-wrap: wrap;">
+        <span class="rules" style="margin: 0;">Sign in to publish lineups to the community. Your draft stays saved locally while you edit.</span>
+        <button mat-stroked-button type="button" class="btn" (click)="auth.requestSignIn()">Sign in</button>
+      </div>
+    }
     <div class="seg" role="group" aria-label="Game mode">
       @for (mode of store.modes(); track mode.slug) {
-      <button mat-button type="button" [attr.aria-pressed]="mode.slug === draft.mode"
+      <button mat-button type="button" [title]="mode.name" [attr.aria-label]="mode.name" [attr.aria-pressed]="mode.slug === draft.mode"
         (click)="changeDraftMode(mode.slug)">{{ mode.short }}</button>
       }
     </div>
@@ -71,6 +77,21 @@
         (petClick)="petModalOpen.set(true)"
         (petRemove)="updateDraftPet({ petId: null, level: null })"
       />
+
+      @if (spCapableDraftHeroes().length === 1) {
+        <p class="muted" style="margin: 0.25rem 0 0;">
+          SP skill: <strong>{{ displayHeroName(spCapableDraftHeroes()[0]) }}</strong> (auto-selected)
+        </p>
+      } @else if (spCapableDraftHeroes().length > 1) {
+        <label class="field">SP skill hero <span class="muted">(optional)</span>
+          <select [value]="draft.forms[draft.cur].spHeroId ?? ''" (change)="setDraftSpHero($event)">
+            <option value="">Any / none specified</option>
+            @for (hero of spCapableDraftHeroes(); track hero.id) {
+              <option [value]="hero.id">{{ displayHeroName(hero) }}</option>
+            }
+          </select>
+        </label>
+      }
 
       @if (draft.forms.length > 1) {
         <label class="field">Notes for {{ draft.forms[draft.cur].label }} (optional)

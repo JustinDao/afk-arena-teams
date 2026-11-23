@@ -120,6 +120,7 @@ export interface EditableImportFormation {
   readonly petId: number | null;
   readonly petName: string;
   readonly petLevel: number | null;
+  readonly spHeroId?: number | null;
   readonly petConfidence: number;
   readonly petGuideOptions: readonly string[];
   readonly petVisualAlternatives: readonly { readonly name: string; readonly slug: string; readonly confidence: number }[];
@@ -1571,12 +1572,15 @@ export class SubmitFromImagePageComponent implements OnDestroy {
     this.formations().some((f) => f.heroes.some((h) => h.heroId !== null)),
   );
 
+  readonly sampleAnalysisLoaded = signal(false);
+
   readonly hasLoadedWorkspace = computed(
-    () => Boolean(this.imageUrl() || this.bestMode() || this.bestLineupMatch() || this.hasAnyHero()),
+    () => Boolean(this.imageUrl() || this.sampleAnalysisLoaded() || this.hasAnyHero()),
   );
 
   resetToUpload(): void {
     this.imageUrl.set(null);
+    this.sampleAnalysisLoaded.set(false);
     this.uploadedDataUrls.set([]);
     this.bestMode.set(null);
     this.bestLineupMatch.set(null);
@@ -1763,7 +1767,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
       const endpoints = ['/api/recognize-sample', 'http://127.0.0.1:8174/api/recognize-sample'];
       for (const url of endpoints) {
         const controller = new AbortController();
-        const timeoutMs = url.startsWith('http') ? 90000 : 2500;
+        const timeoutMs = url.startsWith('http') ? 8000 : 2500;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const res = await fetch(url, {
@@ -1776,6 +1780,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
             const data = await res.json();
             if (data?.ok) {
               this.applyRecognitionResponse(data);
+              this.sampleAnalysisLoaded.set(true);
               return;
             }
           }
@@ -1786,6 +1791,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         }
       }
       this.applyBuiltInSampleRecognition(samplePath);
+      this.sampleAnalysisLoaded.set(true);
     } finally {
       this.analyzing.set(false);
     }
@@ -2756,6 +2762,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         label: form.label,
         petId: form.petId,
         petLevel: form.petLevel,
+        spHeroId: form.spHeroId ?? null,
         time: this.resultEntryMode() === 'per-round' ? (form.time ?? '') : '',
         damage: this.resultEntryMode() === 'per-round' ? (form.damage ?? '') : '',
         notes: form.notes ?? '',
@@ -3048,6 +3055,9 @@ export class SubmitFromImagePageComponent implements OnDestroy {
                 ? petObj.level
                 : Math.min(18, petMaxLevel(resolvedPet.kind)))
             : null,
+          spHeroId: typeof (t as { sp_hero_id?: unknown }).sp_hero_id === 'number'
+            ? ((t as { sp_hero_id?: number }).sp_hero_id ?? null)
+            : null,
           petConfidence: t.pet_warning ? 0 : Number(petObj?.confidence ?? 0.9),
           petGuideOptions,
           petVisualAlternatives,
@@ -3190,6 +3200,7 @@ export class SubmitFromImagePageComponent implements OnDestroy {
         label: form.label,
         petId: form.petId,
         petLevel: form.petLevel,
+        spHeroId: form.spHeroId ?? null,
         time: setState.resultEntryMode === 'per-round' ? (form.time ?? '') : '',
         damage: setState.resultEntryMode === 'per-round' ? (form.damage ?? '') : '',
         notes: form.notes ?? '',

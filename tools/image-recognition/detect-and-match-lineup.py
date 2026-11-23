@@ -4106,37 +4106,68 @@ def _is_sp_capable_hero(h):
     )
 
 
-_SP_BADGE_TMPL = False
+_SP_BADGE_TMPLS = None
 
 
-def _get_sp_badge_template():
-    global _SP_BADGE_TMPL
-    if _SP_BADGE_TMPL is not False:
-        return _SP_BADGE_TMPL
-    p = Path(__file__).resolve().parent / "sp-badge-template.png"
-    _SP_BADGE_TMPL = cv2.imread(str(p), cv2.IMREAD_COLOR) if p.is_file() else None
-    return _SP_BADGE_TMPL
+def _get_sp_badge_templates():
+    global _SP_BADGE_TMPLS
+    if _SP_BADGE_TMPLS is not None:
+        return _SP_BADGE_TMPLS
+    base = Path(__file__).resolve().parent
+    specs = [
+        ("gold_diamond", "sp-badge-template.png", "diamond"),
+        ("brown_diamond", "sp-badge-template-brown.png", "diamond"),
+        ("bronze_circle", "sp-badge-template-circle.png", "circle"),
+    ]
+    out = {}
+    for key, fname, shape in specs:
+        p = base / fname
+        if p.is_file():
+            im = cv2.imread(str(p), cv2.IMREAD_COLOR)
+            if im is not None:
+                out[key] = (im, shape)
+    _SP_BADGE_TMPLS = out
+    return _SP_BADGE_TMPLS
+
+
+def _make_sp_mask(th: int, tw: int, shape: str):
+    yy, xx = np.mgrid[0:th, 0:tw]
+    cy, cx = (th - 1) / 2.0, (tw - 1) / 2.0
+    dx = np.abs(xx - cx) / max(1.0, cx)
+    dy = np.abs(yy - cy) / max(1.0, cy)
+    if shape == "circle":
+        m = ((dx * dx + dy * dy) <= 0.88 * 0.88).astype(np.uint8) * 255
+    else:
+        m = ((dx + dy) <= 0.92).astype(np.uint8) * 255
+    return cv2.merge([m, m, m])
 
 
 def _detect_sp_hero(img, solved_teams):
-    """Detect which Awakened/Highborn hero has the gold SP diamond badge enabled via template matching."""
+    """Detect which Awakened/Highborn hero has the SP badge enabled via masked template matching."""
     if img is None or not solved_teams:
         return
-    tmpl = _get_sp_badge_template()
-    if tmpl is None:
+    tmpls = _get_sp_badge_templates()
+    if not tmpls:
         return
     H, W = img.shape[:2]
 
     for t in solved_teams:
         sp_cands = [
             h for h in (t.get("heroes") or [])
-            if h.get("id") is not None and h.get("bbox") and len(h["bbox"]) == 4 and _is_sp_capable_hero(h)
+            if h.get("id") is not None and _is_sp_capable_hero(h)
         ]
+        if not sp_cands:
+            continue
+        # If there is only 1 Awakened/Highborn hero in the formation, their SP is always enabled.
+        if len(sp_cands) == 1:
+            t["sp_hero_id"] = sp_cands[0]["id"]
+            t["sp_hero_name"] = sp_cands[0]["name"]
+            continue
+        sp_cands = [h for h in sp_cands if h.get("bbox") and len(h["bbox"]) == 4]
         if not sp_cands:
             continue
 
         layout = t.get("layout") or ""
-        is_hfc = layout == "hfc_cards"
         best_h = None
         best_score = 0.0
 
@@ -4144,47 +4175,61 @@ def _detect_sp_hero(img, solved_teams):
             bx, by, bw, bh = [int(round(v)) for v in h["bbox"]]
             if bw < 20 or bh < 20:
                 continue
-            if is_hfc:
-                # Rakudayyy HFC places the gold <SP> diamond either centered below the portrait
-                # (no-notes cards) OR on the bottom-right corner (cards with notes below).
-                rx0 = max(0, bx + round(bw * 0.05))
-                rx1 = min(W, bx + round(bw * 1.35))
-                ry0 = max(0, by + round(bh * 0.50))
-                ry1 = min(H, by + round(bh * 1.85))
+
+            # Layout-specific search regions & badge styles:
+            # - hfc_cards: gold diamond below portrait OR bottom-right corner
+            # - staggered_3_2 (mcwhare): brown/gold diamond at top-left corner
+            # - ts_compact_7 (No_Name_Edit): brown/gold diamond at top-right corner
+            # - theafkguys_ts_grid: bronze circle (or diamond) at top-right corner
+            # - others (Groody, Mugen, in-game): bottom-right OR top-right corner
+            if layout == "hfc_cards":
+                rois = [(0.05, 1.35, 0.50, 1.85)]
+                tmpl_keys = ("gold_diamond",)
                 scale_fracs = (0.30, 0.36, 0.42, 0.48, 0.56, 0.64)
+            elif layout == "staggered_3_2":
+                rois = [(-0.42, 0.58, -0.42, 0.58)]
+                tmpl_keys = ("brown_diamond", "gold_diamond")
+                scale_fracs = (0.28, 0.35, 0.42, 0.50, 0.58)
+            elif layout == "ts_compact_7":
+                rois = [(0.42, 1.42, -0.42, 0.58)]
+                tmpl_keys = ("brown_diamond", "gold_diamond")
+                scale_fracs = (0.30, 0.38, 0.46, 0.54, 0.62)
+            elif layout == "theafkguys_ts_grid":
+                rois = [(0.42, 1.28, -0.25, 0.58)]
+                tmpl_keys = ("bronze_circle", "brown_diamond", "gold_diamond")
+                scale_fracs = (0.26, 0.32, 0.38, 0.46, 0.54)
             else:
-                # Groody, TheAFKGuys, and in-game screenshots place the gold <SP> diamond
-                # overlapping the bottom-right corner of the portrait.
-                rx0 = max(0, bx + round(bw * 0.48))
-                rx1 = min(W, bx + round(bw * 1.38))
-                ry0 = max(0, by + round(bh * 0.48))
-                ry1 = min(H, by + round(bh * 1.38))
-                scale_fracs = (0.26, 0.32, 0.38, 0.46)
+                rois = [(0.48, 1.38, 0.48, 1.38), (0.45, 1.38, -0.35, 0.55)]
+                tmpl_keys = ("gold_diamond", "brown_diamond")
+                scale_fracs = (0.26, 0.32, 0.38, 0.46, 0.54)
 
-            if rx1 - rx0 < 16 or ry1 - ry0 < 16:
-                continue
-            patch = img[ry0:ry1, rx0:rx1]
-            ph, pw = patch.shape[:2]
-
-            tmpl_aspect = tmpl.shape[1] / max(1, tmpl.shape[0])
             max_corr = 0.0
-            for frac in scale_fracs:
-                th = max(12, round(bh * frac))
-                tw = max(12, round(th * tmpl_aspect))
-                if th >= ph or tw >= pw:
+            for fx0, fx1, fy0, fy1 in rois:
+                rx0 = max(0, bx + round(bw * fx0))
+                rx1 = min(W, bx + round(bw * fx1))
+                ry0 = max(0, by + round(bh * fy0))
+                ry1 = min(H, by + round(bh * fy1))
+                if rx1 - rx0 < 14 or ry1 - ry0 < 14:
                     continue
-                resized = cv2.resize(tmpl, (tw, th), interpolation=cv2.INTER_AREA)
-                yy, xx = np.mgrid[0:th, 0:tw]
-                cy, cx = (th - 1) / 2.0, (tw - 1) / 2.0
-                dmask = (
-                    (np.abs(xx - cx) / max(1.0, cx) + np.abs(yy - cy) / max(1.0, cy)) <= 0.92
-                ).astype(np.uint8) * 255
-                dmask3 = cv2.merge([dmask, dmask, dmask])
-                res = cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED, mask=dmask3)
-                res = np.nan_to_num(res, nan=0.0, posinf=0.0, neginf=0.0)
-                _, max_val, _, _ = cv2.minMaxLoc(res)
-                if max_val > max_corr:
-                    max_corr = float(max_val)
+                patch = img[ry0:ry1, rx0:rx1]
+                ph, pw = patch.shape[:2]
+                for tk in tmpl_keys:
+                    if tk not in tmpls:
+                        continue
+                    tmpl, shape = tmpls[tk]
+                    tmpl_aspect = tmpl.shape[1] / max(1, tmpl.shape[0])
+                    for frac in scale_fracs:
+                        th = max(12, round(bh * frac))
+                        tw = max(12, round(th * tmpl_aspect))
+                        if th >= ph or tw >= pw:
+                            continue
+                        resized = cv2.resize(tmpl, (tw, th), interpolation=cv2.INTER_AREA)
+                        mask3 = _make_sp_mask(th, tw, shape)
+                        res = cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED, mask=mask3)
+                        res = np.nan_to_num(res, nan=0.0, posinf=0.0, neginf=0.0)
+                        _, max_val, _, _ = cv2.minMaxLoc(res)
+                        if max_val > max_corr:
+                            max_corr = float(max_val)
 
             if max_corr >= 0.58 and max_corr > best_score:
                 best_score = max_corr

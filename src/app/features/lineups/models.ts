@@ -45,6 +45,10 @@ export function displayHeroName(hero: Pick<Hero, 'name' | 'isAwakened'>): string
   return hero.isAwakened ? `${baseName} (Awakened)` : baseName;
 }
 
+export function isSpCapableHero(hero: Pick<Hero, 'name' | 'isAwakened'>): boolean {
+  return Boolean(hero.isAwakened) || /\(highborn\)/i.test(hero.name);
+}
+
 export interface Pet {
   readonly id: number;
   readonly name: string;
@@ -201,6 +205,7 @@ export interface DraftFormation {
   label: string;
   petId: number | null;
   petLevel: number | null;
+  spHeroId?: number | null;
   time: string;
   damage?: string;
   notes?: string;
