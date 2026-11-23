@@ -4080,12 +4080,26 @@ def _is_sp_capable_hero(h):
     )
 
 
+_SP_BADGE_TMPL = False
+
+
+def _get_sp_badge_template():
+    global _SP_BADGE_TMPL
+    if _SP_BADGE_TMPL is not False:
+        return _SP_BADGE_TMPL
+    p = Path(__file__).resolve().parent / "sp-badge-template.png"
+    _SP_BADGE_TMPL = cv2.imread(str(p), cv2.IMREAD_COLOR) if p.is_file() else None
+    return _SP_BADGE_TMPL
+
+
 def _detect_sp_hero(img, solved_teams):
-    """Detect which Awakened/Highborn hero has the gold SP diamond badge enabled."""
+    """Detect which Awakened/Highborn hero has the gold SP diamond badge enabled via template matching."""
     if img is None or not solved_teams:
         return
+    tmpl = _get_sp_badge_template()
+    if tmpl is None:
+        return
     H, W = img.shape[:2]
-    ocr = _get_ocr_engine()
 
     for t in solved_teams:
         sp_cands = [
@@ -4105,51 +4119,41 @@ def _detect_sp_hero(img, solved_teams):
             if bw < 20 or bh < 20:
                 continue
             if is_hfc:
-                # Rakudayyy HFC places the gold <SP> diamond centered directly below the portrait.
-                rx0 = max(0, bx + round(bw * 0.16))
-                rx1 = min(W, bx + round(bw * 0.84))
-                ry0 = max(0, by + round(bh * 1.10))
-                ry1 = min(H, by + round(bh * 1.56))
+                # Rakudayyy HFC places the gold <SP> diamond either centered below the portrait
+                # (no-notes cards) OR on the bottom-right corner (cards with notes below).
+                rx0 = max(0, bx + round(bw * 0.05))
+                rx1 = min(W, bx + round(bw * 1.28))
+                ry0 = max(0, by + round(bh * 0.55))
+                ry1 = min(H, by + round(bh * 1.85))
+                scale_fracs = (0.28, 0.34, 0.40, 0.48, 0.56)
             else:
                 # Groody, TheAFKGuys, and in-game screenshots place the gold <SP> diamond
                 # overlapping the bottom-right corner of the portrait.
-                rx0 = max(0, bx + round(bw * 0.58))
-                rx1 = min(W, bx + round(bw * 1.32))
-                ry0 = max(0, by + round(bh * 0.58))
-                ry1 = min(H, by + round(bh * 1.32))
+                rx0 = max(0, bx + round(bw * 0.48))
+                rx1 = min(W, bx + round(bw * 1.38))
+                ry0 = max(0, by + round(bh * 0.48))
+                ry1 = min(H, by + round(bh * 1.38))
+                scale_fracs = (0.26, 0.32, 0.38, 0.46)
 
-            if rx1 - rx0 < 12 or ry1 - ry0 < 12:
+            if rx1 - rx0 < 16 or ry1 - ry0 < 16:
                 continue
             patch = img[ry0:ry1, rx0:rx1]
-            hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
-            # Warm gold diamond mask (H: 14..34, S >= 95, V >= 105)
-            gold_mask = (
-                (hsv[:, :, 0] >= 14)
-                & (hsv[:, :, 0] <= 34)
-                & (hsv[:, :, 1] >= 95)
-                & (hsv[:, :, 2] >= 105)
-            )
-            gold_ratio = float(gold_mask.mean())
-            score = gold_ratio
+            ph, pw = patch.shape[:2]
 
-            # Confirm "SP" text via OCR when gold badge is present (avoids gold-hair false positives)
-            min_gold = 0.06 if is_hfc else 0.11
-            if gold_ratio >= min_gold and ocr is not None:
-                try:
-                    up = cv2.resize(patch, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC) if min(patch.shape[:2]) < 60 else patch
-                    ores, _ = ocr(up, use_cls=False)
-                except Exception:
-                    ores = None
-                for _b, txt, _sc in (ores or []):
-                    clean = re.sub(r"[^A-Za-z0-9]", "", txt).upper()
-                    if "SP" in clean or clean in ("5P", "S8", "SR"):
-                        score += 1.0
-                        break
+            max_corr = 0.0
+            for frac in scale_fracs:
+                th = max(12, round(bh * frac))
+                tw = max(12, round(th * 1.38))
+                if th >= ph or tw >= pw:
+                    continue
+                resized = cv2.resize(tmpl, (tw, th), interpolation=cv2.INTER_AREA)
+                res = cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, _ = cv2.minMaxLoc(res)
+                if max_val > max_corr:
+                    max_corr = float(max_val)
 
-            # Require either OCR confirmation ("SP") or strong gold-diamond density in HFC's dark footer
-            threshold = 0.20 if is_hfc else 1.0
-            if score >= threshold and score > best_score:
-                best_score = score
+            if max_corr >= 0.55 and max_corr > best_score:
+                best_score = max_corr
                 best_h = h
 
         if best_h is not None:

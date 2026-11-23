@@ -86,9 +86,9 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                         else:
                             right_edge += max(260, round(avg_hw * 1.8))
                         x0 = max(0, min(b[0] for b in hbs) - 40)
-                        y0 = max(0, min(b[1] for b in hbs) - 60)
+                        y0 = max(0, min(b[1] for b in hbs) - max(60, round(avg_hw * 0.30)))
                         x1 = min(W, right_edge)
-                        y1 = min(H, max(b[1] + b[3] for b in hbs) + 120)
+                        y1 = min(H, max(b[1] + b[3] for b in hbs) + max(120, round(avg_hw * 0.80)))
                     else:
                         x0, y0, x1, y1 = 0, 0, W, min(H, 600)
 
