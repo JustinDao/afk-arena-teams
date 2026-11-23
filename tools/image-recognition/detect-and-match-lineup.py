@@ -670,9 +670,12 @@ def assemble_ts_compact_7_teams(img):
             if float(np.mean([p.std() for p in patches])) > 22.0:
                 row_ys.append(ry)
     sub_w = round(36 * sx)
-    # Estimate parchment card background color from the blank right margin of the first row
-    bg_sample = img[row_ys[0] : row_ys[0] + hw, round(660 * sx) : round(720 * sx)] if row_ys else img[:40, :40]
-    parchment_bg = np.median(bg_sample.reshape(-1, 3), axis=0).astype(np.float32) if bg_sample.size > 0 else np.array([165.0, 195.0, 215.0], dtype=np.float32)
+    # Sample BOTH the inner card tan background AND the lighter outer scroll parchment background
+    # (Row-2 mini-subs extend below the card box onto the outer scroll).
+    bg_in = img[row_ys[0] : row_ys[0] + hw, round(660 * sx) : round(720 * sx)] if row_ys else img[:40, :40]
+    inner_bg = np.median(bg_in.reshape(-1, 3), axis=0).astype(np.float32) if bg_in.size > 0 else np.array([165.0, 195.0, 215.0], dtype=np.float32)
+    bg_out = img[min(H - 20, row_ys[0] + round(102 * sy)) : min(H, row_ys[0] + round(130 * sy)), round(660 * sx) : round(720 * sx)] if row_ys else img[:40, :40]
+    outer_bg = np.median(bg_out.reshape(-1, 3), axis=0).astype(np.float32) if bg_out.size > 0 else inner_bg
 
     teams = []
     for r_idx, ry in enumerate(row_ys):
@@ -686,8 +689,6 @@ def assemble_ts_compact_7_teams(img):
                 x_right = cx + round(41 * sx)
                 if sub_y + sub_w > H:
                     continue
-                # For row 0 (dy=60), check strictly below the primary portrait (y >= ry + hw + 4)
-                # so primary portrait pixels never trigger false subs.
                 check_y0 = max(sub_y + round(4 * sy), ry + hw + round(4 * sy)) if row_idx_s == 0 else sub_y + round(6 * sy)
                 check_y1 = sub_y + sub_w - round(4 * sy)
                 if check_y1 <= check_y0:
@@ -697,8 +698,10 @@ def assemble_ts_compact_7_teams(img):
                     chk = img[check_y0:check_y1, sx0 : sx0 + sw]
                     if chk.size == 0:
                         return 0.0
-                    d = np.max(np.abs(chk.astype(np.float32) - parchment_bg), axis=2)
-                    return float((d > 30.0).mean())
+                    c_f = chk.astype(np.float32)
+                    d_in = np.max(np.abs(c_f - inner_bg), axis=2)
+                    d_out = np.max(np.abs(c_f - outer_bg), axis=2)
+                    return float((np.minimum(d_in, d_out) > 30.0).mean())
 
                 outer_w = max(8, round(14 * sx))
                 fg_l = _fg_frac(x_left + round(2 * sx), outer_w)
@@ -1910,7 +1913,8 @@ def solve_teams(
                         )
                     else:
                         s_cand = s_rk[0]
-                    if s_cand["mse"] < 2600.0:
+                    sub_mse_cap = 3150.0 if (allowed_hero_slugs and hero_meta[s_cand["id"]]["slug"] in allowed_hero_slugs) else 2600.0
+                    if s_cand["mse"] < sub_mse_cap:
                         s_slug = hero_meta[s_cand["id"]]["slug"]
                         if s_slug not in opts:
                             opts.append(s_slug)
