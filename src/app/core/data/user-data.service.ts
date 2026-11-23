@@ -54,6 +54,7 @@ interface DatabaseSubmissionRow {
     pet_level: number | null;
     result_time_seconds: number | null;
     result_damage?: number | null;
+    sp_hero_id?: number | null;
     notes?: string | null;
     pets: { name: string; icon_url: string } | null;
     formation_heroes: {
@@ -223,18 +224,19 @@ export class UserDataService {
     return new Map(((data ?? []) as { submission_id: number; display_name: string }[]).map((row) => [row.submission_id, row.display_name]));
   }
 
+  private static readonly SUBMISSION_SELECT_WITH_RECOMMENDATIONS = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,is_substitute,beast,pet_id,pet_level,result_time_seconds,result_damage,sp_hero_id,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
+  private static readonly SUBMISSION_SELECT_LEGACY = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))';
+
   async loadSubmissions(): Promise<readonly Submission[]> {
     if (!supabase) return [];
-    const selectWithRecommendations = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,is_substitute,beast,pet_id,pet_level,result_time_seconds,result_damage,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
-    const selectLegacy = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))';
     let response = await supabase.from('submissions')
-      .select(selectWithRecommendations)
+      .select(UserDataService.SUBMISSION_SELECT_WITH_RECOMMENDATIONS)
       .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false });
     let rows: DatabaseSubmissionRow[] = (response.data ?? []) as unknown as DatabaseSubmissionRow[];
     if (response.error && (this.isMissingCollectionRecommendationColumn(response.error) || response.error.message.includes('result_damage'))) {
       const legacyResponse = await supabase.from('submissions')
-        .select(selectLegacy)
+        .select(UserDataService.SUBMISSION_SELECT_LEGACY)
         .order('upvotes', { ascending: false })
         .order('created_at', { ascending: false });
       if (legacyResponse.error) throw new Error(`Could not load lineups: ${legacyResponse.error.message}`);
@@ -243,9 +245,35 @@ export class UserDataService {
       throw new Error(`Could not load lineups: ${response.error.message}`);
     }
     const authors = await this.loadSubmissionAuthors();
-    return rows.map((row) => {
-      if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
-      return {
+    return rows.map((row) => this.mapSubmissionRow(row, authors));
+  }
+
+  /** Fetches a single lineup by ID for fast deep-link loads without waiting for the full feed. */
+  async loadSubmissionById(id: number): Promise<Submission | null> {
+    if (!supabase || !Number.isInteger(id) || id <= 0) return null;
+    let response = await supabase.from('submissions')
+      .select(UserDataService.SUBMISSION_SELECT_WITH_RECOMMENDATIONS)
+      .eq('id', id)
+      .maybeSingle();
+    let row = response.data as unknown as DatabaseSubmissionRow | null;
+    if (response.error && (this.isMissingCollectionRecommendationColumn(response.error) || response.error.message.includes('result_damage'))) {
+      const legacyResponse = await supabase.from('submissions')
+        .select(UserDataService.SUBMISSION_SELECT_LEGACY)
+        .eq('id', id)
+        .maybeSingle();
+      if (legacyResponse.error) throw new Error(`Could not load lineup: ${legacyResponse.error.message}`);
+      row = legacyResponse.data as unknown as DatabaseSubmissionRow | null;
+    } else if (response.error) {
+      throw new Error(`Could not load lineup: ${response.error.message}`);
+    }
+    if (!row) return null;
+    const authors = await this.loadSubmissionAuthors();
+    return this.mapSubmissionRow(row, authors);
+  }
+
+  private mapSubmissionRow(row: DatabaseSubmissionRow, authors: ReadonlyMap<number, string>): Submission {
+    if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
+    return {
         id: row.id,
         mode: row.game_modes.slug,
         target: row.targets.name,
@@ -269,6 +297,7 @@ export class UserDataService {
             petLevel: formation.pet_level,
             timeSeconds: formation.result_time_seconds,
             damage: formation.result_damage ?? null,
+            spHeroId: formation.sp_hero_id ?? null,
             notes: formation.notes ?? '',
             heroes: formation.formation_heroes
               .sort((a, b) => a.position - b.position)
@@ -296,8 +325,7 @@ export class UserDataService {
                 };
               }),
           })),
-      };
-    });
+    };
   }
 
   async submitLineup(payload: Record<string, unknown>): Promise<number> {

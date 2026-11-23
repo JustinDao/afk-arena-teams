@@ -130,6 +130,7 @@ export interface Formation {
   readonly petLevel: number | null;
   readonly timeSeconds: number | null;
   readonly damage?: number | null;
+  readonly spHeroId?: number | null;
   readonly notes?: string;
   readonly heroes: readonly HeroPick[];
 }

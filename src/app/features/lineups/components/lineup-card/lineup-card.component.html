@@ -55,6 +55,7 @@
                   [attr.title]="heroSummary(hero, heroStatus(formIndex, rowIndex === 0 ? heroIndex : heroIndex + 2))"
                 >
                   <app-hero-icon [name]="hero.name ?? heroName(hero.hid)" [imageUrl]="hero.iconUrl ?? null" size="large" [ascension]="hero.ascension" [investment]="hero.inv" />
+                  @if (formation.spHeroId === hero.hid) { <i class="sp-tag" title="SP skill enabled">SP</i> }
                   @if (hero.merc && row().submission.mode !== 'twisted-realm') { <i class="tag">merc</i> }
                   @if (hero.collection; as collection) {
                     <span class="collection-tag" [attr.title]="collectionSummary(collection)">

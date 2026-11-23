@@ -304,12 +304,12 @@
             <div class="hero-list">
               ${item.heroes.map((h, idx) => `
                 <div class="hero-row ${h.sus ? 'sus' : ''}">
-                  <span class="hero-name">${idx + 1}. ${escapeHtml(h.name)}${h.sus ? ' (SUS)' : ''}</span>
+                  <span class="hero-name">${idx + 1}. ${escapeHtml(h.name)}${h.sp ? ' <span class="pill" style="background:#d48c14;color:#1b1200;font-weight:800;">SP</span>' : ''}${h.sus ? ' (SUS)' : ''}</span>
                   <span class="hero-debug">MSE ${h.mse} · top3: ${escapeHtml((h.top3 || []).join(', '))}</span>
                 </div>
               `).join('')}
               <div class="hero-row">
-                <span class="hero-name">Pet: ${item.pet ? escapeHtml(typeof item.pet === 'string' ? item.pet : item.pet.name) : 'None'}</span>
+                <span class="hero-name">Pet: ${item.pet ? escapeHtml(typeof item.pet === 'string' ? item.pet : item.pet.name) : 'None'}${item.sp_hero ? ' · SP: ' + escapeHtml(item.sp_hero) : ''}${item.damage ? ' · ' + escapeHtml(item.damage) : ''}</span>
                 <span class="hero-debug">${item.pet && typeof item.pet === 'object' ? `conf ${item.pet.confidence}${(item.pet.options || []).length > 1 ? ' · alts: ' + escapeHtml(item.pet.options.join(' > ')) : ''}` : ''}</span>
               </div>
             </div>

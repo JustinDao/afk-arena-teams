@@ -253,6 +253,21 @@ h3 {
   font-size: 0.625rem;
 }
 
+.sp-tag {
+  position: absolute;
+  top: -8px;
+  left: -4px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f5c84c, #d48c14);
+  color: #1f1400;
+  font-size: 0.625rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 .beast {
   display: flex;
   justify-content: center;

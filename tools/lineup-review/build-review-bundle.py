@@ -96,6 +96,7 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                     crop_rel = f"crops/{item_id}.jpg"
                     cv2.imwrite(str(TOOL_DIR / crop_rel), img[y0:y1, x0:x1], [int(cv2.IMWRITE_JPEG_QUALITY), 88])
 
+                    sp_hero_id = team.get("sp_hero_id")
                     hero_entries = []
                     for h in heroes:
                         alts = [a.get("name") for a in (h.get("visual_alternatives") or []) if a.get("name")]
@@ -103,6 +104,7 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                         hero_entries.append({
                             "name": h.get("name", "Unknown"),
                             "sus": bool(h.get("low_confidence") or h.get("needs_review")),
+                            "sp": bool(sp_hero_id is not None and h.get("id") == sp_hero_id),
                             "mse": round(float(h["mse"])) if h.get("mse") is not None else None,
                             "confidence": round(float(h.get("confidence") or 0.0), 2),
                             "top3": top3,
@@ -129,6 +131,8 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
                         "sus_heroes": sus_heroes,
                         "reprocessed": True,
                         "pet": pet_entry,
+                        "sp_hero": team.get("sp_hero_name"),
+                        "damage": team.get("damage_display"),
                         "heroes": hero_entries,
                     })
 

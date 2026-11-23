@@ -2443,6 +2443,8 @@ def teams_to_seed_formations(solved_teams):
             formation_entry["damage"] = team["damage"]
         if team.get("kill_time_seconds") is not None:
             formation_entry["time_seconds"] = team["kill_time_seconds"]
+        if team.get("sp_hero_id") is not None:
+            formation_entry["sp_hero_id"] = team["sp_hero_id"]
         if team.get("notes"):
             formation_entry["notes"] = team["notes"]
         if team.get("pet") and team["pet"].get("options") and len(team["pet"]["options"]) > 1:
@@ -3530,6 +3532,48 @@ def assemble_hfc_cards(img, model):
             "_hfc_damage": comp_dmg,
             "_ocr_hints": {"modes": ["hunting-fields-contract"], "targets": ["wrizz-no-earrings"]},
         })
+
+    # If a 4-card HFC sheet has one card whose y drifted off the even vertical grid
+    # (e.g. YOLO missed blue-bordered portraits on that card), snap it to the grid and re-OCR its header.
+    if len(teams) == 4:
+        ys = [t["hero_boxes"][0][1] for t in teams]
+        step = (ys[-1] - ys[0]) / 3.0
+        if 0.32 * W <= step <= 0.48 * W:
+            for idx in (1, 2):
+                exp_y = round(ys[0] + idx * step)
+                if abs(ys[idx] - exp_y) > 0.06 * W:
+                    teams[idx]["hero_boxes"] = [[round(fx * W), exp_y, icon_w, icon_w] for fx in hero_x_fracs]
+                    p_box = [round(pet_x_frac * W), exp_y, icon_w, icon_w]
+                    teams[idx]["pet_box"] = p_box
+                    teams[idx]["_hfc_pet_boxes"] = [p_box]
+                    if ocr is not None:
+                        hy0 = max(0, round(exp_y - 0.175 * W))
+                        hy1 = max(hy0 + 10, round(exp_y - 0.045 * W))
+                        hx0 = max(0, round(0.08 * W))
+                        hx1 = min(W, round(0.92 * W))
+                        try:
+                            hres, _ = ocr(img[hy0:hy1, hx0:hx1], use_cls=False)
+                        except Exception:
+                            hres = None
+                        if hres:
+                            ordered = sorted(
+                                ((sum(p[0] for p in b) / 4.0, txt.strip()) for b, txt, _s in hres if txt and txt.strip()),
+                                key=lambda x: x[0],
+                            )
+                            full_hdr = " ".join(t for _, t in ordered)
+                            comp_dmg = None
+                            for m_dmg in reversed(list(re.finditer(r"~?\s*(\d+(?:\.\d+)?)\s*([bBmM])\b", full_hdr))):
+                                val = float(m_dmg.group(1))
+                                unit = m_dmg.group(2).lower()
+                                if unit == "b" and val < 5.0:
+                                    continue
+                                comp_dmg = round(val * (1_000_000_000 if unit == "b" else 1_000_000))
+                                break
+                            clean_lbl = re.sub(r"~?\s*\d{2,}(?:\.\d+)?\s*[bBmM]\b", "", full_hdr).strip(" -~")
+                            if len(clean_lbl) >= 4:
+                                teams[idx]["set_label"] = clean_lbl
+                            if comp_dmg:
+                                teams[idx]["_hfc_damage"] = comp_dmg
     return teams
 
 
@@ -3908,8 +3952,10 @@ def detect_and_assemble_teams_for_image(
                             h_entry["slot_options"] = slot_opts
                 t["substitute_teams"] = lr["substitute_teams"]
         _extract_ts_guide_team_notes(img, solved_teams)
-    _extract_guide_results_and_target_hints(img, solved_teams)
+    if guide_kind != "hfc":
+        _extract_guide_results_and_target_hints(img, solved_teams)
     _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta)
+    _detect_sp_hero(img, solved_teams)
     return solved_teams
 
 
@@ -4021,6 +4067,94 @@ def _hungarian_min_cost(cost_matrix):
 
 
 _OFFMETA_WATCHLIST = frozenset({"oden", "warek", "talene", "kaz", "tidus"})
+
+
+def _is_sp_capable_hero(h):
+    slug = (h.get("slug") or "").lower()
+    name = (h.get("name") or "").lower()
+    return (
+        slug.startswith("awakened-")
+        or slug.startswith("highborn-")
+        or "(awakened)" in name
+        or "(highborn)" in name
+    )
+
+
+def _detect_sp_hero(img, solved_teams):
+    """Detect which Awakened/Highborn hero has the gold SP diamond badge enabled."""
+    if img is None or not solved_teams:
+        return
+    H, W = img.shape[:2]
+    ocr = _get_ocr_engine()
+
+    for t in solved_teams:
+        sp_cands = [
+            h for h in (t.get("heroes") or [])
+            if h.get("id") is not None and h.get("bbox") and len(h["bbox"]) == 4 and _is_sp_capable_hero(h)
+        ]
+        if not sp_cands:
+            continue
+
+        layout = t.get("layout") or ""
+        is_hfc = layout == "hfc_cards"
+        best_h = None
+        best_score = 0.0
+
+        for h in sp_cands:
+            bx, by, bw, bh = [int(round(v)) for v in h["bbox"]]
+            if bw < 20 or bh < 20:
+                continue
+            if is_hfc:
+                # Rakudayyy HFC places the gold <SP> diamond centered directly below the portrait.
+                rx0 = max(0, bx + round(bw * 0.16))
+                rx1 = min(W, bx + round(bw * 0.84))
+                ry0 = max(0, by + round(bh * 1.10))
+                ry1 = min(H, by + round(bh * 1.56))
+            else:
+                # Groody, TheAFKGuys, and in-game screenshots place the gold <SP> diamond
+                # overlapping the bottom-right corner of the portrait.
+                rx0 = max(0, bx + round(bw * 0.58))
+                rx1 = min(W, bx + round(bw * 1.32))
+                ry0 = max(0, by + round(bh * 0.58))
+                ry1 = min(H, by + round(bh * 1.32))
+
+            if rx1 - rx0 < 12 or ry1 - ry0 < 12:
+                continue
+            patch = img[ry0:ry1, rx0:rx1]
+            hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+            # Warm gold diamond mask (H: 14..34, S >= 95, V >= 105)
+            gold_mask = (
+                (hsv[:, :, 0] >= 14)
+                & (hsv[:, :, 0] <= 34)
+                & (hsv[:, :, 1] >= 95)
+                & (hsv[:, :, 2] >= 105)
+            )
+            gold_ratio = float(gold_mask.mean())
+            score = gold_ratio
+
+            # Confirm "SP" text via OCR when gold badge is present (avoids gold-hair false positives)
+            min_gold = 0.06 if is_hfc else 0.11
+            if gold_ratio >= min_gold and ocr is not None:
+                try:
+                    up = cv2.resize(patch, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC) if min(patch.shape[:2]) < 60 else patch
+                    ores, _ = ocr(up, use_cls=False)
+                except Exception:
+                    ores = None
+                for _b, txt, _sc in (ores or []):
+                    clean = re.sub(r"[^A-Za-z0-9]", "", txt).upper()
+                    if "SP" in clean or clean in ("5P", "S8", "SR"):
+                        score += 1.0
+                        break
+
+            # Require either OCR confirmation ("SP") or strong gold-diamond density in HFC's dark footer
+            threshold = 0.20 if is_hfc else 1.0
+            if score >= threshold and score > best_score:
+                best_score = score
+                best_h = h
+
+        if best_h is not None:
+            t["sp_hero_id"] = best_h["id"]
+            t["sp_hero_name"] = best_h["name"]
 
 
 def _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta):
