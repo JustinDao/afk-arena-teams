@@ -9,7 +9,13 @@
     </p>
 
     @if (!auth.user()) {
-      <p class="muted">Sign in and add your heroes to get recommendations.</p>
+      <div class="empty">
+        <p class="empty-message">Sign in and add your heroes to get recommendations.</p>
+        <div class="row-wrap" style="justify-content: center;">
+          <button mat-flat-button type="button" class="btn primary" (click)="auth.requestSignIn()">Sign in</button>
+          <a mat-button class="btn" routerLink="/">Back to lineups</a>
+        </div>
+      </div>
     } @else {
       <div class="row-wrap" role="group" aria-label="Modes to recommend for">
         <span class="muted">Modes</span>

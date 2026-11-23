@@ -1,5 +1,5 @@
 import { CdkTrapFocus } from '@angular/cdk/a11y'
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, ViewEncapsulation, inject, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, ViewEncapsulation, effect, inject, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
@@ -36,9 +36,10 @@ export class AppComponent {
   readonly theme = signal<ThemeMode>('system');
   readonly onRoster = signal(false);
   readonly accountOpen = signal(false);
-  readonly accountMode = signal<'sign-in' | 'sign-up'>('sign-in');
+  readonly accountMode = signal<'sign-in' | 'sign-up' | 'reset'>('sign-in');
   readonly accountBusy = signal(false);
   readonly accountMessage = signal<string | null>(null);
+  readonly showPassword = signal(false);
 
   readonly accountForm = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
@@ -62,25 +63,40 @@ export class AppComponent {
     });
     void this.auth.initialize().then(() => this.initializePageData(this.auth.user()));
     this.readTheme();
+    if (this.auth.accountDialogRequest) {
+      effect(() => {
+        if (this.auth.accountDialogRequest() > 0) this.openAccount();
+      });
+    }
   }
 
   openAccount(): void {
     this.accountOpen.set(true);
     this.accountMode.set('sign-in');
     this.accountMessage.set(null);
+    this.showPassword.set(false);
     this.auth.clearError();
   }
 
   closeAccount(): void {
     this.accountOpen.set(false);
     this.accountMessage.set(null);
+    this.showPassword.set(false);
     this.auth.clearError();
   }
 
-  selectAccountMode(mode: 'sign-in' | 'sign-up'): void {
+  selectAccountMode(mode: 'sign-in' | 'sign-up' | 'reset'): void {
+    if (this.accountMode() !== mode) {
+      this.accountForm.controls.password.reset('');
+    }
     this.accountMode.set(mode);
     this.accountMessage.set(null);
+    this.showPassword.set(false);
     this.auth.clearError();
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword.update((visible) => !visible);
   }
 
   async submitAccount(): Promise<void> {
@@ -89,7 +105,11 @@ export class AppComponent {
     this.auth.clearError();
     const { email, password } = this.accountForm.getRawValue();
     try {
-      if (this.accountMode() === 'sign-up') {
+      if (this.accountMode() === 'reset') {
+        if (await this.auth.resetPassword(email.trim())) {
+          this.accountMessage.set('Check your email for a password reset link.');
+        }
+      } else if (this.accountMode() === 'sign-up') {
         await this.auth.signUp(email.trim(), password);
         if (!this.auth.error()) {
           this.accountMessage.set(this.auth.user()

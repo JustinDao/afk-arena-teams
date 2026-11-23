@@ -304,6 +304,59 @@ footer {
 
 .account-actions .field { margin: 0; }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-2);
+}
+
+.text-link-btn {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-primary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.text-link-btn:hover {
+  text-decoration: underline;
+}
+
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  padding-right: 58px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--app-line);
+  border-radius: 6px;
+  background: var(--app-panel-variant);
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: var(--app-ink);
+  border-color: var(--app-primary);
+}
+
 .account-actions button:disabled { cursor: not-allowed; opacity: 0.55; }
 
 .field-hint {
@@ -313,7 +366,11 @@ footer {
   font-weight: 400;
 }
 
-.account-actions button { width: 100%; margin: 0; }
+.account-actions > form > .submit-button,
+.account-actions > .google-button {
+  width: 100%;
+  margin: 0;
+}
 
 .formation-tabs {
   display: flex;

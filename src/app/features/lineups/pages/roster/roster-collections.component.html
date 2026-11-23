@@ -1,6 +1,9 @@
 <section aria-label="Collections">
   @if (!auth.user()) {
-    <p class="muted">Sign in to manage collections saved to your account.</p>
+    <div class="empty">
+      <p class="empty-message">Sign in to manage collections saved to your account.</p>
+      <button mat-flat-button type="button" class="btn primary" (click)="auth.requestSignIn()">Sign in</button>
+    </div>
   } @else {
     <div class="row-wrap">
       <button mat-flat-button class="btn primary" [disabled]="store.collectionsLoading()" (click)="addingCollection.set(true)">Add collection</button>

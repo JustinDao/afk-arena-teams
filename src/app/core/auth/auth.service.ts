@@ -69,6 +69,11 @@ export class AuthService {
   readonly ready = this.readySignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
   readonly configured = supabaseConfigured;
+  readonly accountDialogRequest = signal(0);
+
+  requestSignIn(): void {
+    this.accountDialogRequest.update((count) => count + 1);
+  }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -125,6 +130,22 @@ export class AuthService {
     if (error) return this.reportError(error.message);
     this.setUser(data.user);
     this.clearError();
+  }
+
+  async resetPassword(email: string): Promise<boolean> {
+    if (!supabase) {
+      this.reportError('Configure the Supabase URL and public anon key before enabling accounts.');
+      return false;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      this.reportError(error.message);
+      return false;
+    }
+    this.clearError();
+    return true;
   }
 
   async signInWithGoogle(): Promise<void> {

@@ -1,5 +1,5 @@
-@if (store.rosterDetailsLoading()) {
-  <p class="rules" role="status">Loading pet roster and hero level…</p>
+@if (store.rosterDetailsLoading() || (busy() && !store.heroes().length)) {
+  <p class="rules" role="status">Loading hero catalog and roster…</p>
 }
 <section aria-label="Heroes">
   <div class="roster-actions-bar">
@@ -19,24 +19,26 @@
     </label>
     <button mat-flat-button class="btn primary" [disabled]="busy()" (click)="addingHero.set(true)">Add hero</button>
   </div>
-  <app-hero-filters
-    [factions]="factions()"
-    [(faction)]="factionFilter"
-    [(heroClass)]="classFilter"
-    [(type)]="typeFilter"
-  />
-  <div class="roster-search-row">
-    <label class="visually-hidden" for="roster-hero-search">Search heroes</label>
-    <input
-      id="roster-hero-search"
-      class="search roster-hero-search"
-      type="search"
-      placeholder="Search heroes"
-      aria-label="Search heroes"
-      [value]="searchQuery()"
-      (input)="setSearch($event)"
-    >
-  </div>
+  @if (store.rosterCount()) {
+    <app-hero-filters
+      [factions]="factions()"
+      [(faction)]="factionFilter"
+      [(heroClass)]="classFilter"
+      [(type)]="typeFilter"
+    />
+    <div class="roster-search-row">
+      <label class="visually-hidden" for="roster-hero-search">Search heroes</label>
+      <input
+        id="roster-hero-search"
+        class="search roster-hero-search"
+        type="search"
+        placeholder="Search heroes"
+        aria-label="Search heroes"
+        [value]="searchQuery()"
+        (input)="setSearch($event)"
+      >
+    </div>
+  }
   <div class="hero-box" role="list" aria-label="Hero box">
     @for (hero of ownedFilteredHeroes(); track hero.id) {
       <button
@@ -65,7 +67,7 @@
   />
 }
 @if (editingHero(); as hero) {
-  <div class="overlay" role="presentation" (click)="editingHeroId.set(null)">
+  <div class="overlay" role="presentation" (click)="editingHeroId.set(null)" (keydown.escape)="editingHeroId.set(null)">
     <section class="panel hero-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Edit ' + displayName(hero)" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()">
       <p class="rules">Enter SI (0–50), furniture (0–36), and engraving (0–100). Short codes like 303 mean SI 30, furniture 3, engraving 0; 309e60 means SI 30, furniture 9, engraving 60.</p>
       <app-hero-investment-editor

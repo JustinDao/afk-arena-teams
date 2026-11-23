@@ -15,8 +15,16 @@ import { LineupsStore } from '../lineups.store';
   imports: [LineupCardComponent, MatButtonModule, RouterLink],
   template: `
     <main class="submit-page lineup-detail">
-      @if (auth.configured && !store.backendReady()) {
-        <div class="empty">Loading lineup…</div>
+      @if (loading()) {
+        <div class="empty">
+          <p class="empty-message" role="status">Loading lineup…</p>
+          <a mat-button class="btn" routerLink="/">Back to lineups</a>
+        </div>
+      } @else if (loadError()) {
+        <div class="empty">
+          <p class="empty-message" role="alert">{{ loadError() }}</p>
+          <a mat-button class="btn" routerLink="/">Back to lineups</a>
+        </div>
       } @else if (row()) {
         @let current = row()!;
         <div class="panel-header">
@@ -42,8 +50,8 @@ import { LineupsStore } from '../lineups.store';
         </div>
       } @else {
         <div class="empty">
-          <p>That lineup could not be found. It may have been removed.</p>
-          <a mat-button class="btn" routerLink="/">Browse lineups</a>
+          <p class="empty-message">That lineup could not be found. It may have been removed.</p>
+          <a mat-button class="btn" routerLink="/">Back to lineups</a>
         </div>
       }
     </main>
@@ -61,10 +69,11 @@ export class LineupDetailPageComponent {
   private readonly meta = inject(Meta);
   private readonly capture = viewChild<ElementRef<HTMLElement>>('capture');
   readonly exporting = signal(false);
-  private   readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((params) => Number(params.get('id')))), { initialValue: NaN });
-  readonly row = computed(() => {
-    return this.store.evaluatedSubmission(this.id());
-  });
+  readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
+  private readonly fetchedRow = signal<ReturnType<LineupsStore['evaluatedSubmission']>>(null);
+  private readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((params) => Number(params.get('id')))), { initialValue: NaN });
+  readonly row = computed(() => this.store.evaluatedSubmission(this.id()) ?? this.fetchedRow());
   readonly modeName = computed(() => {
     const slug = this.row()?.submission.mode;
     return this.store.modes().find((mode) => mode.slug === slug)?.name ?? '';
@@ -72,6 +81,34 @@ export class LineupDetailPageComponent {
   readonly modePath = computed(() => MODE_PATHS[this.row()?.submission.mode ?? ''] ?? '/');
 
   constructor() {
+    effect((onCleanup) => {
+      const id = this.id();
+      const cached = this.store.evaluatedSubmission(id);
+      this.fetchedRow.set(null);
+      this.loadError.set(null);
+      if (cached || !this.auth.configured || !Number.isInteger(id) || id <= 0) {
+        this.loading.set(false);
+        return;
+      }
+      let cancelled = false;
+      onCleanup(() => {
+        cancelled = true;
+      });
+      this.loading.set(true);
+      void this.store.loadSubmissionById(id).then(
+        (result) => {
+          if (cancelled) return;
+          this.fetchedRow.set(result);
+          this.loading.set(false);
+        },
+        (err: unknown) => {
+          if (cancelled) return;
+          this.loadError.set(err instanceof Error ? err.message : 'Could not load this lineup.');
+          this.loading.set(false);
+        },
+      );
+    });
+
     effect(() => {
       const row = this.row();
       if (!row) return;
