@@ -4750,6 +4750,49 @@ def _extract_mcwhare_right_notes(img, solved_teams, matcher, type_tensors, hero_
             team["notes"] = "\n".join(bullets)
 
 
+def _apply_pet_level_requirements_from_notes(solved_teams):
+    """Bump pet.level when a team's notes state a higher minimum level for that exact pet."""
+    if not solved_teams:
+        return
+    pet_aliases = {
+        "nightfall-pegasus": ("pegasus", "pony"),
+        "count-snickerfang": ("rabbit", "bunny", "snickerfang"),
+        "blazefang": ("cerberus", "blazefang"),
+        "twinlum-spirit": ("sheep", "lamb", "twinlum"),
+        "flutterplume-owl": ("owl", "flutterplume"),
+        "pandy-dumpty": ("panda", "pandy"),
+        "slumber-seal": ("seal",),
+        "trickery-chest": ("chest", "mimic", "trickery"),
+        "treatspector": ("treatspector", "treat"),
+        "winged-lion": ("lion",),
+    }
+    pat_lvl = re.compile(r"(?:lvl?|level)\s*(\d{2})(?:\s*/\s*(\d{2}))?", re.IGNORECASE)
+    for t in solved_teams:
+        notes = t.get("notes") or ""
+        pet = t.get("pet")
+        if not notes or not isinstance(pet, dict):
+            continue
+        pslug = pet.get("slug") or ""
+        aliases = pet_aliases.get(pslug, ((pet.get("name") or "").lower(),))
+        best_req = None
+        for line in notes.splitlines():
+            low = line.lower()
+            if not any(a and a in low for a in aliases):
+                continue
+            if not any(kw in low for kw in ("require", "needs", "need ", "minimum", "min ", "at least")):
+                continue
+            m = pat_lvl.search(line)
+            if not m:
+                continue
+            lvl1 = int(m.group(1))
+            if lvl1 in (21, 24, 27, 30, 33, 36):
+                if best_req is None or lvl1 > best_req:
+                    best_req = lvl1
+        cur = pet.get("level")
+        if best_req is not None and (cur is None or cur < best_req):
+            pet["level"] = best_req
+
+
 def detect_and_assemble_teams_for_image(
     img,
     model,
@@ -4945,6 +4988,7 @@ def detect_and_assemble_teams_for_image(
                 t["substitute_teams"] = lr["substitute_teams"]
     if H >= 3000 and 2400 <= W < 3400 and guide_kind not in ("hfc", "abex_grid", "dragonforge_history"):
         _extract_ts_guide_team_notes(img, solved_teams)
+    _apply_pet_level_requirements_from_notes(solved_teams)
     if guide_kind != "hfc":
         _extract_guide_results_and_target_hints(img, solved_teams)
     _resolve_duplicates_and_flag_confidence(solved_teams, hero_meta)
