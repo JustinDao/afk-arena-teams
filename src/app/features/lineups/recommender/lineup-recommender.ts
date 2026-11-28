@@ -149,8 +149,8 @@ interface CompCandidate {
 }
 
 const MAX_CANDIDATES_PER_SLOT = 24;
-const MAX_TS_CANDIDATES = 42;
-const SEARCH_NODE_BUDGET = 80_000;
+const MAX_TS_CANDIDATES = 96;
+const SEARCH_NODE_BUDGET = 120_000;
 
 function computeCompPerformanceScore(modeSlug: string, comp: ModeledComp): number {
   let score = 0;
@@ -424,6 +424,7 @@ function solveUnorderedTeams(
   candidates: readonly CompCandidate[],
   targetTeamCount: number,
   uniqueAcross = true,
+  initialBest: readonly CompCandidate[] = [],
 ): CompCandidate[] {
   const n = candidates.length;
   if (n === 0 || targetTeamCount <= 0) return [];
@@ -433,9 +434,11 @@ function solveUnorderedTeams(
     // Modes like Abyssal Expedition allow heroes to repeat across competing compositions.
     return [...candidates].slice(0, limit);
   }
-  let bestCount = 0;
-  let bestScore = -Infinity;
-  let bestTeamList: CompCandidate[] = [];
+  let bestCount = initialBest.length;
+  let bestScore = initialBest.length > 0
+    ? initialBest.reduce((sum, c) => sum + c.score, 0)
+    : -Infinity;
+  let bestTeamList: CompCandidate[] = [...initialBest];
 
   const current: CompCandidate[] = [];
   const usedHeroes = new Set<number>();
@@ -545,7 +548,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
   const collectionModel = buildCollectionModel(submissions);
 
   const matchingSubmissions = submissions.filter(
-    (sub) => sub.mode === mode.slug && sub.target === target,
+    (sub) => sub.mode === mode.slug && (!target || sub.target === target),
   );
 
   const maxMercs = allowMerc ? (mode.mercMax ?? 0) : 0;
@@ -605,8 +608,52 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
       ),
     );
 
-    const pruned = pruneCandidates(allCandidates, MAX_TS_CANDIDATES);
-    chosenCandidates = solveUnorderedTeams(pruned, desiredCount, uniqueAcross).map((cand, index) => ({
+    // Warm-start with the best complete submission that already has >= desiredCount disjoint teams,
+    // so valid N-team sets are never missed due to pruning or search budget.
+    let initialBest: CompCandidate[] = [];
+    let initialBestScore = -Infinity;
+    if (uniqueAcross) {
+      const candByCompKey = new Map<string, CompCandidate>();
+      for (const c of allCandidates) {
+        if (c.mercHeroId !== null) continue;
+        const prev = candByCompKey.get(c.comp.compKey);
+        if (!prev || c.score > prev.score) candByCompKey.set(c.comp.compKey, c);
+      }
+      for (const sub of matchingSubmissions) {
+        const subForms = sub.forms.filter((f) => f.heroes.length > 0);
+        if (subForms.length < desiredCount) continue;
+        const picked: CompCandidate[] = [];
+        const usedH = new Set<number>();
+        const usedP = new Set<number>();
+        for (const f of subForms) {
+          const heroSig = [...f.heroes].map((h) => h.hid).sort((a, b) => a - b).join(',');
+          const key = `${heroSig}|p:${f.petId ?? 'none'}`;
+          const cand = candByCompKey.get(key);
+          if (!cand || hasConflict(cand, usedH, usedP)) continue;
+          picked.push(cand);
+          for (const hid of cand.heroIds) usedH.add(hid);
+          if (cand.petId !== null) usedP.add(cand.petId);
+          if (picked.length === desiredCount) break;
+        }
+        if (picked.length === desiredCount) {
+          const total = picked.reduce((sum, c) => sum + c.score, 0);
+          if (total > initialBestScore) {
+            initialBestScore = total;
+            initialBest = picked;
+          }
+        }
+      }
+    }
+
+    // Ensure all candidates from the warm-start solution stay in the pruned pool.
+    const prunedBase = pruneCandidates(allCandidates, MAX_TS_CANDIDATES);
+    const prunedIds = new Set(prunedBase.map((c) => c.id));
+    for (const c of initialBest) {
+      if (!prunedIds.has(c.id)) prunedBase.push(c);
+    }
+    prunedBase.sort((a, b) => b.score - a.score);
+
+    chosenCandidates = solveUnorderedTeams(prunedBase, desiredCount, uniqueAcross, initialBest).map((cand, index) => ({
       ...cand,
       slotKey: `team-${index + 1}`,
       slotLabel: `Team ${index + 1}`,

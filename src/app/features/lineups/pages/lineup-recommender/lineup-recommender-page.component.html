@@ -16,20 +16,57 @@
       </div>
 
       @if (activeMode(); as mode) {
-        <div class="control-row" role="group" [attr.aria-label]="mode.targetLabel">
-          <span class="control-label">{{ mode.targetLabel }}</span>
-          <div class="chip-group">
-            @for (target of availableTargets(); track target) {
-              <button
-                mat-button
-                type="button"
-                class="chip"
-                [attr.aria-pressed]="activeTarget() === target"
-                (click)="selectTarget(target)"
-              >{{ target }}</button>
-            }
-          </div>
-        </div>
+        @if (showTargetSelector()) {
+          @if (mode.slug === 'hunting-fields-contract') {
+            <div class="control-row" role="group" aria-label="Hunting Fields Contract filters">
+              <span class="control-label">Contract</span>
+              <div class="select-group">
+                <label class="check target-select">
+                  Boss
+                  <select [value]="activeHfcBoss()" (change)="onHfcBossChange($event)">
+                    @for (boss of hfcBosses(); track boss) {
+                      <option [value]="boss">{{ boss }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="check target-select">
+                  Buff
+                  <select [value]="activeHfcBuff()" (change)="onHfcBuffChange($event)">
+                    @for (buff of hfcBuffsForBoss(); track buff) {
+                      <option [value]="buff">{{ buff }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+            </div>
+          } @else if (mode.slug === 'nightmare-corridor') {
+            <div class="control-row" role="group" [attr.aria-label]="mode.targetLabel">
+              <span class="control-label">{{ mode.targetLabel }}</span>
+              <label class="check target-select">
+                <select [value]="activeTarget()" [attr.aria-label]="mode.targetLabel" (change)="onTargetSelectChange($event)">
+                  @for (target of availableTargets(); track target) {
+                    <option [value]="target">{{ target }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          } @else {
+            <div class="control-row" role="group" [attr.aria-label]="mode.targetLabel">
+              <span class="control-label">{{ mode.targetLabel }}</span>
+              <div class="chip-group">
+                @for (target of availableTargets(); track target) {
+                  <button
+                    mat-button
+                    type="button"
+                    class="chip"
+                    [attr.aria-pressed]="activeTarget() === target"
+                    (click)="selectTarget(target)"
+                  >{{ target }}</button>
+                }
+              </div>
+            </div>
+          }
+        }
 
         @if (variableTeamCountOptions().length > 0) {
           <div class="control-row" role="group" aria-label="Number of teams">

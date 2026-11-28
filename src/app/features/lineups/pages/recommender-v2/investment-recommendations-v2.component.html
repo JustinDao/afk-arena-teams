@@ -10,7 +10,7 @@
           [attr.aria-pressed]="selectedModes().length === 0"
           (click)="toggleMode(null)"
         >Overall (NC / CR / TS)</button>
-        @for (mode of store.modes(); track mode.slug) {
+        @for (mode of investmentModes(); track mode.slug) {
           <button
             mat-button
             type="button"

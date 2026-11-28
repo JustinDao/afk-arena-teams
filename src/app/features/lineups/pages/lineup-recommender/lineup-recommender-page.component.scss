@@ -34,9 +34,15 @@
   font-weight: 600;
 }
 
-.chip-group {
+.chip-group,
+.select-group {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-2);
+}
+
+.chip-group {
   gap: var(--app-space-1);
 }
 

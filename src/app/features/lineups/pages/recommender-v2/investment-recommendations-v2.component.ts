@@ -33,6 +33,12 @@ import {
 
 type V2InvestmentTab = 'heroes' | 'pets' | 'collections';
 
+const INVESTMENT_MODE_SLUGS = new Set<string>([
+  'nightmare-corridor',
+  'cursed-realm',
+  'treasure-scramble',
+]);
+
 const COLLECTION_CLASSES: readonly CollectionCatalogItem['class'][] = [
   'Warrior',
   'Tank',
@@ -59,6 +65,10 @@ export class InvestmentRecommendationsV2Component {
   readonly activeTab = signal<V2InvestmentTab>('heroes');
   readonly excludeOwnedCollections = signal(false);
   readonly expandedRowKey = signal<string | null>(null);
+
+  readonly investmentModes = computed(() =>
+    this.store.modes().filter((m) => INVESTMENT_MODE_SLUGS.has(m.slug)),
+  );
 
   readonly loading = computed(() =>
     !this.store.backendReady()

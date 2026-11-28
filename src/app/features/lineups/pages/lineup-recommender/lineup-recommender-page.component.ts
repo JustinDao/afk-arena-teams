@@ -119,7 +119,48 @@ export class LineupRecommenderPageComponent {
     return counts;
   });
 
+  readonly hfcBosses = computed((): readonly string[] => {
+    const mode = this.activeMode();
+    if (mode?.slug !== 'hunting-fields-contract') return [];
+    const bosses = new Set<string>();
+    for (const target of mode.targets) {
+      const [boss] = target.split(' — ');
+      if (boss?.trim()) bosses.add(boss.trim());
+    }
+    return [...bosses].sort((a, b) => a.localeCompare(b));
+  });
+
+  readonly activeHfcBoss = computed((): string => {
+    const target = this.activeTarget();
+    const [boss] = target.split(' — ');
+    return boss?.trim() || this.hfcBosses()[0] || '';
+  });
+
+  readonly hfcBuffsForBoss = computed((): readonly string[] => {
+    const mode = this.activeMode();
+    if (mode?.slug !== 'hunting-fields-contract') return [];
+    const boss = this.activeHfcBoss();
+    const buffs = new Set<string>();
+    for (const target of mode.targets) {
+      const [b, buff] = target.split(' — ');
+      if (b?.trim() === boss && buff?.trim()) buffs.add(buff.trim());
+    }
+    return [...buffs].sort((a, b) => a.localeCompare(b));
+  });
+
+  readonly activeHfcBuff = computed((): string => {
+    const target = this.activeTarget();
+    const [, buff] = target.split(' — ');
+    return buff?.trim() || this.hfcBuffsForBoss()[0] || '';
+  });
+
+  readonly showTargetSelector = computed(() => {
+    const slug = this.activeMode()?.slug;
+    return slug !== 'temporal-rift' && slug !== 'abyssal-expedition';
+  });
+
   readonly activeTarget = computed((): string => {
+    if (!this.showTargetSelector()) return '';
     const targets = this.availableTargets();
     if (targets.length === 0) return '';
     const current = this.selectedTarget();
@@ -148,7 +189,7 @@ export class LineupRecommenderPageComponent {
   readonly recommendationOptions = computed((): readonly LineupRecommendationResult[] => {
     const mode = this.activeMode();
     const target = this.activeTarget();
-    if (!mode || !target) return [];
+    if (!mode || (this.showTargetSelector() && !target)) return [];
 
     return recommendLineupOptionsForMode({
       mode,
@@ -213,6 +254,36 @@ export class LineupRecommenderPageComponent {
   selectTarget(target: string): void {
     this.selectedTarget.set(target);
     this.selectedOptionIndex.set(0);
+  }
+
+  onTargetSelectChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectTarget(value);
+  }
+
+  onHfcBossChange(event: Event): void {
+    const boss = (event.target as HTMLSelectElement).value;
+    const mode = this.activeMode();
+    if (!mode) return;
+    const currentBuff = this.activeHfcBuff();
+    const exact = `${boss} — ${currentBuff}`;
+    if (mode.targets.includes(exact)) {
+      this.selectTarget(exact);
+      return;
+    }
+    const counts = this.targetSubmissionCounts();
+    const matching = mode.targets.filter((t) => t.startsWith(`${boss} — `));
+    const best = matching.find((t) => (counts[t] ?? 0) > 0) ?? matching[0];
+    if (best) this.selectTarget(best);
+  }
+
+  onHfcBuffChange(event: Event): void {
+    const buff = (event.target as HTMLSelectElement).value;
+    const boss = this.activeHfcBoss();
+    const next = `${boss} — ${buff}`;
+    if (this.availableTargets().includes(next)) {
+      this.selectTarget(next);
+    }
   }
 
   selectVariableTeamCount(count: number): void {
