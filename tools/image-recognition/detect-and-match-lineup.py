@@ -4181,6 +4181,102 @@ def assemble_rakudayyy_ts_rows(img, model):
     return teams
 
 
+_MCWHARE_CR_SI_CNN_CACHE = None
+
+
+def _get_mcwhare_cr_si_cnn():
+    """Lazy-load the 3-seed Spatial CNN ensemble for CR portrait SI tier detection (20/30/40)."""
+    global _MCWHARE_CR_SI_CNN_CACHE
+    if _MCWHARE_CR_SI_CNN_CACHE is not None:
+        return _MCWHARE_CR_SI_CNN_CACHE
+    weights_path = (
+        Path(__file__).resolve().parent
+        / "assets"
+        / "investment-templates"
+        / "mcwhare_cr_si_cnn.pt"
+    )
+    if not weights_path.exists():
+        _MCWHARE_CR_SI_CNN_CACHE = False
+        return False
+    try:
+        import torch
+        import torch.nn as nn
+
+        ckpt = torch.load(str(weights_path), map_location="cpu", weights_only=True)
+        classes = list(ckpt.get("classes") or [20, 30, 40])
+        models = []
+        for sd in ckpt.get("models") or []:
+            m = nn.Sequential(
+                nn.Conv2d(3, 16, 3, padding=1),
+                nn.BatchNorm2d(16),
+                nn.ReLU(),
+                nn.MaxPool2d(2),
+                nn.Conv2d(16, 32, 3, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.MaxPool2d(2),
+                nn.Flatten(),
+                nn.Dropout(0.4),
+                nn.Linear(32 * 6 * 6, 32),
+                nn.ReLU(),
+                nn.Linear(32, len(classes)),
+            )
+            sd_f32 = {
+                k: (v.float() if v.is_floating_point() else v) for k, v in sd.items()
+            }
+            m.load_state_dict(sd_f32)
+            m.eval()
+            models.append(m)
+        ring_mask = np.ones((1, 24, 24), dtype=np.float32)
+        ring_mask[:, :2, :] = 0.0
+        ring_mask[:, :, :2] = 0.0
+        ring_mask[:, 8:16, 8:16] = 0.0
+        ring_mask[:, 15:, 15:] = 0.0
+        _MCWHARE_CR_SI_CNN_CACHE = (models, classes, ring_mask)
+        return _MCWHARE_CR_SI_CNN_CACHE
+    except Exception:
+        _MCWHARE_CR_SI_CNN_CACHE = False
+        return False
+
+
+def _predict_mcwhare_cr_si(inset, ry0_c):
+    """Predict SI tier (20/30/40) from the top-left SI emblem of a CR damage-chart portrait."""
+    bundle = _get_mcwhare_cr_si_cnn()
+    if not bundle:
+        return None
+    models, classes, ring_mask = bundle
+    ih, iw = inset.shape[:2]
+    if ih < 120 or iw < 100:
+        return None
+    import torch
+
+    dy_scale = ih / 377.0
+    tta_patches = []
+    for h_f in (0.0265, 0.0285, 0.0305):
+        half_cr = max(7, round(h_f * ih))
+        for dy_base in (7, 8, 9):
+            cy = ry0_c + round(dy_base * dy_scale)
+            for dx in (-1, 0, 1):
+                cx = round(0.0245 * ih) + dx
+                p = inset[
+                    max(0, cy - half_cr) : min(ih, cy + half_cr),
+                    max(0, cx - half_cr) : min(iw, cx + half_cr),
+                ]
+                if p.shape[0] >= 10 and p.shape[1] >= 10:
+                    tta_patches.append(
+                        cv2.resize(p, (24, 24), interpolation=cv2.INTER_CUBIC)
+                    )
+    if not tta_patches:
+        return None
+    arr = np.stack([p.transpose(2, 0, 1).astype(np.float32) / 255.0 for p in tta_patches])
+    x = torch.from_numpy((arr - 0.5) * 2.0 * ring_mask)
+    with torch.no_grad():
+        probs = np.mean(
+            [torch.softmax(m(x), dim=1).mean(dim=0).numpy() for m in models], axis=0
+        )
+    return int(classes[int(np.argmax(probs))])
+
+
 def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors):
     """Extract per-hero SI, furniture, and engraving from mcwhare35's left-hand in-game battle inset table."""
     if not solved_teams or matcher is None:
@@ -4605,13 +4701,18 @@ def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
                         ).sum()
                     )
                     furn = 9 if f_red >= 12 else (3 if f_red >= 4 else 0)
+                si_cr = _predict_mcwhare_cr_si(inset, ry0_c)
                 inv_obj = {
-                    "si": None,
+                    "si": si_cr,
                     "furniture": furn,
                     "engraving": en,
-                    "code": f"{furn or 0}Fe{en}",
+                    "code": (
+                        f"{si_cr:02d}{furn or 0}e{en}"
+                        if si_cr is not None
+                        else f"{furn or 0}Fe{en}"
+                    ),
                 }
-                if (furn is not None and furn > 0) or en > 0:
+                if (furn is not None and furn > 0) or en > 0 or (si_cr is not None and si_cr > 0):
                     inv_obj["ascension"] = "ascended"
                 h_dict["investment"] = inv_obj
 
