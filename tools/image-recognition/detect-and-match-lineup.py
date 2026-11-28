@@ -4299,7 +4299,38 @@ def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
             )
         }
 
-        row_ys = nc_row_ys if is_nc_equip else cr_row_ys
+        cr_row_bounds = None
+        if not is_nc_equip:
+            gray_ins = cv2.cvtColor(inset, cv2.COLOR_BGR2GRAY)
+            row_bright = (gray_ins[:, round(0.20 * iw) : round(0.95 * iw)] > 210).mean(axis=1)
+            hy = np.where(row_bright > 0.55)[0]
+            glines = (
+                [
+                    int(grp.mean())
+                    for grp in np.split(hy, np.where(np.diff(hy) > 5)[0] + 1)
+                    if grp.mean() > 0.28 * ih
+                ]
+                if len(hy) > 0
+                else []
+            )
+            det_rows = [
+                (glines[i], glines[i + 1])
+                for i in range(len(glines) - 1)
+                if 25 <= (glines[i + 1] - glines[i]) <= 52
+            ][:5]
+            if len(det_rows) == 5:
+                med_rh = int(np.median([b_y - a_y for a_y, b_y in det_rows[:4]]))
+                cr_row_bounds = [(ry0, ry0 + med_rh) for ry0, _ in det_rows]
+
+        row_ys = (
+            nc_row_ys
+            if is_nc_equip
+            else (
+                [(0.5 * (a + b)) / float(ih) for a, b in cr_row_bounds]
+                if cr_row_bounds is not None
+                else [0.435, 0.528, 0.621, 0.714, 0.807]
+            )
+        )
         # Build 5xN cost matrix matching inset row portraits ONLY against this team's recognized heroes
         n_rows = len(row_ys)
         n_heroes = len(heroes)
@@ -4312,12 +4343,21 @@ def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
                     max(18, round(0.096 * iw)),
                     max(18, round(0.096 * ih)),
                 ]
+            elif cr_row_bounds is not None:
+                ry0_c, ry1_c = cr_row_bounds[ri]
+                rh_c = max(18, ry1_c - ry0_c)
+                pbox = [
+                    x0 + round(0.022 * iw),
+                    y0 + ry0_c,
+                    max(18, rh_c),
+                    max(18, rh_c),
+                ]
             else:
                 pbox = [
-                    x0 + round(0.015 * iw),
-                    y0 + round((ry - 0.044) * ih),
-                    max(18, round(0.130 * iw)),
-                    max(18, round(0.088 * ih)),
+                    x0 + round(0.022 * iw),
+                    y0 + round((ry - 0.045) * ih),
+                    max(18, round(0.115 * iw)),
+                    max(18, round(0.090 * ih)),
                 ]
             rks = matcher.rank_candidates_in_box(
                 img,
@@ -4514,32 +4554,66 @@ def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
                         inv_obj["ascension"] = "ascended"
                     h_dict["investment"] = inv_obj
             else:
-                # CR damage-chart inset: extract engraving tier from star color at portrait bottom
+                # CR damage-chart inset: extract furniture (0/3/9 diamonds) + engraving (e0/e30/e60 stars)
+                if cr_row_bounds is not None:
+                    ry0_c, ry1_c = cr_row_bounds[ri]
+                    rh_c = max(18, ry1_c - ry0_c)
+                else:
+                    rh_c = max(18, round(0.090 * ih))
+                    ry0_c = round(ry * ih - 0.5 * rh_c)
+                    ry1_c = ry0_c + rh_c
+                # Star strip (x=0.024..0.092 avoids bottom-right SP badge)
                 s_crop = inset[
-                    round((ry + 0.022) * ih) : round((ry + 0.044) * ih),
-                    round(0.022 * iw) : round(0.115 * iw),
+                    max(0, ry1_c - round(0.24 * rh_c)) : min(ih, ry1_c - round(0.03 * rh_c)),
+                    round(0.024 * iw) : round(0.092 * iw),
                 ]
+                en = 0
                 if s_crop.size > 0:
                     hsv = cv2.cvtColor(s_crop, cv2.COLOR_BGR2HSV)
                     red_px = int(
                         (
-                            ((hsv[:, :, 0] <= 10) | (hsv[:, :, 0] >= 165))
+                            ((hsv[:, :, 0] <= 8) | (hsv[:, :, 0] >= 168))
                             & (hsv[:, :, 1] >= 100)
-                            & (hsv[:, :, 2] >= 110)
+                            & (hsv[:, :, 2] >= 105)
                         ).sum()
                     )
                     org_px = int(
                         (
-                            (hsv[:, :, 0] >= 11)
+                            (hsv[:, :, 0] >= 9)
                             & (hsv[:, :, 0] <= 28)
-                            & (hsv[:, :, 1] >= 110)
-                            & (hsv[:, :, 2] >= 130)
+                            & (hsv[:, :, 1] >= 100)
+                            & (hsv[:, :, 2] >= 120)
                         ).sum()
                     )
-                    if red_px >= 5:
-                        h_dict["investment"] = {"si": None, "furniture": None, "engraving": 60, "ascension": "ascended", "code": "e60"}
+                    if red_px >= max(5, org_px * 1.2):
+                        en = 60
                     elif org_px >= 5:
-                        h_dict["investment"] = {"si": None, "furniture": None, "engraving": 30, "ascension": "ascended", "code": "e30"}
+                        en = 30
+                # Furniture red diamonds directly below faction emblem
+                f_crop = inset[
+                    max(0, ry0_c + round(0.36 * rh_c)) : min(ih, ry0_c + round(0.64 * rh_c)),
+                    round(0.014 * iw) : round(0.056 * iw),
+                ]
+                furn = None
+                if f_crop.size > 0:
+                    fhsv = cv2.cvtColor(f_crop, cv2.COLOR_BGR2HSV)
+                    f_red = int(
+                        (
+                            ((fhsv[:, :, 0] <= 12) | (fhsv[:, :, 0] >= 164))
+                            & (fhsv[:, :, 1] >= 80)
+                            & (fhsv[:, :, 2] >= 100)
+                        ).sum()
+                    )
+                    furn = 9 if f_red >= 12 else (3 if f_red >= 4 else 0)
+                inv_obj = {
+                    "si": None,
+                    "furniture": furn,
+                    "engraving": en,
+                    "code": f"{furn or 0}Fe{en}",
+                }
+                if (furn is not None and furn > 0) or en > 0:
+                    inv_obj["ascension"] = "ascended"
+                h_dict["investment"] = inv_obj
 
 
 def _extract_mcwhare_right_notes(img, solved_teams, matcher, type_tensors, hero_meta):
