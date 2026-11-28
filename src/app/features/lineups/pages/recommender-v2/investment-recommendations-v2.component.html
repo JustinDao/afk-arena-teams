@@ -186,49 +186,97 @@
           <p class="empty-message">Your collection inventory covers the top consensus collection builds for these modes!</p>
         </div>
       } @else {
-        <section class="rec-panel rec-overall" aria-label="Overall collection priority">
-          <header class="rec-panel-header">
-            <h3>Overall priority</h3>
-            <span class="rec-panel-sub">Top {{ overallCollections().length }} distinct builds across all classes</span>
-          </header>
-          <ol class="rec-list">
-            @for (col of overallCollections(); track col.buildKey; let i = $index) {
-              <li class="rec-row" [class.best]="i === 0">
-                <span class="rec-rank">{{ i + 1 }}</span>
-                <img class="rec-icon" [src]="collectionIcon(col.catalogId, col.targetLevel)" [alt]="col.name + ' icon'" width="42" height="42">
-                <div class="rec-main">
-                  <div class="rec-title-line">
-                    <strong>{{ col.name }}</strong>
-                    <span class="rec-category">{{ col.collectionClass }}</span>
-                    @if (col.desiredStats.length) {
-                      <span class="rec-target rec-stats-inline">
-                        @for (stat of col.desiredStats; track stat) {
-                          <span class="stat-inline" [title]="statLabel(stat)">
-                            <img class="stat-icon" [src]="statIcon(stat)" [alt]="statLabel(stat)">
-                            <span>{{ statLabel(stat) }}</span>
+        @if (overallCraftCollections().length) {
+          <section class="rec-panel rec-overall" aria-label="Overall craft priority">
+              <header class="rec-panel-header">
+                <h3>Overall craft priority</h3>
+                <span class="rec-panel-sub">Top {{ overallCraftCollections().length }} new runs</span>
+              </header>
+              <ol class="rec-list">
+                @for (col of overallCraftCollections(); track col.buildKey; let i = $index) {
+                  <li class="rec-row" [class.best]="i === 0">
+                    <span class="rec-rank">{{ i + 1 }}</span>
+                    <img class="rec-icon" [src]="collectionIcon(col.catalogId, col.targetLevel)" [alt]="col.name + ' icon'" width="42" height="42">
+                    <div class="rec-main">
+                      <div class="rec-title-line">
+                        <strong>{{ col.name }}</strong>
+                        <span class="rec-category">{{ col.collectionClass }}</span>
+                        @if (col.desiredStats.length) {
+                          <span class="rec-target rec-stats-inline">
+                            @for (stat of col.desiredStats; track stat) {
+                              <span class="stat-inline" [title]="statLabel(stat)">
+                                <img class="stat-icon" [src]="statIcon(stat)" [alt]="statLabel(stat)">
+                                <span>{{ statLabel(stat) }}</span>
+                              </span>
+                            }
                           </span>
                         }
-                      </span>
-                    }
-                  </div>
-                  <div class="rec-sub-line">
-                    <span>{{ collectionReason(col) }}</span>
-                    @let users = collectionUsers(col.topHeroIds);
-                    @if (users.length) {
-                      <span class="rec-sub-right">
-                        <span class="rec-users" aria-label="Most common users">
-                          @for (hero of users; track hero.id) {
-                            <app-hero-icon size="xs" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
-                          }
-                        </span>
-                      </span>
-                    }
-                  </div>
-                </div>
-              </li>
-            }
-          </ol>
-        </section>
+                      </div>
+                      <div class="rec-sub-line">
+                        <span>{{ collectionReason(col) }}</span>
+                        @let users = collectionUsers(col.topHeroIds);
+                        @if (users.length) {
+                          <span class="rec-sub-right">
+                            <span class="rec-users" aria-label="Most common users">
+                              @for (hero of users; track hero.id) {
+                                <app-hero-icon size="xs" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                              }
+                            </span>
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ol>
+            </section>
+          }
+
+        @if (overallRecastCollections().length) {
+          <section class="rec-panel rec-overall" aria-label="Overall recast priority">
+              <header class="rec-panel-header">
+                <h3>Overall recast priority</h3>
+                <span class="rec-panel-sub">Top {{ overallRecastCollections().length }} closest owned collections</span>
+              </header>
+              <ol class="rec-list">
+                @for (col of overallRecastCollections(); track col.buildKey; let i = $index) {
+                  <li class="rec-row" [class.best]="i === 0">
+                    <span class="rec-rank">{{ i + 1 }}</span>
+                    <img class="rec-icon" [src]="collectionIcon(col.catalogId, col.targetLevel)" [alt]="col.name + ' icon'" width="42" height="42">
+                    <div class="rec-main">
+                      <div class="rec-title-line">
+                        <strong>{{ col.name }}</strong>
+                        <span class="rec-category">{{ col.collectionClass }}</span>
+                        @if (col.desiredStats.length) {
+                          <span class="rec-target rec-stats-inline">
+                            @for (stat of col.desiredStats; track stat) {
+                              <span class="stat-inline" [title]="statLabel(stat)">
+                                <img class="stat-icon" [src]="statIcon(stat)" [alt]="statLabel(stat)">
+                                <span>{{ statLabel(stat) }}</span>
+                              </span>
+                            }
+                          </span>
+                        }
+                      </div>
+                      <div class="rec-sub-line">
+                        <span>{{ collectionReason(col) }}</span>
+                        @let users = collectionUsers(col.topHeroIds);
+                        @if (users.length) {
+                          <span class="rec-sub-right">
+                            <span class="rec-users" aria-label="Most common users">
+                              @for (hero of users; track hero.id) {
+                                <app-hero-icon size="xs" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                              }
+                            </span>
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ol>
+            </section>
+          }
 
         <div class="rec-group-grid">
           @for (group of collectionGroups(); track group.label) {
@@ -245,6 +293,7 @@
                       <div class="rec-main">
                         <div class="rec-title-line">
                           <strong>{{ col.name }}</strong>
+                          <span class="rec-action" [class.is-build]="col.action === 'recast'">{{ col.action === 'recast' ? 'Recast' : 'Craft' }}</span>
                           @if (col.desiredStats.length) {
                             <span class="rec-target rec-stats-inline">
                               @for (stat of col.desiredStats; track stat) {

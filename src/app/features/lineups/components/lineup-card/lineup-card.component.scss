@@ -176,7 +176,7 @@ h3 {
   gap: 3px;
 }
 
-.hero-formation.front-right .hero app-hero-icon {
+.hero-formation.front-right .hero .hero-portrait {
   transform: translateY(-4px);
 }
 
@@ -242,6 +242,11 @@ h3 {
   height: 22px;
 }
 
+.hero-portrait {
+  position: relative;
+  display: inline-flex;
+}
+
 .tag {
   position: absolute;
   top: -8px;
@@ -253,10 +258,14 @@ h3 {
   font-size: 0.625rem;
 }
 
+.tag.below-sp {
+  top: 10px;
+}
+
 .sp-tag {
   position: absolute;
   top: -8px;
-  left: -4px;
+  right: -4px;
   padding: 1px 5px;
   border-radius: 6px;
   background: linear-gradient(135deg, #f5c84c, #d48c14);

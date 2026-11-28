@@ -36,7 +36,7 @@ import {
   RecommendedHeroSlot,
   RecommendedLineupModeSlug,
   RecommendedTeam,
-  recommendLineupForMode,
+  recommendLineupOptionsForMode,
 } from '../../recommender/lineup-recommender';
 import { rosterFilterColor } from '../../roster-filter-colors';
 
@@ -65,6 +65,8 @@ export class LineupRecommenderPageComponent {
   readonly tsTeamCount = signal<number>(7);
   readonly strictInvestment = signal<boolean>(false);
   readonly allowMerc = signal<boolean>(true);
+  readonly excludedMercHeroIds = signal<readonly number[]>([]);
+  readonly selectedOptionIndex = signal<number>(0);
 
   readonly supportedModes = computed((): readonly ModeConfig[] => {
     const allowed = new Set<string>(RECOMMENDED_LINEUP_MODE_SLUGS);
@@ -119,17 +121,18 @@ export class LineupRecommenderPageComponent {
 
   readonly hasRoster = computed(() => this.store.rosterCount() > 0);
 
-  readonly recommendation = computed((): LineupRecommendationResult | null => {
+  readonly recommendationOptions = computed((): readonly LineupRecommendationResult[] => {
     const mode = this.activeMode();
     const target = this.activeTarget();
-    if (!mode || !target) return null;
+    if (!mode || !target) return [];
 
-    return recommendLineupForMode({
+    return recommendLineupOptionsForMode({
       mode,
       target,
       teamCount: mode.slug === 'treasure-scramble' ? this.tsTeamCount() : undefined,
       strictInvestment: this.strictInvestment(),
       allowMerc: this.allowMerc(),
+      excludedMercHeroIds: this.excludedMercHeroIds(),
       submissions: this.store.submissions(),
       roster: this.store.roster(),
       petRoster: this.store.petRoster(),
@@ -137,7 +140,22 @@ export class LineupRecommenderPageComponent {
       collectionCatalog: this.store.collectionCatalog(),
       heroes: this.store.heroes(),
       pets: this.store.pets(),
-    });
+    }, 3);
+  });
+
+  readonly recommendation = computed((): LineupRecommendationResult | null => {
+    const options = this.recommendationOptions();
+    if (options.length === 0) return null;
+    const idx = Math.min(this.selectedOptionIndex(), options.length - 1);
+    return options[idx] ?? options[0];
+  });
+
+  readonly excludedMercHeroes = computed((): readonly { readonly id: number; readonly name: string }[] => {
+    const names = this.heroNameById();
+    return this.excludedMercHeroIds().map((id) => ({
+      id,
+      name: names.get(id) ?? `Hero #${id}`,
+    }));
   });
 
   constructor() {
@@ -153,23 +171,62 @@ export class LineupRecommenderPageComponent {
     if (RECOMMENDED_LINEUP_MODE_SLUGS.includes(slug as RecommendedLineupModeSlug)) {
       this.selectedModeSlug.set(slug as RecommendedLineupModeSlug);
       this.selectedTarget.set('');
+      this.selectedOptionIndex.set(0);
     }
   }
 
   selectTarget(target: string): void {
     this.selectedTarget.set(target);
+    this.selectedOptionIndex.set(0);
   }
 
   selectTsTeamCount(count: number): void {
     this.tsTeamCount.set(count);
+    this.selectedOptionIndex.set(0);
   }
 
   toggleStrictInvestment(): void {
     this.strictInvestment.update((v) => !v);
+    this.selectedOptionIndex.set(0);
   }
 
   toggleAllowMerc(): void {
     this.allowMerc.update((v) => !v);
+    this.selectedOptionIndex.set(0);
+  }
+
+  selectOption(index: number): void {
+    this.selectedOptionIndex.set(index);
+  }
+
+  excludeMercHero(heroId: number): void {
+    const current = this.excludedMercHeroIds();
+    if (!current.includes(heroId)) {
+      this.excludedMercHeroIds.set([...current, heroId]);
+      this.selectedOptionIndex.set(0);
+    }
+  }
+
+  removeExcludedMerc(heroId: number): void {
+    this.excludedMercHeroIds.update((list) => list.filter((id) => id !== heroId));
+    this.selectedOptionIndex.set(0);
+  }
+
+  clearExcludedMercs(): void {
+    this.excludedMercHeroIds.set([]);
+    this.selectedOptionIndex.set(0);
+  }
+
+  optionSummaryLabel(opt: LineupRecommendationResult, index: number): string {
+    const parts = [`Option ${index + 1}`];
+    if (opt.merc) {
+      parts.push(`Merc: ${opt.merc.heroName}`);
+    } else if ((this.activeMode()?.mercMax ?? 0) > 0 && this.allowMerc()) {
+      parts.push('No merc');
+    } else if (opt.totalNcTimeSeconds !== null) {
+      parts.push(formatKillTime(opt.totalNcTimeSeconds));
+    }
+    return parts.join(' · ');
   }
 
   readonly heroNameById = computed(() => {

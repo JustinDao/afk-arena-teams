@@ -47,6 +47,40 @@
   margin-bottom: var(--app-space-3);
 }
 
+.options-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-1);
+  margin-bottom: var(--app-space-3);
+}
+
+.summary-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-2);
+}
+
+.skip-merc-btn {
+  padding: 1px 7px;
+  border: 1px solid color-mix(in srgb, var(--app-error) 45%, var(--app-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-error) 10%, transparent);
+  color: var(--app-error);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.skip-merc-btn:hover {
+  background: color-mix(in srgb, var(--app-error) 20%, transparent);
+}
+
+.chip--excluded {
+  border-color: color-mix(in srgb, var(--app-error) 45%, var(--app-line));
+  color: var(--app-error);
+}
+
 .summary-stat {
   display: flex;
   flex-direction: column;
@@ -270,7 +304,7 @@
   gap: 3px;
 }
 
-.hero-formation.front-right .hero app-hero-icon {
+.hero-formation.front-right .hero .hero-portrait {
   transform: translateY(-4px);
 }
 
@@ -285,6 +319,11 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
+}
+
+.hero-portrait {
+  position: relative;
+  display: inline-flex;
 }
 
 .hero.under app-hero-icon {
@@ -320,7 +359,7 @@
 }
 
 .sp-tag {
-  left: -4px;
+  right: -4px;
   background: var(--app-warning);
   color: #111;
 }
@@ -329,6 +368,10 @@
   right: -4px;
   background: var(--app-primary);
   color: var(--app-on-primary);
+}
+
+.merc-tag.below-sp {
+  top: 12px;
 }
 
 .collection-assignment {

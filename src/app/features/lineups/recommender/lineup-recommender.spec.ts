@@ -10,7 +10,7 @@ import {
   RosterEntry,
   Submission,
 } from '../models';
-import { recommendLineupForMode } from './lineup-recommender';
+import { recommendLineupForMode, recommendLineupOptionsForMode } from './lineup-recommender';
 
 describe('recommendLineupForMode', () => {
   const ncMode = MODES.find((m) => m.slug === 'nightmare-corridor')!;
@@ -295,5 +295,95 @@ describe('recommendLineupForMode', () => {
     expect(rec.collectionSummary.requested).toBe(2);
     expect(rec.collectionSummary.exact).toBe(1);
     expect(rec.collectionSummary.missing).toBe(1);
+  });
+
+  it('generates multiple distinct lineup options with different mercenaries and respects excludedMercHeroIds', () => {
+    const customNcMode: ModeConfig = {
+      ...ncMode,
+      targetFormations: {
+        'Soulchain Knight': [{ key: 'boss-1', label: 'Boss 1' }],
+      },
+    };
+
+    const subMercA: Submission = {
+      id: 401,
+      mode: 'nightmare-corridor',
+      target: 'Soulchain Knight',
+      up: 30,
+      days: 1,
+      result: {},
+      notes: '',
+      by: 'alice',
+      heroLevel: null,
+      // Missing hero 20 (e.g. Odysseus) -> fastest comp if you can merc 20.
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 20], 1, 18, 10)],
+    };
+
+    const subMercB: Submission = {
+      id: 402,
+      mode: 'nightmare-corridor',
+      target: 'Soulchain Knight',
+      up: 20,
+      days: 1,
+      result: {},
+      notes: '',
+      by: 'bob',
+      heroLevel: null,
+      // Missing hero 21 -> second-best comp with a different merc.
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 21], 1, 18, 15)],
+    };
+
+    const subNoMerc: Submission = {
+      id: 403,
+      mode: 'nightmare-corridor',
+      target: 'Soulchain Knight',
+      up: 10,
+      days: 1,
+      result: {},
+      notes: '',
+      by: 'carol',
+      heroLevel: null,
+      // All 5 owned -> no merc needed!
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 5], 1, 18, 22)],
+    };
+
+    const roster: Record<string, RosterEntry> = {};
+    for (const id of [1, 2, 3, 4, 5]) {
+      roster[id] = { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 };
+    }
+
+    const options = recommendLineupOptionsForMode({
+      mode: customNcMode,
+      target: 'Soulchain Knight',
+      strictInvestment: false,
+      allowMerc: true,
+      submissions: [subMercA, subMercB, subNoMerc],
+      roster,
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes,
+    }, 3);
+
+    expect(options.length).toBe(3);
+    expect(options[0].merc?.heroId).toBe(20);
+    expect(options[1].merc?.heroId).toBe(21);
+    expect(options[2].merc).toBeNull();
+
+    // Explicitly excluding hero 20 skips it from Option 1 immediately.
+    const without20 = recommendLineupOptionsForMode({
+      mode: customNcMode,
+      target: 'Soulchain Knight',
+      strictInvestment: false,
+      allowMerc: true,
+      excludedMercHeroIds: [20],
+      submissions: [subMercA, subMercB, subNoMerc],
+      roster,
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes,
+    }, 3);
+    expect(without20[0].merc?.heroId).toBe(21);
   });
 });

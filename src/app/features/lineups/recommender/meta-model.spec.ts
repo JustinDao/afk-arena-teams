@@ -244,4 +244,108 @@ describe('Recommender V2 consensus modeling', () => {
     expect(result.collections.length).toBe(1);
     expect(result.collections[0].catalogId).toBe(9);
   });
+
+  it('weights collection recasting higher when an owned exact-level copy is 1 slot away (2/3 Mythic) vs 2 slots away (1/3 Mythic)', () => {
+    const sub: Submission = {
+      id: 802,
+      mode: 'cursed-realm',
+      target: 'Kane',
+      up: 20,
+      days: 1,
+      result: { damage: 50_000_000_000 },
+      notes: '',
+      by: 'alice',
+      heroLevel: null,
+      forms: [
+        {
+          key: 'boss',
+          label: 'Boss',
+          beast: 'Seal',
+          petId: 1,
+          petLevel: 18,
+          timeSeconds: null,
+          heroes: [
+            {
+              pos: 0,
+              hid: 2,
+              name: 'Hero 2',
+              inv: { si: 30, furn: 9, eng: 60 },
+              ascension: 'ascended_1',
+              merc: false,
+              collection: {
+                catalogId: 14,
+                name: "Stormwrath's Lull",
+                class: 'Mage',
+                nodes: [],
+                recommendation: { level: 1, attackStats: ['erosion'], defenseStats: [] },
+              },
+            },
+            {
+              pos: 1,
+              hid: 3,
+              name: 'Hero 3',
+              inv: { si: 30, furn: 9, eng: 60 },
+              ascension: 'ascended_1',
+              merc: false,
+              collection: {
+                catalogId: 13,
+                name: 'Shadowflow Blade',
+                class: 'Ranger',
+                nodes: [],
+                recommendation: { level: 1, attackStats: ['atk'], defenseStats: [] },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = computeInvestmentRecommendationsV2({
+      selectedModeSlugs: ['cursed-realm'],
+      modes: MODES,
+      submissions: [sub],
+      roster: {
+        2: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+        3: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+      },
+      petRoster: { 1: { level: 18 } },
+      collections: [
+        // 2/3 Mythic Erosion -> 1 slot away (strong recast candidate!)
+        {
+          id: 'storm-2m',
+          catalogId: 14,
+          name: 'Storm 2M Erosion',
+          class: 'Mage',
+          nodes: [
+            { slotIndex: 0, stat: 'erosion', tier: 'mythic' },
+            { slotIndex: 1, stat: 'erosion', tier: 'mythic' },
+            { slotIndex: 2, stat: 'erosion', tier: 'legendary' },
+          ],
+        },
+        // 1/3 Mythic ATK -> 2 slots away (weaker recast candidate)
+        {
+          id: 'blade-1m',
+          catalogId: 13,
+          name: 'Blade 1M ATK',
+          class: 'Ranger',
+          nodes: [
+            { slotIndex: 0, stat: 'atk', tier: 'mythic' },
+            { slotIndex: 1, stat: 'hp', tier: 'legendary' },
+            { slotIndex: 2, stat: 'def', tier: 'elite' },
+          ],
+        },
+      ],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes,
+      pets,
+    });
+
+    expect(result.collections.length).toBe(2);
+    // Storm (2/3 Mythic, 1 slot away) must outrank Blade (1/3 Mythic, 2 slots away).
+    expect(result.collections[0].catalogId).toBe(14);
+    expect(result.collections[0].action).toBe('recast');
+    expect(result.collections[0].recastCandidate?.slotsRemaining).toBe(1);
+    expect(result.collections[0].recastCandidate?.estimatedElixirs).toBe(400);
+    expect(result.collections[0].score).toBeGreaterThan(result.collections[1].score);
+  });
 });

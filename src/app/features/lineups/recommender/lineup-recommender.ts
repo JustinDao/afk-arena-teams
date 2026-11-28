@@ -44,6 +44,8 @@ export interface LineupRecommenderInput {
   readonly teamCount?: number;
   readonly strictInvestment: boolean;
   readonly allowMerc: boolean;
+  readonly excludedMercHeroIds?: readonly number[];
+  readonly excludedCompKeys?: readonly string[];
   readonly submissions: readonly Submission[];
   readonly roster: Readonly<Record<string, RosterEntry>>;
   readonly petRoster: Readonly<Record<string, PetRosterEntry>>;
@@ -65,6 +67,7 @@ export interface RecommendedHeroSlot {
 }
 
 export interface RecommendedTeam {
+  readonly compKey: string;
   readonly slotKey: string;
   readonly slotLabel: string;
   readonly formation: Formation;
@@ -171,6 +174,7 @@ function buildCandidatesForComp(
   heroById: ReadonlyMap<number, Hero>,
   strictInvestment: boolean,
   canUseMerc: boolean,
+  excludedMercSet: ReadonlySet<number>,
 ): CompCandidate[] {
   const heroGaps = comp.heroes.map((hero) =>
     evaluateHeroAgainstTarget(hero.hid, hero.target, roster),
@@ -239,7 +243,7 @@ function buildCandidatesForComp(
     }
 
     if (mercHeroId !== null) {
-      score -= 18;
+      score -= 4;
     }
 
     return {
@@ -270,11 +274,13 @@ function buildCandidatesForComp(
       .filter(({ g }) => g.status === 'missing');
     if (missingIndices.length === 1) {
       const hid = comp.heroes[missingIndices[0].idx].hid;
-      results.push(makeCandidate(hid, 'missing'));
+      if (!excludedMercSet.has(hid)) {
+        results.push(makeCandidate(hid, 'missing'));
+      }
     } else if (missingIndices.length === 0) {
       const worstUnder = heroGaps
         .map((g, idx) => ({ g, idx }))
-        .filter(({ g }) => g.status === 'under')
+        .filter(({ g, idx }) => g.status === 'under' && !excludedMercSet.has(comp.heroes[idx].hid))
         .sort((a, b) => b.g.penalty - a.g.penalty)[0];
       if (worstUnder) {
         results.push(makeCandidate(comp.heroes[worstUnder.idx].hid, 'under-invested'));
@@ -528,6 +534,8 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
 
   const maxMercs = allowMerc ? (mode.mercMax ?? 0) : 0;
   const canUseMerc = maxMercs > 0;
+  const excludedMercSet = new Set<number>(input.excludedMercHeroIds ?? []);
+  const excludedCompKeySet = new Set<string>(input.excludedCompKeys ?? []);
 
   let chosenCandidates: CompCandidate[] = [];
   const emptySlots: { key: string; label: string }[] = [];
@@ -560,7 +568,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
       collectionCatalog,
       petById,
       collectionModel,
-    );
+    ).filter((comp) => !excludedCompKeySet.has(comp.compKey));
 
     const allCandidates = modeledComps.flatMap((comp) =>
       buildCandidatesForComp(
@@ -573,6 +581,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         heroById,
         strictInvestment,
         false,
+        excludedMercSet,
       ),
     );
 
@@ -612,8 +621,10 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         petById,
         collectionModel,
       );
+      const filteredComps = modeledComps.filter((c) => !excludedCompKeySet.has(`${slotDef.key}::${c.compKey}`));
+      const compsToUse = filteredComps.length > 0 ? filteredComps : modeledComps;
 
-      const candidates = modeledComps.flatMap((comp) =>
+      const candidates = compsToUse.flatMap((comp) =>
         buildCandidatesForComp(
           mode.slug,
           comp,
@@ -624,6 +635,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
           heroById,
           strictInvestment,
           canUseMerc,
+          excludedMercSet,
         ),
       );
       return pruneCandidates(candidates, MAX_CANDIDATES_PER_SLOT);
@@ -736,6 +748,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
     }
 
     return {
+      compKey: cand.comp.compKey,
       slotKey: cand.slotKey,
       slotLabel: cand.slotLabel,
       formation: synthesizedFormation,
@@ -771,4 +784,76 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
     totalNcTimeSeconds: allNcHaveTime ? Math.round(ncTimeSum * 10) / 10 : null,
     candidateSubmissionCount: matchingSubmissions.length,
   };
+}
+
+function lineupSignature(result: LineupRecommendationResult): string {
+  const teamSigs = result.teams
+    .map((t) => `${t.slotKey}:${t.compKey}:m${t.mercHeroId ?? 'none'}`)
+    .sort()
+    .join(';');
+  return `${teamSigs}|merc:${result.merc?.heroId ?? 'none'}`;
+}
+
+/**
+ * Generates up to `maxOptions` distinct conflict-free lineup recommendations.
+ * When a previous option used a mercenary, the next option excludes that merc hero so the user
+ * immediately gets alternatives with a different merc (or no merc); otherwise it diversifies by
+ * excluding one of the previous option's comps.
+ */
+export function recommendLineupOptionsForMode(
+  input: LineupRecommenderInput,
+  maxOptions = 3,
+): readonly LineupRecommendationResult[] {
+  const first = recommendLineupForMode(input);
+  if (first.candidateSubmissionCount === 0 || first.teams.length === 0 || maxOptions <= 1) {
+    return [first];
+  }
+
+  const results: LineupRecommendationResult[] = [first];
+  const seenSigs = new Set<string>([lineupSignature(first)]);
+  const excludedMercs = [...(input.excludedMercHeroIds ?? [])];
+  const excludedComps = [...(input.excludedCompKeys ?? [])];
+
+  for (let attempt = 0; attempt < maxOptions * 2 && results.length < maxOptions; attempt++) {
+    const prev = results[results.length - 1];
+    let candidate: LineupRecommendationResult | null = null;
+
+    // 1. If the previous option used a merc, try excluding that merc hero next.
+    if (prev.merc && !excludedMercs.includes(prev.merc.heroId)) {
+      excludedMercs.push(prev.merc.heroId);
+      candidate = recommendLineupForMode({
+        ...input,
+        excludedMercHeroIds: excludedMercs,
+        excludedCompKeys: excludedComps,
+      });
+    } else {
+      // 2. Otherwise diversify by rotating out the top-scoring comp from the previous option.
+      const pivotTeam = [...prev.teams]
+        .sort((a, b) => b.score - a.score)
+        .find((t) => {
+          const key = input.mode.slug === 'treasure-scramble' ? t.compKey : `${t.slotKey}::${t.compKey}`;
+          return !excludedComps.includes(key);
+        });
+      if (!pivotTeam) break;
+      const pivotKey = input.mode.slug === 'treasure-scramble'
+        ? pivotTeam.compKey
+        : `${pivotTeam.slotKey}::${pivotTeam.compKey}`;
+      excludedComps.push(pivotKey);
+      candidate = recommendLineupForMode({
+        ...input,
+        excludedMercHeroIds: excludedMercs,
+        excludedCompKeys: excludedComps,
+      });
+    }
+
+    if (candidate && candidate.teams.length > 0) {
+      const sig = lineupSignature(candidate);
+      if (!seenSigs.has(sig)) {
+        seenSigs.add(sig);
+        results.push(candidate);
+      }
+    }
+  }
+
+  return results;
 }

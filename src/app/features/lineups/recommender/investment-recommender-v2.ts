@@ -75,11 +75,22 @@ export interface PetInvestmentRecV2 {
   readonly byMode: Readonly<Record<string, number>>;
 }
 
+export interface CollectionRecastCandidate {
+  readonly ownedName: string;
+  readonly matchedMythicCount: number;
+  readonly matchedLegendaryCount: number;
+  readonly targetMythicCount: number;
+  readonly slotsRemaining: number;
+  readonly estimatedElixirs: number;
+}
+
 export interface CollectionInvestmentRecV2 {
   readonly buildKey: string;
   readonly catalogId: number;
   readonly name: string;
   readonly collectionClass: CollectionCatalogItem['class'];
+  readonly action: 'craft' | 'recast';
+  readonly recastCandidate: CollectionRecastCandidate | null;
   readonly score: number;
   readonly targetLevel: number;
   readonly ownedMatchingCount: number;
@@ -507,13 +518,21 @@ export function computeInvestmentRecommendationsV2(
 
   // ---- 3. COLLECTION RECOMMENDATIONS V2 ----
   // Group by distinct build: (catalogId, exact level, mythic stat build).
-  // When a submission omits mythic stats on a collection, impute the stat build from other
-  // submissions using the same (hero, catalog, level) or (catalog, level) so we always
-  // recommend concrete mythic-node builds rather than empty stat-less shells.
+  // Models Ghoulish Gallery Recasting Elixir economics:
+  // - Exact level is required (Skill Level +1 cannot be recast).
+  // - Recasting L->M costs ~400 Elixirs per slot (and requires >=3 unlocked stat nodes).
+  // - Owned copies already close to the target (e.g. 2/3 Mythics, 1 slot away) are strongly
+  //   weighted toward Recast, while 0-match copies recommend a fresh Craft.
+  const NON_RECASTABLE_STATS = new Set<string>(['skill_level', 'err']);
+
   interface OwnedColSummary {
+    readonly id: string;
+    readonly name: string;
     readonly catalogId: number;
     readonly level: number;
-    readonly mythicStats: ReadonlySet<string>;
+    readonly totalStatNodes: number;
+    readonly mythicStatCounts: ReadonlyMap<string, number>;
+    readonly legendaryStatCounts: ReadonlyMap<string, number>;
   }
 
   const ownedColsByCatalog = new Map<number, OwnedColSummary[]>();
@@ -522,17 +541,34 @@ export function computeInvestmentRecommendationsV2(
     const cid = item.catalogId ?? resolved?.id;
     if (cid === undefined) continue;
     const level = collectionLevelFromNodes(item.nodes);
-    const mythicStats = new Set<string>(
-      item.nodes
-        .filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic')
-        .map(({ stat }) => stat),
-    );
+    const mythicStatCounts = new Map<string, number>();
+    const legendaryStatCounts = new Map<string, number>();
+    let totalStatNodes = 0;
+
+    for (const node of item.nodes) {
+      if (node.stat === 'skill_level') continue;
+      totalStatNodes += 1;
+      if (node.tier === 'mythic') {
+        mythicStatCounts.set(node.stat, (mythicStatCounts.get(node.stat) ?? 0) + 1);
+      } else if (node.tier === 'legendary') {
+        legendaryStatCounts.set(node.stat, (legendaryStatCounts.get(node.stat) ?? 0) + 1);
+      }
+    }
+
     let list = ownedColsByCatalog.get(cid);
     if (!list) {
       list = [];
       ownedColsByCatalog.set(cid, list);
     }
-    list.push({ catalogId: cid, level, mythicStats });
+    list.push({
+      id: item.id,
+      name: item.name,
+      catalogId: cid,
+      level,
+      totalStatNodes,
+      mythicStatCounts,
+      legendaryStatCounts,
+    });
   }
 
   const normalizeStatBuild = (stats: readonly string[]): readonly string[] =>
@@ -540,6 +576,15 @@ export function computeInvestmentRecommendationsV2(
 
   const makeBuildKey = (catalogId: number, level: number, stats: readonly string[]): string =>
     `${catalogId}|${level}|${stats.join(',')}`;
+
+  // Lv.3 uses 2 slots for +1 Skill Level nodes, so 2 target Mythics is already a strong build;
+  // Lv.1 and Lv.2 have more open slots so 3 target Mythics is the full-build benchmark.
+  const targetMythicBenchmark = (reqLevel: number): number => (reqLevel >= 3 ? 2 : 3);
+
+  const countMatchingNodes = (
+    counts: ReadonlyMap<string, number>,
+    desiredStats: readonly string[],
+  ): number => desiredStats.reduce((sum, st) => sum + (counts.get(st) ?? 0), 0);
 
   // Pass 1: learn consensus mythic stat builds across ALL submissions for imputation.
   const heroColBuildVotes = new Map<string, Map<string, number>>();
@@ -603,15 +648,70 @@ export function computeInvestmentRecommendationsV2(
     return bestVotedStats(colLevelBuildVotes.get(`${cid}|${lvl}`));
   };
 
-  const ownedCoversBuild = (
-    owned: OwnedColSummary,
+  const evaluateOwnedCollectionBuild = (
+    catalogId: number,
     reqLevel: number,
     desiredStats: readonly string[],
-  ): boolean => {
-    // Collections at different levels are treated as completely distinct builds.
-    if (owned.level !== reqLevel) return false;
-    if (desiredStats.length === 0) return true;
-    return desiredStats.some((st) => owned.mythicStats.has(st));
+  ): {
+    readonly fullMatchingCount: number;
+    readonly bestRecast: CollectionRecastCandidate | null;
+    readonly closenessMultiplier: number;
+  } => {
+    const ownedList = ownedColsByCatalog.get(catalogId) ?? [];
+    const targetMythics = targetMythicBenchmark(reqLevel);
+    const canRecastTarget = desiredStats.some((st) => !NON_RECASTABLE_STATS.has(st));
+
+    let fullMatchingCount = 0;
+    let bestRecast: CollectionRecastCandidate | null = null;
+    let bestProximity = -1;
+
+    for (const owned of ownedList) {
+      // Collections at different levels are completely distinct builds (Skill Level cannot be recast).
+      if (owned.level !== reqLevel) continue;
+      const mCount = countMatchingNodes(owned.mythicStatCounts, desiredStats);
+      const lCount = countMatchingNodes(owned.legendaryStatCounts, desiredStats);
+
+      if (mCount >= targetMythics) {
+        fullMatchingCount += 1;
+        continue;
+      }
+
+      // Evaluate as a Recast candidate if it already has >=1 matching Mythic stat and >=3 unlocked nodes.
+      if (canRecastTarget && owned.totalStatNodes >= 3 && mCount >= 1) {
+        const slotsRemaining = Math.max(1, targetMythics - mCount);
+        const proximity = mCount * 10 + lCount * 3 - slotsRemaining * 2;
+        if (proximity > bestProximity) {
+          bestProximity = proximity;
+          // L->M recast costs ~400 Elixirs; if fewer L matches than slotsRemaining, non-L slots cost more (~500).
+          const lUpgrades = Math.min(lCount, slotsRemaining);
+          const otherUpgrades = slotsRemaining - lUpgrades;
+          const estimatedElixirs = lUpgrades * 400 + otherUpgrades * 500;
+          bestRecast = {
+            ownedName: owned.name,
+            matchedMythicCount: mCount,
+            matchedLegendaryCount: lCount,
+            targetMythicCount: targetMythics,
+            slotsRemaining,
+            estimatedElixirs,
+          };
+        }
+      }
+    }
+
+    // Weight recasting strongly by closeness:
+    // - 1 slot away (e.g. 2/3 Mythic Erosion) -> strong boost (1.45x, +0.1x if an L match is ready)
+    // - 2 slots away (e.g. 1/3 Mythic Erosion) -> modest weight (1.05x if L match, 0.92x otherwise)
+    // - 0 matches (fresh craft) -> standard 1.0x
+    let closenessMultiplier = 1.0;
+    if (bestRecast) {
+      if (bestRecast.slotsRemaining === 1) {
+        closenessMultiplier = bestRecast.matchedLegendaryCount > 0 ? 1.55 : 1.45;
+      } else {
+        closenessMultiplier = bestRecast.matchedLegendaryCount > 0 ? 1.05 : 0.92;
+      }
+    }
+
+    return { fullMatchingCount, bestRecast, closenessMultiplier };
   };
 
   // Track max concurrent copies of each distinct (catalogId, level, statBuild) used within a single run.
@@ -663,10 +763,9 @@ export function computeInvestmentRecommendationsV2(
       if (desired.length === 0) continue;
 
       const key = makeBuildKey(cid, reqLvl, desired);
-      const ownedList = ownedColsByCatalog.get(cid) ?? [];
-      const matchingOwned = ownedList.filter((o) => ownedCoversBuild(o, reqLvl, desired)).length;
+      const evalOwned = evaluateOwnedCollectionBuild(cid, reqLvl, desired);
       const copiesNeeded = maxCopiesPerRun.get(key) ?? 1;
-      if (matchingOwned >= copiesNeeded) continue;
+      if (evalOwned.fullMatchingCount >= copiesNeeded) continue;
 
       let acc = colAccMap.get(key);
       if (!acc) {
@@ -684,10 +783,9 @@ export function computeInvestmentRecommendationsV2(
         colAccMap.set(key, acc);
       }
 
-      // Slightly higher weight when the submission explicitly specified mythic stats vs imputed.
       const statConfidence = rawStats.length > 0 ? 1.0 : 0.75;
-      const gapMult = matchingOwned === 0 ? 1.25 : 0.7;
-      acc.pts += row.weight * gapMult * statConfidence;
+      const gapMult = evalOwned.fullMatchingCount === 0 ? 1.25 : 0.7;
+      acc.pts += row.weight * gapMult * statConfidence * evalOwned.closenessMultiplier;
       acc.demandCount += 1;
       acc.heroWeights.set(pick.hid, (acc.heroWeights.get(pick.hid) ?? 0) + row.weight);
     }
@@ -700,18 +798,22 @@ export function computeInvestmentRecommendationsV2(
         .slice(0, 5)
         .map(([id]) => id);
 
-      const ownedList = ownedColsByCatalog.get(acc.catalogId) ?? [];
-      const ownedMatchingCount = ownedList.filter((o) => ownedCoversBuild(o, acc.targetLevel, acc.desiredStats)).length;
+      const evalOwned = evaluateOwnedCollectionBuild(acc.catalogId, acc.targetLevel, acc.desiredStats);
       const maxCopiesInRun = maxCopiesPerRun.get(acc.buildKey) ?? 1;
+      // Recommend Recast when we have an eligible close candidate (e.g. 1 slot away, or 1M+1L);
+      // otherwise recommend a fresh Craft.
+      const action: 'craft' | 'recast' = evalOwned.bestRecast !== null ? 'recast' : 'craft';
 
       return {
         buildKey: acc.buildKey,
         catalogId: acc.catalogId,
         name: acc.name,
         collectionClass: acc.collectionClass,
+        action,
+        recastCandidate: evalOwned.bestRecast,
         score: Math.round(acc.pts * 100) / 100,
         targetLevel: acc.targetLevel,
-        ownedMatchingCount,
+        ownedMatchingCount: evalOwned.fullMatchingCount,
         maxCopiesInRun,
         desiredStats: acc.desiredStats,
         topHeroIds,

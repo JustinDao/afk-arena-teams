@@ -69,6 +69,24 @@
             }
           </div>
         </div>
+
+        @if ((mode.mercMax ?? 0) > 0 && allowMerc() && excludedMercHeroes().length > 0) {
+          <div class="control-row" role="group" aria-label="Excluded mercenaries">
+            <span class="control-label">Skip merc</span>
+            <div class="chip-group">
+              @for (hero of excludedMercHeroes(); track hero.id) {
+                <button
+                  mat-button
+                  type="button"
+                  class="chip chip--excluded"
+                  [attr.aria-label]="'Allow mercing ' + hero.name + ' again'"
+                  (click)="removeExcludedMerc(hero.id)"
+                >{{ hero.name }} ×</button>
+              }
+              <button mat-button type="button" class="chip" (click)="clearExcludedMercs()">Clear all</button>
+            </div>
+          </div>
+        }
       }
     </div>
 
@@ -96,6 +114,22 @@
           </div>
         </div>
       } @else {
+        @if (recommendationOptions().length > 1) {
+          <div class="options-switcher" role="tablist" aria-label="Recommended lineup options">
+            @for (opt of recommendationOptions(); track $index; let i = $index) {
+              <button
+                mat-button
+                type="button"
+                role="tab"
+                class="chip"
+                [attr.aria-selected]="selectedOptionIndex() === i"
+                [attr.aria-pressed]="selectedOptionIndex() === i"
+                (click)="selectOption(i)"
+              >{{ optionSummaryLabel(opt, i) }}</button>
+            }
+          </div>
+        }
+
         <section class="summary-strip" aria-label="Recommended lineup summary">
           <div class="summary-stat">
             <span class="summary-label">Teams ready</span>
@@ -106,7 +140,15 @@
 
           @if (rec.merc; as merc) {
             <div class="summary-stat">
-              <span class="summary-label">Recommended merc</span>
+              <div class="summary-label-row">
+                <span class="summary-label">Recommended merc</span>
+                <button
+                  type="button"
+                  class="skip-merc-btn"
+                  [title]="'Exclude ' + merc.heroName + ' from mercenary recommendations'"
+                  (click)="excludeMercHero(merc.heroId)"
+                >Can't merc</button>
+              </div>
               <strong class="summary-value merc">
                 {{ merc.heroName }}
                 <small>({{ merc.slotLabel }} · {{ merc.reason === 'missing' ? 'missing' : 'upgrade' }})</small>
@@ -194,19 +236,21 @@
                         [style.--hero-faction-color]="heroFactionColor(slot)"
                         [attr.title]="heroTooltip(slot)"
                       >
-                        <app-hero-icon
-                          [name]="heroDisplayName(slot)"
-                          [imageUrl]="slot.pick.iconUrl ?? null"
-                          size="large"
-                          [ascension]="slot.pick.ascension"
-                          [investment]="slot.pick.inv"
-                        />
-                        @if (team.formation.spHeroId === slot.pick.hid) {
-                          <i class="sp-tag" title="SP skill enabled">SP</i>
-                        }
-                        @if (slot.isMerc) {
-                          <i class="tag merc-tag" title="Recommended mercenary">merc</i>
-                        }
+                        <span class="hero-portrait">
+                          <app-hero-icon
+                            [name]="heroDisplayName(slot)"
+                            [imageUrl]="slot.pick.iconUrl ?? null"
+                            size="large"
+                            [ascension]="slot.pick.ascension"
+                            [investment]="slot.pick.inv"
+                          />
+                          @if (team.formation.spHeroId === slot.pick.hid) {
+                            <i class="sp-tag" title="SP skill enabled">SP</i>
+                          }
+                          @if (slot.isMerc) {
+                            <i class="tag merc-tag" [class.below-sp]="team.formation.spHeroId === slot.pick.hid" title="Recommended mercenary">merc</i>
+                          }
+                        </span>
 
                         @if (slot.collectionAssignment.status !== 'none') {
                           @let ca = slot.collectionAssignment;

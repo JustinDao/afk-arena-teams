@@ -92,7 +92,13 @@ export class InvestmentRecommendationsV2Component {
       : all;
   });
 
-  readonly overallCollections = computed(() => this.visibleCollections().slice(0, 10));
+  readonly overallCraftCollections = computed(() =>
+    this.visibleCollections().filter((c) => c.action === 'craft').slice(0, 10),
+  );
+
+  readonly overallRecastCollections = computed(() =>
+    this.visibleCollections().filter((c) => c.action === 'recast').slice(0, 10),
+  );
 
   readonly collectionGroups = computed((): readonly {
     readonly label: CollectionCatalogItem['class'];
@@ -190,10 +196,17 @@ export class InvestmentRecommendationsV2Component {
   }
 
   collectionReason(col: CollectionInvestmentRecV2): string {
-    if (col.ownedMatchingCount > 0) {
-      return `Own ${col.ownedMatchingCount} · up to ${col.maxCopiesInRun} in a run`;
+    const parts: string[] = [];
+    if (col.recastCandidate) {
+      const rc = col.recastCandidate;
+      const slotsLabel = countLabel(rc.slotsRemaining, 'slot');
+      parts.push(`Recast ${rc.ownedName} (${rc.matchedMythicCount}/${rc.targetMythicCount} M, ${slotsLabel} · ~${rc.estimatedElixirs} elixirs)`);
+    } else if (col.ownedMatchingCount > 0) {
+      parts.push(`Own ${col.ownedMatchingCount} · up to ${col.maxCopiesInRun} in a run`);
+    } else {
+      parts.push(`Used in ${countLabel(col.demandCount, 'slot')}`);
     }
-    return `Used in ${countLabel(col.demandCount, 'slot')}`;
+    return parts.join(' · ');
   }
 
   modeShortLabel(slug: string): string {
