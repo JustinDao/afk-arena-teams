@@ -1588,6 +1588,18 @@ def solve_teams(
                 rks = adjusted
             all_hero_rankings.append(rks)
     assigned_heroes = matcher.assign_unique_identities(all_hero_rankings)
+    # Never let cross-team uniqueness override an unmistakable top-1 match (e.g. Poll guides repeating a hero across 2 teams)
+    for i, (choice, rks) in enumerate(zip(assigned_heroes, all_hero_rankings)):
+        if len(rks) >= 2 and choice["id"] != rks[0]["id"]:
+            top1_mse = float(rks[0]["mse"])
+            runner_mse = float(rks[1]["mse"])
+            assigned_mse = float(choice["mse"])
+            if (
+                top1_mse < 1000.0
+                and assigned_mse > top1_mse + 1200.0
+                and runner_mse / max(1.0, top1_mse) >= 2.0
+            ):
+                assigned_heroes[i] = rks[0]
 
     pet_indices = [i for i, t in enumerate(teams_geom) if t["pet_box"] is not None]
     pet_rankings = [
