@@ -340,6 +340,41 @@ describe('roster pages', () => {
     expect(collectionNodeIconUrl('atk', 'mythic')).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_stats_icon/atk_m.webp',
     );
+    expect(component.collectionIcon({
+      id: 'col-1',
+      catalogId: 13,
+      name: 'Shadowflow Blade',
+      class: 'Ranger',
+      nodes: [
+        { slotIndex: 0, stat: 'cda', tier: 'mythic' },
+        { slotIndex: 1, stat: 'atk', tier: 'legendary' },
+        { slotIndex: 6, stat: 'skill_level', tier: 'mythic' },
+        { slotIndex: 7, stat: 'skill_level', tier: 'mythic' },
+      ],
+    })).toBe(
+      'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms3_cl.webp',
+    );
+    expect(component.displayName({
+      id: 'col-2',
+      catalogId: 14,
+      name: 'EROSION, EROSION, EROSION',
+      class: 'Mage',
+      nodes: [
+        { slotIndex: 0, stat: 'erosion', tier: 'mythic' },
+        { slotIndex: 1, stat: 'erosion', tier: 'mythic' },
+        { slotIndex: 2, stat: 'erosion', tier: 'mythic' },
+      ],
+    })).toBe('3x EROSION');
+    expect(component.displayName({
+      id: 'col-3',
+      catalogId: 14,
+      name: '2x Erosion',
+      class: 'Mage',
+      nodes: [
+        { slotIndex: 0, stat: 'erosion', tier: 'mythic' },
+        { slotIndex: 1, stat: 'erosion', tier: 'mythic' },
+      ],
+    })).toBe('2x Erosion');
   });
 
   it('filters owned heroes by name when searching on the hero roster page', async () => {

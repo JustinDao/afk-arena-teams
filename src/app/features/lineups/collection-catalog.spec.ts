@@ -4,6 +4,7 @@ import {
   collectionIconUrlForSnapshot,
   defaultCollectionName,
   DEFENSE_COLLECTION_NODE_STATS,
+  isDefaultCollectionName,
 } from './collection-catalog';
 import { CollectionNode } from './models';
 
@@ -21,14 +22,20 @@ describe('collection catalog helpers', () => {
     expect(collectionIconUrlForNodes(13, nodes)).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms3_cl.webp',
     );
+    expect(collectionIconUrlForNodes(13, nodes, { includeLevelInMythicCount: true })).toBe(
+      'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl3_ms5_cl.webp',
+    );
     expect(collectionIconUrlForNodes(13, [])).toBe(
       'https://raw.githubusercontent.com/afk-mine/cdn/main/collection_icon/13_lvl1_cl.webp',
     );
   });
 
-  it('defaults the name to the non-Level mythic nodes, or the catalog name when there are none', () => {
-    expect(defaultCollectionName('Shadowflow Blade', nodes)).toBe('CDA, CDA, CRIT');
+  it('defaults the name to grouped non-Level mythic nodes, or the catalog name when there are none', () => {
+    expect(defaultCollectionName('Shadowflow Blade', nodes)).toBe('2x CDA, CRIT');
     expect(defaultCollectionName('Shadowflow Blade', [])).toBe('Shadowflow Blade');
+    expect(isDefaultCollectionName('CDA, CDA, CRIT', 'Shadowflow Blade', nodes)).toBeTrue();
+    expect(isDefaultCollectionName('2x CDA, CRIT', 'Shadowflow Blade', nodes)).toBeTrue();
+    expect(isDefaultCollectionName('My Custom Blade', 'Shadowflow Blade', nodes)).toBeFalse();
   });
 
   it('previews flexible recommendations without an exact Mythic node count', () => {

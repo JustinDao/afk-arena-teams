@@ -1,7 +1,7 @@
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { collectionIconUrlForNodes, defaultCollectionName } from '../../collection-catalog';
+import { collectionIconUrlForNodes, defaultCollectionName, isDefaultCollectionName } from '../../collection-catalog';
 import { CollectionCatalogItem, CollectionInventoryItem, CollectionNode, CollectionNodeStat } from '../../models';
 import { CollectionBuildEditorComponent } from '../collection-build-editor/collection-build-editor.component';
 
@@ -56,12 +56,15 @@ export class CollectionEditorModalComponent {
   readonly customName = linkedSignal<string | null>(() => {
     const existing = this.existing();
     if (!existing) return null;
-    const derived = defaultCollectionName(this.catalogItem().name, existing.nodes);
-    return existing.name === this.catalogItem().name || existing.name === derived ? null : existing.name;
+    return isDefaultCollectionName(existing.name, this.catalogItem().name, existing.nodes) ? null : existing.name;
   });
   readonly defaultName = computed(() => defaultCollectionName(this.catalogItem().name, this.nodes()));
   readonly name = computed(() => this.customName() ?? this.defaultName());
-  readonly iconUrl = computed(() => collectionIconUrlForNodes(this.catalogItem().id, this.nodes()));
+  readonly iconUrl = computed(() =>
+    collectionIconUrlForNodes(this.catalogItem().id, this.nodes(), {
+      includeLevelInMythicCount: true,
+    }),
+  );
 
   onName(event: Event): void {
     const value = event.target instanceof HTMLInputElement ? event.target.value : '';

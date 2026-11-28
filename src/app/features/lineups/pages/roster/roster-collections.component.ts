@@ -1,7 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { AuthService } from '../../../../core/auth/auth.service'
-import { collectionIconUrlForNodes, collectionNodeLabel, defaultCollectionName } from '../../collection-catalog'
+import {
+  collectionIconUrlForNodes,
+  collectionNodeLabel,
+  defaultCollectionName,
+  isDefaultCollectionName,
+} from '../../collection-catalog'
 import { AddCollectionModalComponent } from '../../components/add-collection-modal/add-collection-modal.component'
 import {
   CollectionEditorModalComponent,
@@ -107,12 +112,14 @@ export class RosterCollectionsComponent {
   }
 
   collectionIcon(collection: CollectionInventoryItem): string {
-    return collectionIconUrlForNodes(collection.catalogId ?? 0, collection.nodes);
+    return collectionIconUrlForNodes(collection.catalogId ?? 0, collection.nodes, {
+      includeLevelInMythicCount: true,
+    });
   }
 
   displayName(collection: CollectionInventoryItem): string {
     const catalogName = this.collectionCatalog().find(({ id }) => id === collection.catalogId)?.name;
-    return catalogName && collection.name === catalogName
+    return catalogName && isDefaultCollectionName(collection.name, catalogName, collection.nodes)
       ? defaultCollectionName(catalogName, collection.nodes)
       : collection.name;
   }

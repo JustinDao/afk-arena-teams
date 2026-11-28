@@ -53,9 +53,17 @@ export function collectionIconUrl(collectionId: number, level = 1, mythicStats =
   return `${CDN_BASE}/collection_icon/${collectionId}${lvl}${mythic}_cl.webp`;
 }
 
-export function collectionIconUrlForNodes(collectionId: number, nodes: readonly CollectionNode[]): string {
+export function collectionIconUrlForNodes(
+  collectionId: number,
+  nodes: readonly CollectionNode[],
+  options?: { readonly includeLevelInMythicCount?: boolean },
+): string {
   const levelNodes = nodes.filter(({ stat }) => stat === 'skill_level').length;
-  const mythicStats = nodes.filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic').length;
+  const mythicStats = nodes.filter(({ stat, tier }) =>
+    options?.includeLevelInMythicCount
+      ? stat === 'skill_level' || tier === 'mythic'
+      : stat !== 'skill_level' && tier === 'mythic',
+  ).length;
   return collectionIconUrl(collectionId, levelNodes + 1, mythicStats);
 }
 
@@ -65,12 +73,30 @@ export function collectionIconUrlForSnapshot(collectionId: number, snapshot: Col
     : collectionIconUrlForNodes(collectionId, snapshot.nodes);
 }
 
-export function defaultCollectionName(catalogName: string, nodes: readonly CollectionNode[]): string {
-  const labels = [...nodes]
+function mythicNodeLabels(nodes: readonly CollectionNode[]): string[] {
+  return [...nodes]
     .filter(({ stat, tier }) => stat !== 'skill_level' && tier === 'mythic')
     .sort((left, right) => left.slotIndex - right.slotIndex)
     .map(({ stat }) => collectionNodeLabel(stat));
+}
+
+export function defaultCollectionName(catalogName: string, nodes: readonly CollectionNode[]): string {
+  const counts = new Map<string, number>();
+  for (const label of mythicNodeLabels(nodes)) {
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const labels = [...counts.entries()].map(([label, count]) => (count > 1 ? `${count}x ${label}` : label));
   return labels.length ? labels.join(', ') : catalogName;
+}
+
+export function isDefaultCollectionName(
+  name: string,
+  catalogName: string,
+  nodes: readonly CollectionNode[],
+): boolean {
+  if (name === catalogName || name === defaultCollectionName(catalogName, nodes)) return true;
+  const legacyLabels = mythicNodeLabels(nodes);
+  return legacyLabels.length > 0 && name === legacyLabels.join(', ').slice(0, 80);
 }
 
 export function collectionNodeIconUrl(stat: CollectionNodeStat, tier: CollectionNodeTier): string {

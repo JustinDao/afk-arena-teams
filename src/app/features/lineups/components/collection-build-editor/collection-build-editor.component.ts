@@ -62,8 +62,10 @@ import { CollectionCatalogItem, CollectionNode, CollectionNodeStat } from '../..
     fieldset { min-width: 0; padding: 8px 10px; border: 1px solid var(--app-line); border-radius: var(--app-radius-sm); }
     legend { padding-inline: 4px; font-weight: 600; }
     .collection-node-form { display: grid; width: min(100%, 360px); grid-template-columns: 32px minmax(0, 1fr); align-items: center; column-gap: 14px; margin: 8px auto; }
-    .collection-node-form.has-tier { width: min(100%, 440px); grid-template-columns: 32px minmax(0, 1fr) minmax(80px, 0.55fr); }
-    .collection-node-form select { padding-right: 16px; }
+    .collection-node-form.has-tier { width: min(100%, 440px); grid-template-columns: 32px minmax(0, 1fr) minmax(96px, 0.55fr); }
+    .collection-node-form .field { position: relative; }
+    .collection-node-form .field::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; border-right: 1.5px solid var(--app-ink); border-bottom: 1.5px solid var(--app-ink); transform: translateY(-65%) rotate(45deg); pointer-events: none; opacity: 0.85; }
+    .collection-node-form select { appearance: none; -webkit-appearance: none; padding-right: 28px; }
     .collection-node-icon, .collection-node-icon-placeholder { width: 36px; height: 36px; object-fit: contain; }
     .collection-node-icon-placeholder { display: grid; place-items: center; border-radius: var(--app-radius-sm); background: var(--app-panel-variant); color: var(--app-muted); }
     .collection-node-tier-fixed { color: var(--app-muted); font-size: 0.9rem; font-weight: 600; text-align: center; }
