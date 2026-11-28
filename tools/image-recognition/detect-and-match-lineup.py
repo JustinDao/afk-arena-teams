@@ -1689,16 +1689,21 @@ def solve_teams(
                         mse_thresh=1500.0,
                     )
                 else:
+                    is_raku_wide = layout in ("rakudayyy_ts_rows", "row_5_col")
                     roi_x0 = max(0, cx - 25)
                     roi_y0 = max(0, cy + ch - 10)
                     roi = img[
-                        roi_y0 : min(img.shape[0], cy + ch + 80),
+                        roi_y0 : min(img.shape[0], cy + ch + (115 if is_raku_wide else 80)),
                         roi_x0 : min(img.shape[1], cx + cw + 25),
                     ]
                     raw_nodes = matcher.detect_nodes_in_roi(
                         roi,
                         node_assets,
-                        sz_list=(50,) if fast_grid else (46, 50, 54, 56),
+                        sz_list=(
+                            (50,)
+                            if fast_grid
+                            else ((48, 54, 60, 66, 72) if is_raku_wide else (46, 50, 54, 56))
+                        ),
                         max_nodes=2,
                         mse_thresh=1750.0,
                     )
@@ -4118,7 +4123,11 @@ def assemble_rakudayyy_ts_rows(img, model):
             coll_boxes = []
             for k in range(5):
                 exp_cx = cx0 + k * c_stride
-                near = [b for b in mid_c_det if abs(b[0] - exp_cx) <= 45 * sx]
+                near = [
+                    b
+                    for b in mid_c_det
+                    if abs(b[0] - exp_cx) <= 45 * sx and abs(b[1] - c_y_med) <= 24 * sy
+                ]
                 coll_boxes.append(
                     near[0] if near else [round(exp_cx), c_y_med, c_w_med, c_h_med]
                 )
