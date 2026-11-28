@@ -77,7 +77,13 @@ def build_bundle(jsonl_path: Path, images_dir: Path, flagged_only: bool) -> int:
 
                     H, W = img.shape[:2]
                     hbs = [h["bbox"] for h in heroes if h.get("bbox") and len(h["bbox"]) == 4]
-                    if hbs:
+                    if hbs and team.get("layout") == "rakudayyy_ts_rows":
+                        top_y = min(b[1] for b in hbs)
+                        x0 = 0
+                        x1 = min(W, round(W * 0.78))
+                        y0 = max(0, top_y - round(H * 0.022))
+                        y1 = min(H, top_y + round(H * 0.102))
+                    elif hbs:
                         avg_hw = sum(b[2] for b in hbs) / len(hbs)
                         pb = (team.get("pet") or {}).get("bbox")
                         left_edge = min(b[0] for b in hbs) - 40

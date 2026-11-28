@@ -1218,7 +1218,7 @@ def _get_lookup_assets():
 
 def is_hero_lookup_sheet_image(img):
     H, W = img.shape[:2]
-    return 2400 <= W <= 2800 and 1600 <= H <= 1900
+    return 2200 <= W <= 3200 and 1500 <= H <= 2100
 
 
 def _detect_lookup_grid(gray, sx, sy):
@@ -1277,6 +1277,18 @@ def _detect_lookup_grid(gray, sx, sy):
 
 
 def extract_hero_lookup_sheet(img, matcher, type_tensors, hero_meta, collections_catalog):
+    # Normalize black-bordered 2940x1912 lookup sheets onto the exact 2600x1750 coordinate grid
+    if img.shape[1] >= 2850 and img.shape[0] >= 1850:
+        gray_raw = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        col_means = gray_raw[200:1500, :180].mean(axis=0)
+        row_means = gray_raw[:120, 200:2400].mean(axis=1)
+        x_hits = np.where(col_means > 120)[0]
+        y_hits = np.where(row_means > 120)[0]
+        if len(x_hits) > 0 and len(y_hits) > 0:
+            x_off = max(0, int(x_hits[0]) - 32)
+            y_off = max(0, int(y_hits[0]) - 14)
+            if x_off + 2600 <= img.shape[1] and y_off + 1750 <= img.shape[0]:
+                img = img[y_off : y_off + 1750, x_off : x_off + 2600]
     H, W = img.shape[:2]
     sx = W / 2600.0
     sy = H / 1750.0
@@ -1631,7 +1643,11 @@ def solve_teams(
 
             coll_result = None
             nodes_found = []
-            if layout in ("app_card_3_2", "row_5_col", "multi_col_nc_grid"):
+            if (
+                layout
+                in ("app_card_3_2", "row_5_col", "multi_col_nc_grid", "rakudayyy_ts_rows")
+                and team.get("coll_boxes")
+            ):
                 cbox = team["coll_boxes"][s_idx]
                 c_ranked = matcher.rank_candidates_in_box(
                     img,
@@ -1882,10 +1898,16 @@ def solve_teams(
                         "nodes": nodes_found,
                     }
 
+            inv_boxes = team.get("inv_hero_boxes")
+            inv_box = (
+                inv_boxes[s_idx]
+                if inv_boxes and s_idx < len(inv_boxes) and inv_boxes[s_idx] is not None
+                else hbox
+            )
             inv_result = (
                 None
                 if layout in ("ts_compact_7", "theafkguys_ts_grid", "abex_4x2_grid")
-                else detect_hero_investment(img, hbox)
+                else detect_hero_investment(img, inv_box)
             )
 
             slot_options = None
@@ -2029,45 +2051,74 @@ def solve_teams(
                     det_pet_lvl = _detect_pet_level(img, team["pet_box"])
                     if det_pet_lvl is not None:
                         pet_out["level"] = det_pet_lvl
+                if team.get("pet_alt_box") is not None:
+                    alt_rk = matcher.rank_candidates_in_box(
+                        img,
+                        team["pet_alt_box"],
+                        "pet",
+                        type_tensors,
+                        scales=(0.92, 0.98, 1.04),
+                        pad_ratio=0.16,
+                        stride=2,
+                    )
+                    if alt_rk and alt_rk[0]["mse"] < 4200.0:
+                        alt_slug = pet_meta[alt_rk[0]["id"]]["slug"]
+                        pet_opts = [pet_out["slug"]]
+                        if alt_slug != pet_out["slug"]:
+                            pet_opts.append(alt_slug)
+                        pet_out["options"] = pet_opts
         elif team.get("pet_banner_box") is not None:
             pet_banners = _get_lookup_assets()["pet_banners"]
-            pb_x, pb_y, pb_w, pb_h = team["pet_banner_box"]
-            pb_crop = img[max(0, pb_y) : pb_y + pb_h, max(0, pb_x) : pb_x + pb_w]
-            if pb_crop.size > 0 and pet_banners:
-                if pb_crop.shape[:2] != (30, 60):
-                    pb_crop = cv2.resize(pb_crop, (60, 30))
-                pbf = pb_crop.astype(np.float32)
-                best_pslug, best_pmse = None, 1e9
+            H_img, W_img = img.shape[:2]
+
+            def _match_banner(box):
+                bx, by, bw, bh = box
+                pad = 6
+                x0 = max(0, bx - pad)
+                y0 = max(0, by - pad)
+                x1 = min(W_img, bx + bw + pad)
+                y1 = min(H_img, by + bh + pad)
+                roi = img[y0:y1, x0:x1]
+                if roi.size == 0 or roi.shape[0] < 30 or roi.shape[1] < 60:
+                    return None, 1e9, 0.0
+                core = img[max(0, by) : min(H_img, by + bh), max(0, bx) : min(W_img, bx + bw)]
+                core_std = float(core.std()) if core.size > 0 else 0.0
+                # Rescale ROI proportionally if banner box differs from 60x30
+                if (bw, bh) != (60, 30) and bw > 0 and bh > 0:
+                    sx_b, sy_b = 60.0 / bw, 30.0 / bh
+                    roi = cv2.resize(
+                        roi,
+                        (max(60, round(roi.shape[1] * sx_b)), max(30, round(roi.shape[0] * sy_b))),
+                    )
+                roi_f = roi.astype(np.float32)
+                best_s, best_m = None, 1e9
                 for pslug, ptmpl in pet_banners.items():
-                    pmse = float(np.mean((pbf - ptmpl) ** 2))
-                    if pmse < best_pmse:
-                        best_pmse = pmse
-                        best_pslug = pslug
+                    if roi_f.shape[0] < ptmpl.shape[0] or roi_f.shape[1] < ptmpl.shape[1]:
+                        continue
+                    res = cv2.matchTemplate(roi_f, ptmpl, cv2.TM_SQDIFF)
+                    pmse = float(res.min()) / float(ptmpl.size)
+                    if pmse < best_m:
+                        best_m = pmse
+                        best_s = pslug
+                return best_s, best_m, core_std
+
+            if pet_banners:
+                best_pslug, best_pmse, _ = _match_banner(team["pet_banner_box"])
                 pet_by_slug = {p["slug"]: p for p in pet_meta.values()}
                 if best_pslug and best_pslug in pet_by_slug and best_pmse < 1200.0:
                     p_info = pet_by_slug[best_pslug]
                     pet_opts = [best_pslug]
                     alt_box = team.get("pet_banner_alt_box")
                     if alt_box is not None:
-                        ax, ay, aw, ah = alt_box
-                        acrop = img[max(0, ay) : ay + ah, max(0, ax) : ax + aw]
-                        if acrop.size > 0 and acrop.std() > 35.0:
-                            if acrop.shape[:2] != (30, 60):
-                                acrop = cv2.resize(acrop, (60, 30))
-                            af = acrop.astype(np.float32)
-                            alt_slug, alt_mse = None, 1e9
-                            for pslug, ptmpl in pet_banners.items():
-                                pmse = float(np.mean((af - ptmpl) ** 2))
-                                if pmse < alt_mse:
-                                    alt_mse = pmse
-                                    alt_slug = pslug
-                            if (
-                                alt_slug
-                                and alt_slug in pet_by_slug
-                                and alt_mse < 1200.0
-                                and alt_slug not in pet_opts
-                            ):
-                                pet_opts.append(alt_slug)
+                        alt_slug, alt_mse, alt_std = _match_banner(alt_box)
+                        if (
+                            alt_std > 35.0
+                            and alt_slug
+                            and alt_slug in pet_by_slug
+                            and alt_mse < 1200.0
+                            and alt_slug not in pet_opts
+                        ):
+                            pet_opts.append(alt_slug)
                     pet_out = {
                         "id": p_info["id"],
                         "slug": p_info["slug"],
@@ -3463,11 +3514,26 @@ def _detect_guide_layout_kind(img):
     text = " ".join(r[1] for r in (res or [])).upper()
     if "HUNTING" in text or "CONTRACT" in text or "NO EARRINGS" in text:
         return "hfc", text
+    if (
+        W >= 2400
+        and H >= 3000
+        and (
+            "SCRAMBLE DEBUFF" in text
+            or "SCRRMBLE DEBUFF" in text
+            or ("COLLECTIONS + INVESTMENTS" in text and "TEAM 1" in text)
+            or ("TOTAL APPEARANCES" in text and "TEAM 1" in text)
+        )
+    ):
+        return "rakudayyy_ts_rows", text
     if "TEMPORAL" in text or "RIFT" in text:
         return "temporal_rift", text
     if "ABEX" in text or "AB&X" in text:
         return "abex_grid", text
-    if "TRIAL" in text or "DRAGONFORGE" in text or "FIRST 3-STAR" in text:
+    if (
+        "DRAGONFORGE" in text
+        or "FIRST 3-STAR" in text
+        or ("TRIAL" in text and "TRIAL DMG" not in text)
+    ):
         return "dragonforge_history", text
     return None, text
 
@@ -3848,6 +3914,612 @@ def _attach_temporal_rift_pets(img, model, solved_teams, matcher, type_tensors, 
             }
 
 
+def assemble_rakudayyy_ts_rows(img, model):
+    """Assemble Rakudayyy/Mugen 7-row Treasure Scramble guide (3000x6000 dark layout with left Team+Subs and middle Collections+Investments)."""
+    H, W = img.shape[:2]
+    if model is None:
+        return []
+    sx = W / 3000.0
+    sy = H / 6000.0
+
+    # 1. Color-agnostic horizontal band divider detection
+    x_lo, x_hi = int(0.05 * W), int(0.95 * W)
+    bg_local = 0.5 * (
+        img[:-20, x_lo:x_hi].astype(np.float32) + img[20:, x_lo:x_hi].astype(np.float32)
+    )
+    center = img[10:-10, x_lo:x_hi].astype(np.float32)
+    line_frac = (np.abs(center - bg_local).max(axis=2) > 55.0).mean(axis=1)
+    div_ys = np.where(line_frac > 0.70)[0] + 10
+    divs = []
+    if len(div_ys) > 0:
+        for grp in np.split(div_ys, np.where(np.diff(div_ys) > 8)[0] + 1):
+            m = int(grp.mean())
+            if m > 0.08 * H:
+                divs.append(m)
+    bands = [
+        (divs[i], divs[i + 1])
+        for i in range(len(divs) - 1)
+        if (divs[i + 1] - divs[i]) > 350 * sy
+    ]
+    if divs and (H - divs[-1]) > 420 * sy:
+        bands.append((divs[-1], H - round(100 * sy)))
+    if not bands:
+        return []
+
+    teams = []
+    for r_idx, (y0, y1) in enumerate(bands, 1):
+        # Sample dark background in left margin of this band
+        bg_patch = img[
+            min(H - 10, y0 + round(340 * sy)) : min(H, y0 + round(440 * sy)),
+            round(50 * sx) : round(130 * sx),
+        ]
+        bg_med = (
+            np.median(bg_patch.reshape(-1, 3), axis=0).astype(np.float32)
+            if bg_patch.size > 0
+            else np.array([38.0, 27.0, 32.0], dtype=np.float32)
+        )
+
+        # Left column: 5 main heroes + 1-2 pets + vertical subs
+        lx0, lx1 = round(100 * sx), round(1120 * sx)
+        rl = model.predict(
+            source=img[y0:y1, lx0:lx1],
+            imgsz=640,
+            conf=0.20,
+            iou=0.45,
+            max_det=100,
+            device="cpu",
+            verbose=False,
+        )[0]
+        l_raw_b = [
+            [b[0] + lx0, b[1] + y0, b[2] + lx0, b[3] + y0]
+            for b in rl.boxes.xyxy.cpu().tolist()
+        ]
+        l_raw_s = rl.boxes.conf.cpu().tolist()
+        l_norm = normalize_yolo_boxes(l_raw_b, l_raw_s, img.shape, min_px=round(82 * sx))
+        sq = [
+            b
+            for b, _ in l_norm
+            if 82 * sx <= b[2] <= 125 * sx and 82 * sy <= b[3] <= 125 * sy
+        ]
+        if not sq:
+            continue
+        top_y = min(b[1] for b in sq)
+        top_boxes = sorted([b for b in sq if abs(b[1] - top_y) < 35 * sy], key=lambda b: b[0])
+        if not top_boxes:
+            continue
+
+        hw = round(float(np.median([b[2] for b in top_boxes])))
+        hh = round(float(np.median([b[3] for b in top_boxes])))
+        top_y_med = round(float(np.median([b[1] for b in top_boxes])))
+
+        # Estimate horizontal stride across the 5 heroes + pet 1 (ignore optional 2nd pet gap)
+        gaps = [
+            top_boxes[i + 1][0] - top_boxes[i][0]
+            for i in range(len(top_boxes) - 1)
+            if 112 * sx <= (top_boxes[i + 1][0] - top_boxes[i][0]) <= 146 * sx
+        ]
+        stride = float(np.median(gaps)) if gaps else (132.5 * sx)
+        # Anchor x0: if the leftmost detected box is already near x~165..230, use it; else step back
+        x0 = float(top_boxes[0][0])
+        while x0 > 245 * sx:
+            x0 -= stride
+
+        row6 = []
+        used_top = set()
+        for k in range(6):
+            exp_x = x0 + k * stride
+            best_i, best_d = None, 32 * sx
+            for ti_b, tb in enumerate(top_boxes):
+                if ti_b in used_top:
+                    continue
+                d = abs(tb[0] - exp_x)
+                if d < best_d:
+                    best_d = d
+                    best_i = ti_b
+            if best_i is not None:
+                used_top.add(best_i)
+                row6.append(top_boxes[best_i])
+            else:
+                row6.append([round(exp_x), top_y_med, hw, hh])
+
+        hero_boxes = row6[:5]
+        pet_box = row6[5]
+        pet_alt_box = None
+        # Check for a 2nd pet portrait directly to the right of pet_box
+        for ti_b, tb in enumerate(top_boxes):
+            if ti_b in used_top:
+                continue
+            if pet_box[0] + 85 * sx <= tb[0] <= pet_box[0] + 150 * sx:
+                pet_alt_box = tb
+                break
+
+        # Vertical subs directly under each of the 5 hero slots
+        yolo_subs = [b for b in sq if b[1] >= top_y_med + 60 * sy]
+        sub_hero_boxes = []
+        sub_dy = 117.0 * sy
+        for hx, hy, h_w, h_h in hero_boxes:
+            slot_subs = sorted(
+                [b for b in yolo_subs if abs(b[0] - hx) <= 35 * sx],
+                key=lambda b: b[1],
+            )
+            # Fill any dark/missed sub portraits on the vertical grid directly below slot
+            for k in range(1, 5):
+                sy_exp = round(hy + k * sub_dy)
+                if sy_exp + h_h > y1 - 8:
+                    break
+                if any(abs(sb[1] - sy_exp) <= 38 * sy for sb in slot_subs):
+                    continue
+                pad = max(6, round(10 * sx))
+                patch = img[sy_exp + pad : sy_exp + h_h - pad, hx + pad : hx + h_w - pad]
+                if patch.size == 0:
+                    continue
+                p_std = float(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY).std())
+                fg_frac = float(
+                    (np.abs(patch.astype(np.float32) - bg_med).max(axis=2) > 30.0).mean()
+                )
+                if p_std > 18.0 and fg_frac > 0.30:
+                    slot_subs.append([hx, sy_exp, h_w, h_h])
+            slot_subs.sort(key=lambda b: b[1])
+            sub_hero_boxes.append(slot_subs)
+
+        # Middle column: 5 investment hero cards + 5 collection icons
+        mx0, mx1 = round(1150 * sx), round(2320 * sx)
+        rm = model.predict(
+            source=img[y0:y1, mx0:mx1],
+            imgsz=640,
+            conf=0.20,
+            iou=0.45,
+            max_det=100,
+            device="cpu",
+            verbose=False,
+        )[0]
+        m_raw_b = [
+            [b[0] + mx0, b[1] + y0, b[2] + mx0, b[3] + y0]
+            for b in rm.boxes.xyxy.cpu().tolist()
+        ]
+        m_raw_s = rm.boxes.conf.cpu().tolist()
+        m_norm = normalize_yolo_boxes(m_raw_b, m_raw_s, img.shape, min_px=round(80 * sx))
+        mid_c_det = sorted(
+            [
+                b
+                for b, _ in m_norm
+                if 80 * sx <= b[2] <= 122 * sx
+                and 80 * sy <= b[3] <= 122 * sy
+                and b[1] > y0 + 400 * sy
+            ],
+            key=lambda b: b[0],
+        )
+        mid_h_det = sorted(
+            [
+                b
+                for b, _ in m_norm
+                if 118 * sx <= b[2] <= 185 * sx
+                and 120 * sy <= b[3] <= 200 * sy
+                and b[1] < y0 + 420 * sy
+            ],
+            key=lambda b: b[0],
+        )
+
+        # Snap 5 collection boxes
+        coll_boxes = None
+        if len(mid_c_det) >= 3:
+            c_y_med = round(float(np.median([b[1] for b in mid_c_det])))
+            c_w_med = round(float(np.median([b[2] for b in mid_c_det])))
+            c_h_med = round(float(np.median([b[3] for b in mid_c_det])))
+            c_gaps = [
+                mid_c_det[i + 1][0] - mid_c_det[i][0]
+                for i in range(len(mid_c_det) - 1)
+                if 185 * sx <= (mid_c_det[i + 1][0] - mid_c_det[i][0]) <= 240 * sx
+            ]
+            c_stride = float(np.median(c_gaps)) if c_gaps else (212.0 * sx)
+            cx0 = float(mid_c_det[0][0])
+            while cx0 > 1360 * sx:
+                cx0 -= c_stride
+            coll_boxes = []
+            for k in range(5):
+                exp_cx = cx0 + k * c_stride
+                near = [b for b in mid_c_det if abs(b[0] - exp_cx) <= 45 * sx]
+                coll_boxes.append(
+                    near[0] if near else [round(exp_cx), c_y_med, c_w_med, c_h_med]
+                )
+
+        # Pair each collection box with its middle investment hero card directly above it
+        inv_hero_boxes = None
+        if coll_boxes is not None:
+            inv_hero_boxes = []
+            for cb in coll_boxes:
+                c_mid_x = cb[0] + cb[2] * 0.5
+                near_h = [
+                    b for b in mid_h_det if abs((b[0] + b[2] * 0.5) - c_mid_x) <= 60 * sx
+                ]
+                if near_h:
+                    inv_hero_boxes.append(near_h[0])
+                else:
+                    inv_hero_boxes.append(
+                        [
+                            round(cb[0] - 24 * sx),
+                            round(cb[1] - 242 * sy),
+                            round(148 * sx),
+                            round(164 * sy),
+                        ]
+                    )
+
+        teams.append(
+            {
+                "round": r_idx,
+                "layout": "rakudayyy_ts_rows",
+                "hero_boxes": hero_boxes,
+                "inv_hero_boxes": inv_hero_boxes,
+                "sub_hero_boxes": sub_hero_boxes,
+                "coll_boxes": coll_boxes,
+                "pet_box": pet_box,
+                "pet_alt_box": pet_alt_box,
+            }
+        )
+    return teams
+
+
+def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors):
+    """Extract per-hero SI, furniture, and engraving from mcwhare35's left-hand in-game battle inset table."""
+    if not solved_teams or matcher is None:
+        return
+    staggered = [t for t in solved_teams if t.get("layout") == "staggered_3_2"]
+    if not staggered:
+        return
+
+    H, W = img.shape[:2]
+    lx0, lx1 = round(0.03 * W), round(0.32 * W)
+    left = img[:, lx0:lx1]
+    if left.size == 0:
+        return
+    b, g, r = (
+        left[:, :, 0].astype(np.int32),
+        left[:, :, 1].astype(np.int32),
+        left[:, :, 2].astype(np.int32),
+    )
+    is_warm = (r > 150) & (g > 125) & ((r - b) > 35)
+    ys = np.where(is_warm.mean(axis=1) > 0.25)[0]
+    if len(ys) == 0:
+        return
+
+    min_inset_h = max(180, round(0.12 * H))
+    insets = []
+    for grp in np.split(ys, np.where(np.diff(ys) > 20)[0] + 1):
+        if (grp[-1] - grp[0]) >= min_inset_h:
+            y0, y1 = int(grp[0]), int(grp[-1])
+            xs = np.where(is_warm[y0:y1].mean(axis=0) > 0.25)[0]
+            if len(xs) >= 120:
+                insets.append((lx0 + int(xs[0]), y0, lx0 + int(xs[-1]), y1))
+    if not insets:
+        return
+
+    ocr = _get_ocr_engine()
+    tmpl_dir = Path(__file__).resolve().parent / "assets" / "investment-templates"
+    t20_im = cv2.imread(str(tmpl_dir / "mcwhare_si_20.png"), cv2.IMREAD_GRAYSCALE)
+    t30_im = cv2.imread(str(tmpl_dir / "mcwhare_si_30.png"), cv2.IMREAD_GRAYSCALE)
+
+    nc_row_ys = [0.355, 0.499, 0.643, 0.787, 0.931]
+    cr_row_ys = [0.388, 0.483, 0.578, 0.673, 0.768]
+
+    for team in staggered:
+        heroes = team.get("heroes") or []
+        if not heroes:
+            continue
+        hbs = [h["bbox"] for h in heroes if h.get("bbox") and len(h["bbox"]) == 4]
+        if not hbs:
+            continue
+        team_cy = float(np.median([hb[1] + hb[3] * 0.5 for hb in hbs]))
+
+        # Pair with closest inset vertically
+        best_inset = None
+        best_dist = 240.0 * (H / 2014.0)
+        for ins_box in insets:
+            ins_cy = 0.5 * (ins_box[1] + ins_box[3])
+            d = abs(ins_cy - team_cy)
+            if d < best_dist:
+                best_dist = d
+                best_inset = ins_box
+        if best_inset is None:
+            continue
+
+        x0, y0, x1, y1 = best_inset
+        inset = img[y0:y1, x0:x1]
+        ih, iw = inset.shape[:2]
+        if ih < 180 or iw < 120:
+            continue
+
+        # Distinguish NC Equip table (dark-brown furniture pills at x=0.185..0.255) vs CR Damage chart
+        pill_means = []
+        for ry in nc_row_ys:
+            p = inset[
+                round((ry - 0.028) * ih) : round((ry + 0.002) * ih),
+                round(0.185 * iw) : round(0.255 * iw),
+            ]
+            if p.size > 0:
+                pill_means.append(float(p.mean()))
+        is_nc_equip = bool(pill_means and float(np.median(pill_means)) < 148.0)
+
+        team_hero_ids = {h["id"] for h in heroes if h.get("id") is not None}
+        if not team_hero_ids:
+            continue
+
+        # Slice hero tensors to ONLY this team's 5 heroes (~45x faster & focused)
+        h_items, h_T, h_M, h_TM, h_T2, h_d = type_tensors["hero"]
+        keep_idx = [
+            i
+            for i, it in enumerate(h_items)
+            if (
+                it.get("id")
+                if isinstance(it, dict)
+                else (it[0].get("id") if isinstance(it[0], dict) else it[0])
+            )
+            in team_hero_ids
+        ]
+        if not keep_idx:
+            continue
+        def _slice_axis(arr):
+            if not hasattr(arr, "ndim"):
+                return arr
+            if arr.ndim == 2 and arr.shape[0] != len(h_items) and arr.shape[1] == len(h_items):
+                return arr[:, keep_idx]
+            if arr.ndim >= 1 and arr.shape[0] == len(h_items):
+                return arr[keep_idx]
+            return arr
+
+        sub_tensors = {
+            "hero": (
+                [h_items[i] for i in keep_idx],
+                _slice_axis(h_T),
+                _slice_axis(h_M),
+                _slice_axis(h_TM),
+                _slice_axis(h_T2),
+                _slice_axis(h_d),
+            )
+        }
+
+        row_ys = nc_row_ys if is_nc_equip else cr_row_ys
+        # Build 5xN cost matrix matching inset row portraits ONLY against this team's recognized heroes
+        n_rows = len(row_ys)
+        n_heroes = len(heroes)
+        cost = np.full((n_rows, n_heroes), 1e6, dtype=np.float32)
+        for ri, ry in enumerate(row_ys):
+            if is_nc_equip:
+                pbox = [
+                    x0 + round(0.044 * iw),
+                    y0 + round((ry - 0.048) * ih),
+                    max(18, round(0.096 * iw)),
+                    max(18, round(0.096 * ih)),
+                ]
+            else:
+                pbox = [
+                    x0 + round(0.015 * iw),
+                    y0 + round((ry - 0.044) * ih),
+                    max(18, round(0.130 * iw)),
+                    max(18, round(0.088 * ih)),
+                ]
+            rks = matcher.rank_candidates_in_box(
+                img,
+                pbox,
+                "hero",
+                sub_tensors,
+                scales=(0.90, 0.98, 1.06),
+                pad_ratio=0.14,
+                stride=2,
+            )
+            rk_map = {r_item["id"]: float(r_item["mse"]) for r_item in rks}
+            for hi, h_dict in enumerate(heroes):
+                hid = h_dict.get("id")
+                if hid in rk_map:
+                    cost[ri, hi] = rk_map[hid]
+
+        # Optimal 5xN assignment (N <= 5, at most 120 permutations — no scipy needed)
+        import itertools
+
+        best_perm = None
+        best_total = 1e12
+        if n_heroes <= n_rows:
+            for perm in itertools.permutations(range(n_rows), n_heroes):
+                tot = sum(float(cost[perm[hi], hi]) for hi in range(n_heroes))
+                if tot < best_total:
+                    best_total = tot
+                    best_perm = list(zip(perm, range(n_heroes)))
+        else:
+            for perm in itertools.permutations(range(n_heroes), n_rows):
+                tot = sum(float(cost[ri, perm[ri]]) for ri in range(n_rows))
+                if tot < best_total:
+                    best_total = tot
+                    best_perm = list(zip(range(n_rows), perm))
+        pairs = best_perm or []
+
+        for ri, hi in pairs:
+            if cost[ri, hi] >= 5e5:
+                continue
+            h_dict = heroes[hi]
+            if h_dict.get("investment"):
+                continue
+            ry = row_ys[ri]
+
+            if is_nc_equip:
+                # 1. Furniture via recognition-only OCR on dark-brown pill
+                furn = None
+                if ocr is not None:
+                    f_crop = inset[
+                        round((ry - 0.030) * ih) : round((ry + 0.002) * ih),
+                        round(0.185 * iw) : round(0.255 * iw),
+                    ]
+                    if f_crop.size > 0:
+                        f_up = cv2.resize(
+                            f_crop, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_CUBIC
+                        )
+                        f_pad = cv2.copyMakeBorder(
+                            f_up, 8, 8, 16, 16, cv2.BORDER_REPLICATE
+                        )
+                        try:
+                            f_res, _ = ocr(
+                                f_pad, use_det=False, use_cls=False, use_rec=True
+                            )
+                        except Exception:
+                            f_res = None
+                        if f_res and f_res[0] and f_res[0][0]:
+                            digits = "".join(c for c in str(f_res[0][0]) if c.isdigit())
+                            if digits:
+                                val = int(digits)
+                                if 0 <= val <= 36:
+                                    furn = val
+
+                # 2. Exclusive SI via icon color tier + tiny +20/+30 template match
+                e_crop = inset[
+                    round((ry - 0.052) * ih) : round((ry + 0.052) * ih),
+                    round(0.455 * iw) : round(0.565 * iw),
+                ]
+                si = None
+                if e_crop.size > 0:
+                    e_inner = e_crop[4:-4, 4:-4] if e_crop.shape[0] > 10 and e_crop.shape[1] > 10 else e_crop
+                    e_mean = float(e_inner.mean())
+                    e_std = float(e_inner.std())
+                    if e_mean < 105.0 or e_std < 18.0:
+                        si = 0
+                    else:
+                        ehsv = cv2.cvtColor(e_crop, cv2.COLOR_BGR2HSV)
+                        e_red = float(
+                            (
+                                ((ehsv[:, :, 0] <= 10) | (ehsv[:, :, 0] >= 165))
+                                & (ehsv[:, :, 1] >= 100)
+                                & (ehsv[:, :, 2] >= 100)
+                            ).mean()
+                        )
+                        e_gold = float(
+                            (
+                                (ehsv[:, :, 0] >= 14)
+                                & (ehsv[:, :, 0] <= 32)
+                                & (ehsv[:, :, 1] >= 110)
+                                & (ehsv[:, :, 2] >= 120)
+                            ).mean()
+                        )
+                        if e_red >= 0.15:
+                            si = 30
+                            if t20_im is not None and t30_im is not None:
+                                roi = inset[
+                                    round((ry + 0.014) * ih) : round((ry + 0.050) * ih),
+                                    round(0.454 * iw) : round(0.524 * iw),
+                                ]
+                                if roi.size > 0:
+                                    g_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                    # Scale templates if inset width differs from 288
+                                    sc = iw / 288.0
+                                    t20_s = (
+                                        cv2.resize(
+                                            t20_im,
+                                            (
+                                                max(4, round(t20_im.shape[1] * sc)),
+                                                max(4, round(t20_im.shape[0] * sc)),
+                                            ),
+                                        )
+                                        if abs(sc - 1.0) > 0.05
+                                        else t20_im
+                                    )
+                                    t30_s = (
+                                        cv2.resize(
+                                            t30_im,
+                                            (
+                                                max(4, round(t30_im.shape[1] * sc)),
+                                                max(4, round(t30_im.shape[0] * sc)),
+                                            ),
+                                        )
+                                        if abs(sc - 1.0) > 0.05
+                                        else t30_im
+                                    )
+                                    if (
+                                        g_roi.shape[0] >= max(t20_s.shape[0], t30_s.shape[0])
+                                        and g_roi.shape[1] >= max(t20_s.shape[1], t30_s.shape[1])
+                                    ):
+                                        s20 = float(
+                                            cv2.matchTemplate(
+                                                g_roi, t20_s, cv2.TM_CCOEFF_NORMED
+                                            ).max()
+                                        )
+                                        s30 = float(
+                                            cv2.matchTemplate(
+                                                g_roi, t30_s, cv2.TM_CCOEFF_NORMED
+                                            ).max()
+                                        )
+                                        if s20 > s30 + 0.005:
+                                            si = 20
+                        elif e_gold >= 0.18:
+                            si = 10
+                        else:
+                            si = 40
+
+                # 3. Engraving from interior star strip at bottom of hero portrait
+                if si == 0 and (furn is None or furn == 0):
+                    en = 0
+                else:
+                    s_crop = inset[
+                        round((ry + 0.022) * ih) : round((ry + 0.042) * ih),
+                        round(0.052 * iw) : round(0.122 * iw),
+                    ]
+                    en = 0
+                    if s_crop.size > 0:
+                        hsv = cv2.cvtColor(s_crop, cv2.COLOR_BGR2HSV)
+                        red_px = int(
+                            (
+                                ((hsv[:, :, 0] <= 10) | (hsv[:, :, 0] >= 165))
+                                & (hsv[:, :, 1] >= 100)
+                                & (hsv[:, :, 2] >= 110)
+                            ).sum()
+                        )
+                        org_px = int(
+                            (
+                                (hsv[:, :, 0] >= 11)
+                                & (hsv[:, :, 0] <= 28)
+                                & (hsv[:, :, 1] >= 110)
+                                & (hsv[:, :, 2] >= 130)
+                            ).sum()
+                        )
+                        if red_px >= 6:
+                            en = 60
+                        elif org_px >= 6:
+                            en = 30
+
+                if si is not None or furn is not None or en is not None:
+                    inv_obj = {
+                        "si": si,
+                        "furniture": furn,
+                        "engraving": en,
+                        "code": f"{si or 0:02d}{furn or 0}e{en or 0}",
+                    }
+                    if (furn is not None and furn > 0) or (en is not None and en > 0):
+                        inv_obj["ascension"] = "ascended"
+                    h_dict["investment"] = inv_obj
+            else:
+                # CR damage-chart inset: extract engraving tier from star color at portrait bottom
+                s_crop = inset[
+                    round((ry + 0.022) * ih) : round((ry + 0.044) * ih),
+                    round(0.022 * iw) : round(0.115 * iw),
+                ]
+                if s_crop.size > 0:
+                    hsv = cv2.cvtColor(s_crop, cv2.COLOR_BGR2HSV)
+                    red_px = int(
+                        (
+                            ((hsv[:, :, 0] <= 10) | (hsv[:, :, 0] >= 165))
+                            & (hsv[:, :, 1] >= 100)
+                            & (hsv[:, :, 2] >= 110)
+                        ).sum()
+                    )
+                    org_px = int(
+                        (
+                            (hsv[:, :, 0] >= 11)
+                            & (hsv[:, :, 0] <= 28)
+                            & (hsv[:, :, 1] >= 110)
+                            & (hsv[:, :, 2] >= 130)
+                        ).sum()
+                    )
+                    if red_px >= 5:
+                        h_dict["investment"] = {"si": None, "furniture": None, "engraving": 60, "ascension": "ascended", "code": "e60"}
+                    elif org_px >= 5:
+                        h_dict["investment"] = {"si": None, "furniture": None, "engraving": 30, "ascension": "ascended", "code": "e30"}
+
+
 def detect_and_assemble_teams_for_image(
     img,
     model,
@@ -3867,6 +4539,8 @@ def detect_and_assemble_teams_for_image(
     guide_kind, guide_ocr_text = _detect_guide_layout_kind(img)
     if guide_kind == "hfc":
         teams_geom = assemble_hfc_cards(img, model)
+    elif guide_kind == "rakudayyy_ts_rows":
+        teams_geom = assemble_rakudayyy_ts_rows(img, model)
     elif guide_kind == "abex_grid":
         teams_geom = assemble_abex_4x2_grid(img, model)
     elif guide_kind == "dragonforge_history":
@@ -3970,6 +4644,8 @@ def detect_and_assemble_teams_for_image(
     )
     if W >= 3200 and 2400 <= H <= 3400:
         _extract_theafkguys_variants(img, solved_teams, matcher, type_tensors, hero_meta, pet_meta)
+    if any(t.get("layout") == "staggered_3_2" for t in solved_teams):
+        _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
     if guide_kind == "temporal_rift":
         for t in solved_teams:
             t["_ocr_hints"] = {"modes": ["temporal-rift"], "targets": ["s16"]}
@@ -4011,7 +4687,7 @@ def detect_and_assemble_teams_for_image(
     elif guide_kind == "dragonforge_history":
         for t in solved_teams:
             t["_ocr_hints"] = {"modes": ["dragonforge-trials"], "targets": ["trial-11", "trial-12"]}
-    elif H >= 3000 and 2400 <= W < 3400:
+    elif H >= 3000 and 2400 <= W < 3400 and guide_kind != "rakudayyy_ts_rows":
         left_rounds = decode_left_panel_rounds(
             img, matcher, type_tensors, hero_meta, pet_meta
         )
@@ -4036,6 +4712,7 @@ def detect_and_assemble_teams_for_image(
                         if len(slot_opts) > 1:
                             h_entry["slot_options"] = slot_opts
                 t["substitute_teams"] = lr["substitute_teams"]
+    if H >= 3000 and 2400 <= W < 3400 and guide_kind not in ("hfc", "abex_grid", "dragonforge_history"):
         _extract_ts_guide_team_notes(img, solved_teams)
     if guide_kind != "hfc":
         _extract_guide_results_and_target_hints(img, solved_teams)
@@ -4843,7 +5520,7 @@ def _extract_ts_guide_team_notes(img, solved_teams):
     if ocr is None or not solved_teams:
         return
     H, W = img.shape[:2]
-    x0, x1 = round(W * 0.76), W - 10
+    x0, x1 = round(W * 0.745), W - 10
     team_hys = []
     for t in solved_teams:
         ys = [h["bbox"][1] for h in t.get("heroes", []) if h.get("bbox")]
