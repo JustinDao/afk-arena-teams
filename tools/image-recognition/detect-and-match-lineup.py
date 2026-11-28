@@ -4542,6 +4542,214 @@ def _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
                         h_dict["investment"] = {"si": None, "furniture": None, "engraving": 30, "ascension": "ascended", "code": "e30"}
 
 
+def _extract_mcwhare_right_notes(img, solved_teams, matcher, type_tensors, hero_meta):
+    """OCR the right-hand per-hero tips & Notes column on u/mcwhare35 (staggered_3_2) guides."""
+    ocr = _get_ocr_engine()
+    if ocr is None or not solved_teams or matcher is None:
+        return
+    staggered = [t for t in solved_teams if t.get("layout") == "staggered_3_2"]
+    if not staggered:
+        return
+
+    H, W = img.shape[:2]
+    sx = W / 1228.0
+    sy = H / 2014.0
+
+    # Detect left-hand warm-parchment insets to anchor each round's exact vertical band
+    lx0, lx1 = round(0.03 * W), round(0.32 * W)
+    left = img[:, lx0:lx1]
+    if left.size == 0:
+        return
+    b, g, r = (
+        left[:, :, 0].astype(np.int32),
+        left[:, :, 1].astype(np.int32),
+        left[:, :, 2].astype(np.int32),
+    )
+    is_warm = (r > 150) & (g > 125) & ((r - b) > 35)
+    ys = np.where(is_warm.mean(axis=1) > 0.25)[0]
+    if len(ys) == 0:
+        return
+
+    min_inset_h = max(180, round(0.12 * H))
+    insets = []
+    for grp in np.split(ys, np.where(np.diff(ys) > 20)[0] + 1):
+        if (grp[-1] - grp[0]) >= min_inset_h:
+            insets.append((int(grp[0]), int(grp[-1])))
+    if not insets:
+        return
+
+    rx0, rx1 = round(0.515 * W), round(0.975 * W)
+
+    for team in staggered:
+        heroes = team.get("heroes") or []
+        hbs = [h["bbox"] for h in heroes if h.get("bbox") and len(h["bbox"]) == 4]
+        if not hbs:
+            continue
+        team_cy = float(np.median([hb[1] + hb[3] * 0.5 for hb in hbs]))
+
+        best_idx = None
+        best_dist = 240.0 * sy
+        for ii, (iy0, iy1) in enumerate(insets):
+            d = abs(0.5 * (iy0 + iy1) - team_cy)
+            if d < best_dist:
+                best_dist = d
+                best_idx = ii
+        if best_idx is None:
+            continue
+
+        iy0, iy1 = insets[best_idx]
+        prev_bot = (insets[best_idx - 1][1] + round(18 * sy)) if best_idx > 0 else 0
+        next_top = (insets[best_idx + 1][0] - round(140 * sy)) if best_idx + 1 < len(insets) else H
+        band_y0 = max(prev_bot, iy0 - round(135 * sy))
+        band_y1 = min(next_top, iy1 + round(32 * sy))
+        if band_y1 <= band_y0 + 60:
+            continue
+
+        roi = img[band_y0:band_y1, rx0:rx1]
+        if roi.size == 0:
+            continue
+        roi2 = cv2.resize(roi, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        try:
+            res, _ = ocr(roi2)
+        except Exception:
+            continue
+        if not res:
+            continue
+
+        raw_items = []
+        for box, txt, sc in res:
+            t_clean = str(txt).strip()
+            if not t_clean or float(sc) < 0.65:
+                continue
+            bx0 = min(p[0] for p in box) / 2.0
+            by0 = min(p[1] for p in box) / 2.0
+            by1 = max(p[1] for p in box) / 2.0
+            raw_items.append((by0, by1, bx0, t_clean))
+        if not raw_items:
+            continue
+        raw_items.sort(key=lambda it: (it[0], it[2]))
+
+        # Merge same-line fragments
+        lines = []
+        for by0, by1, bx0, txt in raw_items:
+            if lines and abs(by0 - lines[-1]["y0"]) <= 11.0 * sy:
+                lines[-1]["parts"].append((bx0, txt))
+                lines[-1]["y0"] = min(lines[-1]["y0"], by0)
+                lines[-1]["y1"] = max(lines[-1]["y1"], by1)
+                lines[-1]["x0"] = min(lines[-1]["x0"], bx0)
+            else:
+                lines.append({"y0": by0, "y1": by1, "x0": bx0, "parts": [(bx0, txt)]})
+        for ln in lines:
+            ln["text"] = " ".join(t for _x, t in sorted(ln["parts"], key=lambda p: p[0]))
+
+        # Slice hero tensors to ONLY this team's 5 heroes for fast mini-portrait matching
+        team_hero_ids = {h["id"] for h in heroes if h.get("id") is not None}
+        sub_tensors = None
+        if team_hero_ids:
+            h_items, h_T, h_M, h_TM, h_T2, h_d = type_tensors["hero"]
+            keep_idx = [
+                i
+                for i, it in enumerate(h_items)
+                if (
+                    it.get("id")
+                    if isinstance(it, dict)
+                    else (it[0].get("id") if isinstance(it[0], dict) else it[0])
+                )
+                in team_hero_ids
+            ]
+            if keep_idx:
+                def _sl(arr):
+                    if not hasattr(arr, "ndim"):
+                        return arr
+                    if arr.ndim == 2 and arr.shape[0] != len(h_items) and arr.shape[1] == len(h_items):
+                        return arr[:, keep_idx]
+                    if arr.ndim >= 1 and arr.shape[0] == len(h_items):
+                        return arr[keep_idx]
+                    return arr
+
+                sub_tensors = {
+                    "hero": (
+                        [h_items[i] for i in keep_idx],
+                        _sl(h_T),
+                        _sl(h_M),
+                        _sl(h_TM),
+                        _sl(h_T2),
+                        _sl(h_d),
+                    )
+                }
+
+        # Group into per-hero blocks (x0 >= 52*sx) and bottom Notes section (x0 < 45*sx)
+        hero_blocks = []
+        general_lines = []
+        in_general = False
+        for ln in lines:
+            low = ln["text"].lower().strip()
+            if ln["x0"] < 45.0 * sx and (low.startswith("notes") or in_general):
+                in_general = True
+                if low in ("notes", "notes:"):
+                    continue
+                general_lines.append(ln["text"])
+                continue
+            if in_general:
+                general_lines.append(ln["text"])
+                continue
+            if ln["x0"] >= 52.0 * sx:
+                if not hero_blocks or (ln["y0"] - hero_blocks[-1]["y1"]) >= 24.0 * sy:
+                    hero_blocks.append({"y0": ln["y0"], "y1": ln["y1"], "texts": [ln["text"]]})
+                else:
+                    hero_blocks[-1]["y1"] = max(hero_blocks[-1]["y1"], ln["y1"])
+                    hero_blocks[-1]["texts"].append(ln["text"])
+            else:
+                general_lines.append(ln["text"])
+
+        bullets = []
+        used_hids = set()
+        for blk in hero_blocks:
+            body_txt = " ".join(blk["texts"]).strip()
+            if not body_txt:
+                continue
+            # Clean common OCR glitches like "Ivl27" -> "lvl 27", "+2 Is" -> "+2 IS"
+            body_txt = re.sub(r"\bIvl\s*(\d+)", r"lvl \1", body_txt)
+            body_txt = re.sub(r"\bIs\b", "IS", body_txt)
+            hero_prefix = None
+            if sub_tensors is not None:
+                # Mini hero portrait sits directly left of blk["y0"]
+                pbox = [
+                    rx0 + round(12 * sx),
+                    band_y0 + round(blk["y0"] - 10 * sy),
+                    max(24, round(52 * sx)),
+                    max(24, round(52 * sy)),
+                ]
+                rks = matcher.rank_candidates_in_box(
+                    img,
+                    pbox,
+                    "hero",
+                    sub_tensors,
+                    scales=(0.88, 0.96, 1.04),
+                    pad_ratio=0.16,
+                    stride=2,
+                )
+                if rks:
+                    chosen = next((x for x in rks if x["id"] not in used_hids), rks[0])
+                    if float(chosen["mse"]) < 4200.0:
+                        used_hids.add(chosen["id"])
+                        hmeta = hero_meta.get(chosen["id"]) or {}
+                        hero_prefix = hmeta.get("name")
+            if hero_prefix:
+                bullets.append(f"• {hero_prefix}: {body_txt}")
+            else:
+                bullets.append(f"• {body_txt}")
+
+        if general_lines:
+            gen_txt = " ".join(general_lines).strip()
+            gen_txt = re.sub(r"\bIvl\s*(\d+)", r"lvl \1", gen_txt)
+            if gen_txt:
+                bullets.append(f"• Notes: {gen_txt}")
+
+        if bullets:
+            team["notes"] = "\n".join(bullets)
+
+
 def detect_and_assemble_teams_for_image(
     img,
     model,
@@ -4668,6 +4876,7 @@ def detect_and_assemble_teams_for_image(
         _extract_theafkguys_variants(img, solved_teams, matcher, type_tensors, hero_meta, pet_meta)
     if any(t.get("layout") == "staggered_3_2" for t in solved_teams):
         _extract_mcwhare_inset_investments(img, solved_teams, matcher, type_tensors)
+        _extract_mcwhare_right_notes(img, solved_teams, matcher, type_tensors, hero_meta)
     if guide_kind == "temporal_rift":
         for t in solved_teams:
             t["_ocr_hints"] = {"modes": ["temporal-rift"], "targets": ["s16"]}
