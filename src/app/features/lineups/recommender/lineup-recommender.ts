@@ -28,6 +28,7 @@ import {
   InvestmentGapDetail,
   ModeledComp,
   ModeledCompHero,
+  ModelInferenceSource,
 } from './meta-model';
 
 export const RECOMMENDED_LINEUP_MODE_SLUGS = [
@@ -75,6 +76,8 @@ export interface RecommendedHeroSlot {
   readonly belowMinViable: boolean;
   readonly suggestedSubstitutes: readonly SuggestedHeroSubstitute[];
   readonly collectionAssignment: CollectionAssignmentResult;
+  readonly collectionSource: ModelInferenceSource;
+  readonly collectionSourceDetail?: string;
 }
 
 export interface RecommendedTeam {
@@ -544,8 +547,8 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
 
   // Build global hierarchical investment & collection models from ALL submissions so missing
   // investments or collections in any single submission are imputed from other lineups.
-  const investmentModel = buildInvestmentModel(submissions);
-  const collectionModel = buildCollectionModel(submissions);
+  const investmentModel = buildInvestmentModel(submissions, heroById);
+  const collectionModel = buildCollectionModel(submissions, heroById);
 
   const matchingSubmissions = submissions.filter(
     (sub) => sub.mode === mode.slug && (!target || sub.target === target),
@@ -729,24 +732,47 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
   }
 
   // Optimal unique collection inventory assignment across all chosen teams.
-  const collectionRequests: CollectionAssignmentRequest[] = [];
+  // Pass 1: assign explicitly modeled hero collections (comp/mode/global) first so inferred
+  // suggestions never steal scarce owned copies from explicitly requested slots.
+  const directRequests: CollectionAssignmentRequest[] = [];
+  const inferredRequests: CollectionAssignmentRequest[] = [];
   chosenCandidates.forEach((cand, teamIdx) => {
     cand.comp.heroes.forEach((hero, heroIdx) => {
       const heroMeta = heroById.get(hero.hid);
-      collectionRequests.push({
+      const req: CollectionAssignmentRequest = {
         slotKey: `${teamIdx}:${heroIdx}`,
         heroId: hero.hid,
         heroClass: normalizeHeroClass(heroMeta?.class),
         target: hero.collection,
-      });
+      };
+      if (hero.collectionSource === 'sub' || hero.collectionSource === 'class') {
+        inferredRequests.push(req);
+      } else {
+        directRequests.push(req);
+      }
     });
   });
 
-  const collectionAssignments = assignCollectionsToLineup(
-    collectionRequests,
+  const collectionAssignments = new Map(assignCollectionsToLineup(
+    directRequests,
     collections,
     collectionCatalog,
-  );
+  ));
+  if (inferredRequests.length > 0) {
+    const usedIds = new Set<string>();
+    for (const res of collectionAssignments.values()) {
+      if (res.assigned) usedIds.add(res.assigned.id);
+    }
+    const remainingCollections = collections.filter((c) => !usedIds.has(c.id));
+    const inferredAssignments = assignCollectionsToLineup(
+      inferredRequests,
+      remainingCollections,
+      collectionCatalog,
+    );
+    for (const [k, v] of inferredAssignments.entries()) {
+      collectionAssignments.set(k, v);
+    }
+  }
 
   let merc: RecommendedMercenary | null = null;
   let missingHeroCount = 0;
@@ -882,7 +908,8 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         matchedStats: [],
         score: 0,
       };
-      if (assignment.status !== 'none') {
+      const isInferredCollection = hero.collectionSource === 'sub' || hero.collectionSource === 'class';
+      if (assignment.status !== 'none' && !isInferredCollection) {
         collectionSummary.requested += 1;
         collectionSummary[assignment.status] += 1;
       }
@@ -901,6 +928,8 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         belowMinViable: isMerc ? false : gap.belowMinViable,
         suggestedSubstitutes,
         collectionAssignment: assignment,
+        collectionSource: hero.collectionSource,
+        ...(hero.collectionSourceDetail ? { collectionSourceDetail: hero.collectionSourceDetail } : {}),
       };
     });
 

@@ -291,10 +291,12 @@
 
                         @if (slot.collectionAssignment.status !== 'none') {
                           @let ca = slot.collectionAssignment;
+                          @let inferredCol = isInferredSource(slot.collectionSource);
                           <div
                             class="collection-assignment"
                             [class]="ca.status"
-                            [attr.title]="collectionTooltip(ca)"
+                            [class.inferred]="inferredCol"
+                            [attr.title]="collectionTooltip(slot)"
                           >
                             <span class="collection-tag">
                               @if (collectionIcon(ca); as iconUrl) {
@@ -309,6 +311,9 @@
                               }
                             </span>
                             <span class="collection-pill" [class]="ca.status">{{ collectionStatusLabel(ca.status) }}</span>
+                            @if (inferredCol) {
+                              <span class="inferred-badge">Inferred</span>
+                            }
                           </div>
                         }
                       </div>
@@ -339,6 +344,15 @@
                 <div class="sub-hints">
                   @for (hint of subHints; track hint.missingName) {
                     <p class="sub-hint">Sub for <strong>{{ hint.missingName }}</strong>: {{ hint.subs }}</p>
+                  }
+                </div>
+              }
+
+              @let inferredHints = teamInferredHints(team);
+              @if (inferredHints.length > 0) {
+                <div class="inferred-hints">
+                  @for (hint of inferredHints; track hint.heroName) {
+                    <p class="inferred-hint"><strong>{{ hint.heroName }}</strong>: {{ hint.detail }} <span class="inferred-note">(not in guide)</span></p>
                   }
                 </div>
               }

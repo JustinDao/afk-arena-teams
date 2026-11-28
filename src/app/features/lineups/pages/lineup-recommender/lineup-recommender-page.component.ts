@@ -338,6 +338,34 @@ export class LineupRecommenderPageComponent {
       }));
   }
 
+  isInferredSource(source: RecommendedHeroSlot['collectionSource']): boolean {
+    return source === 'sub' || source === 'class';
+  }
+
+  teamInferredHints(team: RecommendedTeam): readonly { readonly heroName: string; readonly detail: string }[] {
+    const hints: { heroName: string; detail: string }[] = [];
+    for (const slot of team.heroes) {
+      const invInf = this.isInferredSource(slot.investmentTarget.source) && slot.investmentTarget.inv !== null;
+      const colInf = this.isInferredSource(slot.collectionSource) && slot.collectionAssignment.status !== 'none';
+      if (!invInf && !colInf) continue;
+
+      const invSrc = slot.investmentTarget.sourceDetail ?? 'similar heroes';
+      const colSrc = slot.collectionSourceDetail ?? 'similar heroes';
+      let detail: string;
+      if (invInf && colInf) {
+        detail = invSrc === colSrc
+          ? `investment & collection inferred from ${colSrc}`
+          : `investment inferred from ${invSrc}; collection from ${colSrc}`;
+      } else if (invInf) {
+        detail = `investment inferred from ${invSrc}`;
+      } else {
+        detail = `collection inferred from ${colSrc}`;
+      }
+      hints.push({ heroName: this.heroDisplayName(slot), detail });
+    }
+    return hints;
+  }
+
   private readExcludedMercs(): readonly SavedExcludedMerc[] {
     if (typeof localStorage === 'undefined') return [];
     try {
@@ -409,7 +437,11 @@ export class LineupRecommenderPageComponent {
         ? ' (mode consensus)'
         : slot.investmentTarget.source === 'global'
           ? ' (global consensus)'
-          : '';
+          : slot.investmentTarget.source === 'sub'
+            ? ` (inferred from ${slot.investmentTarget.sourceDetail ?? 'replaced hero'})`
+            : slot.investmentTarget.source === 'class'
+              ? ` (inferred from ${slot.investmentTarget.sourceDetail ?? 'similar heroes'})`
+              : '';
       parts.push(`Target: ${reqInv}${inferred}`);
       if (minInv && minInv !== reqInv) parts.push(`Min viable: ${minInv}`);
     }
@@ -514,9 +546,19 @@ export class LineupRecommenderPageComponent {
     }
   }
 
-  collectionTooltip(assignment: CollectionAssignmentResult): string {
+  collectionTooltip(slot: RecommendedHeroSlot): string {
+    const assignment = slot.collectionAssignment;
     const targetName = assignment.target?.name ?? 'Collection';
     const targetLvl = assignment.targetLevel ? `Lv.${assignment.targetLevel}` : '';
+    const inferredNote = slot.collectionSource === 'sub'
+      ? ` (inferred from ${slot.collectionSourceDetail ?? 'replaced hero'} — not listed in guide)`
+      : slot.collectionSource === 'class'
+        ? ` (inferred from ${slot.collectionSourceDetail ?? 'similar heroes'} — not listed in guide)`
+        : slot.collectionSource === 'mode'
+          ? ' (mode consensus)'
+          : slot.collectionSource === 'global'
+            ? ' (global consensus)'
+            : '';
     if (assignment.assigned) {
       const owned = assignment.assigned;
       const ownedLvl = assignment.assignedLevel ? `Lv.${assignment.assignedLevel}` : '';
@@ -526,9 +568,9 @@ export class LineupRecommenderPageComponent {
         : assignment.status === 'close'
           ? 'Closest owned match:'
           : 'Fallback same-class owned:';
-      return `${prefix} ${owned.name} (${ownedLvl}${statsText ? `, ${statsText}` : ''}). Target: ${targetName} ${targetLvl}`.trim();
+      return `${prefix} ${owned.name} (${ownedLvl}${statsText ? `, ${statsText}` : ''}). Target: ${targetName} ${targetLvl}${inferredNote}`.trim();
     }
-    return `Missing collection: target ${targetName} ${targetLvl}`.trim();
+    return `Missing collection: target ${targetName} ${targetLvl}${inferredNote}`.trim();
   }
 
   assignedCollectionLabel(assignment: CollectionAssignmentResult): string {

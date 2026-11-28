@@ -348,4 +348,198 @@ describe('Recommender V2 consensus modeling', () => {
     expect(result.collections[0].recastCandidate?.estimatedElixirs).toBe(400);
     expect(result.collections[0].score).toBeGreaterThan(result.collections[1].score);
   });
+
+  it('infers investment and collection for a sub-only hero from the replaced same-class peer', () => {
+    const crMode = MODES.find((m) => m.slug === 'cursed-realm')!;
+    const extendedHeroes: Hero[] = [
+      ...heroes,
+      { id: 6, name: 'Nyla', faction: 'Draconis', class: 'Support' },
+    ];
+    const sub: Submission = {
+      id: 901,
+      mode: 'cursed-realm',
+      target: 'Burning Brute',
+      up: 20,
+      days: 1,
+      result: { damage: 52_000_000_000 },
+      notes: '',
+      by: 'guide',
+      heroLevel: null,
+      forms: [
+        {
+          key: 'sg1',
+          label: 'SG1',
+          beast: 'Fox',
+          petId: 1,
+          petLevel: 18,
+          timeSeconds: null,
+          damage: 52_000_000_000,
+          heroes: [
+            {
+              pos: 0,
+              hid: 1,
+              name: 'Hero 1',
+              inv: { si: 30, furn: 9, eng: 60 },
+              ascension: 'ascended_1',
+              merc: false,
+              collection: {
+                catalogId: 9,
+                name: "Trader's Vault",
+                class: 'Support',
+                nodes: [],
+                recommendation: { level: 2, attackStats: ['full_atk'], defenseStats: [] },
+              },
+            },
+            { pos: 1, hid: 2, name: 'Hero 2', inv: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1', merc: false, collection: null },
+            { pos: 2, hid: 3, name: 'Hero 3', inv: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1', merc: false, collection: null },
+            { pos: 3, hid: 4, name: 'Hero 4', inv: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1', merc: false, collection: null },
+            { pos: 4, hid: 5, name: 'Hero 5', inv: { si: 30, furn: 9, eng: 60 }, ascension: 'ascended_1', merc: false, collection: null },
+          ],
+        },
+      ],
+      substituteForms: [
+        {
+          key: 'sg1-sub',
+          parentSlotKey: 'sg1',
+          isSubstitute: true,
+          label: 'SG1',
+          beast: 'Fox',
+          petId: 1,
+          petLevel: 18,
+          timeSeconds: null,
+          damage: 33_000_000_000,
+          heroes: [
+            // Nyla (id 6, Support) replaces Hero 1 (id 1, Support) with no recorded inv or collection.
+            { pos: 0, hid: 6, name: 'Nyla', inv: null, ascension: null, merc: false, collection: null },
+            { pos: 1, hid: 2, name: 'Hero 2', inv: null, ascension: null, merc: false, collection: null },
+            { pos: 2, hid: 3, name: 'Hero 3', inv: null, ascension: null, merc: false, collection: null },
+            { pos: 3, hid: 4, name: 'Hero 4', inv: null, ascension: null, merc: false, collection: null },
+            { pos: 4, hid: 5, name: 'Hero 5', inv: null, ascension: null, merc: false, collection: null },
+          ],
+        },
+      ],
+    };
+
+    const rec = recommendLineupForMode({
+      mode: crMode,
+      target: 'Burning Brute',
+      strictInvestment: false,
+      allowMerc: false,
+      submissions: [sub],
+      roster: {
+        // User owns Nyla + 2,3,4,5 (does NOT own Hero 1), so the recommender picks the Nyla sub team.
+        2: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+        3: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+        4: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+        5: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+        6: { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 },
+      },
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes: extendedHeroes,
+      pets,
+    });
+
+    const nylaSlot = rec.teams[0]?.heroes.find((h) => h.pick.hid === 6);
+    expect(nylaSlot).toBeDefined();
+    expect(nylaSlot?.investmentTarget.source).toBe('sub');
+    expect(nylaSlot?.investmentTarget.sourceDetail).toBe('Hero 1');
+    expect(nylaSlot?.investmentTarget.inv).toEqual({ si: 30, furn: 9, eng: 60 });
+    expect(nylaSlot?.collectionSource).toBe('sub');
+    expect(nylaSlot?.collectionSourceDetail).toBe('Hero 1');
+    expect(nylaSlot?.collectionAssignment.target?.catalogId).toBe(9);
+  });
+
+  it('falls back to same-class consensus when a hero has no direct or sub-peer observations', () => {
+    const crMode = MODES.find((m) => m.slug === 'cursed-realm')!;
+    const extendedHeroes: Hero[] = [
+      ...heroes,
+      { id: 7, name: 'Rare Support', faction: 'Wilder', class: 'Support' },
+    ];
+    const subWithSupportData: Submission = {
+      id: 902,
+      mode: 'cursed-realm',
+      target: 'Kane',
+      up: 20,
+      days: 1,
+      result: { damage: 40_000_000_000 },
+      notes: '',
+      by: 'guide',
+      heroLevel: null,
+      forms: [
+        {
+          key: 'sg1',
+          label: 'SG1',
+          beast: 'Fox',
+          petId: 1,
+          petLevel: 18,
+          timeSeconds: null,
+          heroes: [
+            {
+              pos: 0,
+              hid: 1,
+              name: 'Hero 1',
+              inv: { si: 30, furn: 9, eng: 30 },
+              ascension: 'ascended_1',
+              merc: false,
+              collection: {
+                catalogId: 9,
+                name: "Trader's Vault",
+                class: 'Support',
+                nodes: [],
+                recommendation: { level: 2, attackStats: ['full_atk'], defenseStats: [] },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const subWithRareSupport: Submission = {
+      id: 903,
+      mode: 'cursed-realm',
+      target: 'Burning Brute',
+      up: 10,
+      days: 1,
+      result: { damage: 30_000_000_000 },
+      notes: '',
+      by: 'guide',
+      heroLevel: null,
+      forms: [
+        {
+          key: 'sg1',
+          label: 'SG1',
+          beast: 'Fox',
+          petId: 1,
+          petLevel: 18,
+          timeSeconds: null,
+          heroes: [
+            { pos: 0, hid: 7, name: 'Rare Support', inv: null, ascension: null, merc: false, collection: null },
+          ],
+        },
+      ],
+    };
+
+    const rec = recommendLineupForMode({
+      mode: crMode,
+      target: 'Burning Brute',
+      strictInvestment: false,
+      allowMerc: false,
+      submissions: [subWithSupportData, subWithRareSupport],
+      roster: {
+        7: { inv: '309e30', ascension: 'ascended_1', si: 30, furn: 9, eng: 30 },
+      },
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes: extendedHeroes,
+      pets,
+    });
+
+    const slot = rec.teams[0]?.heroes[0];
+    expect(slot?.investmentTarget.source).toBe('class');
+    expect(slot?.investmentTarget.inv).toEqual({ si: 30, furn: 9, eng: 30 });
+    expect(slot?.collectionSource).toBe('class');
+    expect(slot?.collectionAssignment.target?.catalogId).toBe(9);
+  });
 });

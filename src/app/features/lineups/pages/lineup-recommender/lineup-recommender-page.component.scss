@@ -393,6 +393,20 @@
   opacity: 0.55;
 }
 
+.collection-assignment.inferred .collection-icon {
+  outline: 1.5px dashed color-mix(in srgb, var(--app-muted) 75%, transparent);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+.inferred-badge {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--app-muted);
+  line-height: 1.1;
+}
+
 .collection-tag {
   display: flex;
   flex-flow: row wrap;
@@ -495,4 +509,24 @@
 .sub-hint {
   margin: 0;
   color: var(--app-ink);
+}
+
+.inferred-hints {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--app-radius-sm);
+  border: 1px dashed color-mix(in srgb, var(--app-muted) 40%, transparent);
+  background: color-mix(in srgb, var(--app-surface-2, var(--app-surface)) 55%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.inferred-hint {
+  margin: 0;
+  color: var(--app-ink);
+}
+
+.inferred-note {
+  color: var(--app-muted);
 }

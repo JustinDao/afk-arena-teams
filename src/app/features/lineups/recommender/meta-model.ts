@@ -30,11 +30,14 @@ export interface WeightedSample {
   readonly weight: number;
 }
 
+export type ModelInferenceSource = 'comp' | 'mode' | 'global' | 'sub' | 'class' | 'none';
+
 export interface HeroInvestmentTarget {
   readonly ascension: AscensionRank | null;
   readonly inv: Investment | null;
   readonly minViableInv: Investment | null;
-  readonly source: 'comp' | 'mode' | 'global' | 'none';
+  readonly source: ModelInferenceSource;
+  readonly sourceDetail?: string;
   readonly sampleCount: number;
 }
 
@@ -46,6 +49,8 @@ export interface ModeledCompHero {
   readonly faction?: string | null;
   readonly target: HeroInvestmentTarget;
   readonly collection: CollectionSnapshot | null;
+  readonly collectionSource: ModelInferenceSource;
+  readonly collectionSourceDetail?: string;
 }
 
 export interface ModeledComp {
@@ -180,7 +185,8 @@ function clampAscensionForInvestment(
 
 function summarizeBucket(
   bucket: InvestmentBucket | undefined,
-  source: 'comp' | 'mode' | 'global',
+  source: Exclude<ModelInferenceSource, 'none'>,
+  sourceDetail?: string,
 ): HeroInvestmentTarget | null {
   if (!bucket || (bucket.count === 0 && bucket.asc.length === 0)) return null;
 
@@ -218,14 +224,31 @@ function summarizeBucket(
     inv,
     minViableInv,
     source,
+    ...(sourceDetail ? { sourceDetail } : {}),
     sampleCount: bucket.count,
   };
+}
+
+function normalizeClassKey(hero: Hero | undefined): string | null {
+  const cls = hero?.class?.trim().toLowerCase();
+  return cls || null;
 }
 
 export class HeroInvestmentModel {
   private readonly byComp = new Map<string, InvestmentBucket>();
   private readonly byMode = new Map<string, InvestmentBucket>();
   private readonly byGlobal = new Map<number, InvestmentBucket>();
+  private readonly byModeClass = new Map<string, InvestmentBucket>();
+  private readonly byGlobalClass = new Map<string, InvestmentBucket>();
+
+  private addToMap(map: Map<string, InvestmentBucket>, key: string, pick: HeroPick, weight: number): void {
+    let bucket = map.get(key);
+    if (!bucket) {
+      bucket = createBucket();
+      map.set(key, bucket);
+    }
+    addPickToBucket(bucket, pick, weight);
+  }
 
   addObservation(
     modeSlug: string,
@@ -234,23 +257,13 @@ export class HeroInvestmentModel {
     compHeroSig: string,
     pick: HeroPick,
     weight: number,
+    heroMeta?: Hero,
   ): void {
     const compKey = `${modeSlug}|${target}|${slotKey}|${compHeroSig}|${pick.hid}`;
     const modeKey = `${modeSlug}|${pick.hid}`;
 
-    let compBucket = this.byComp.get(compKey);
-    if (!compBucket) {
-      compBucket = createBucket();
-      this.byComp.set(compKey, compBucket);
-    }
-    addPickToBucket(compBucket, pick, weight);
-
-    let modeBucket = this.byMode.get(modeKey);
-    if (!modeBucket) {
-      modeBucket = createBucket();
-      this.byMode.set(modeKey, modeBucket);
-    }
-    addPickToBucket(modeBucket, pick, weight);
+    this.addToMap(this.byComp, compKey, pick, weight);
+    this.addToMap(this.byMode, modeKey, pick, weight);
 
     let globalBucket = this.byGlobal.get(pick.hid);
     if (!globalBucket) {
@@ -258,6 +271,14 @@ export class HeroInvestmentModel {
       this.byGlobal.set(pick.hid, globalBucket);
     }
     addPickToBucket(globalBucket, pick, weight);
+
+    if (hasRecordedInvestment(pick)) {
+      const cls = normalizeClassKey(heroMeta);
+      if (cls) {
+        this.addToMap(this.byModeClass, `${modeSlug}|${cls}`, pick, weight);
+        this.addToMap(this.byGlobalClass, cls, pick, weight);
+      }
+    }
   }
 
   resolve(
@@ -266,6 +287,7 @@ export class HeroInvestmentModel {
     slotKey: string,
     compHeroSig: string,
     heroId: number,
+    heroMeta?: Hero,
   ): HeroInvestmentTarget {
     const compKey = `${modeSlug}|${target}|${slotKey}|${compHeroSig}|${heroId}`;
     const fromComp = summarizeBucket(this.byComp.get(compKey), 'comp');
@@ -278,6 +300,9 @@ export class HeroInvestmentModel {
     const fromGlobal = summarizeBucket(this.byGlobal.get(heroId), 'global');
     if (fromGlobal?.inv) return fromGlobal;
 
+    const fromClass = this.resolveByClass(modeSlug, heroMeta);
+    if (fromClass?.inv) return fromClass;
+
     return fromComp ?? fromMode ?? fromGlobal ?? {
       ascension: null,
       inv: null,
@@ -285,6 +310,48 @@ export class HeroInvestmentModel {
       source: 'none',
       sampleCount: 0,
     };
+  }
+
+  resolveHeroOnly(
+    modeSlug: string,
+    target: string,
+    slotKey: string,
+    compHeroSig: string,
+    heroId: number,
+  ): HeroInvestmentTarget | null {
+    const compKey = `${modeSlug}|${target}|${slotKey}|${compHeroSig}|${heroId}`;
+    const fromComp = summarizeBucket(this.byComp.get(compKey), 'comp');
+    if (fromComp?.inv) return fromComp;
+
+    const modeKey = `${modeSlug}|${heroId}`;
+    const fromMode = summarizeBucket(this.byMode.get(modeKey), 'mode');
+    if (fromMode?.inv) return fromMode;
+
+    const fromGlobal = summarizeBucket(this.byGlobal.get(heroId), 'global');
+    if (fromGlobal?.inv) return fromGlobal;
+
+    return null;
+  }
+
+  resolveByClass(modeSlug: string, heroMeta?: Hero): HeroInvestmentTarget | null {
+    const cls = normalizeClassKey(heroMeta);
+    if (!cls) return null;
+    const classLabel = heroMeta?.class?.trim() ?? cls;
+    const fromModeClass = summarizeBucket(
+      this.byModeClass.get(`${modeSlug}|${cls}`),
+      'class',
+      `similar ${classLabel} heroes`,
+    );
+    if (fromModeClass?.inv) return fromModeClass;
+
+    const fromGlobalClass = summarizeBucket(
+      this.byGlobalClass.get(cls),
+      'class',
+      `similar ${classLabel} heroes`,
+    );
+    if (fromGlobalClass?.inv) return fromGlobalClass;
+
+    return null;
   }
 
   resolveForHero(heroId: number, modeSlug?: string): HeroInvestmentTarget {
@@ -341,25 +408,53 @@ interface CollectionObservation {
   readonly weight: number;
 }
 
+export interface ResolvedCollection {
+  readonly snapshot: CollectionSnapshot;
+  readonly source: Exclude<ModelInferenceSource, 'none'>;
+  readonly sourceDetail?: string;
+}
+
 export class HeroCollectionModel {
   private readonly byMode = new Map<string, CollectionObservation[]>();
   private readonly byGlobal = new Map<number, CollectionObservation[]>();
+  private readonly byModeClass = new Map<string, CollectionObservation[]>();
+  private readonly byGlobalClass = new Map<string, CollectionObservation[]>();
 
-  addObservation(modeSlug: string, heroId: number, snapshot: CollectionSnapshot, weight: number): void {
-    const modeKey = `${modeSlug}|${heroId}`;
-    let modeList = this.byMode.get(modeKey);
-    if (!modeList) {
-      modeList = [];
-      this.byMode.set(modeKey, modeList);
+  private pushObs(map: Map<string, CollectionObservation[]>, key: string, obs: CollectionObservation): void {
+    let list = map.get(key);
+    if (!list) {
+      list = [];
+      map.set(key, list);
     }
-    modeList.push({ snapshot, weight });
+    list.push(obs);
+  }
+
+  addObservation(
+    modeSlug: string,
+    heroId: number,
+    snapshot: CollectionSnapshot,
+    weight: number,
+    heroMeta?: Hero,
+  ): void {
+    const obs: CollectionObservation = { snapshot, weight };
+    this.pushObs(this.byMode, `${modeSlug}|${heroId}`, obs);
 
     let globalList = this.byGlobal.get(heroId);
     if (!globalList) {
       globalList = [];
       this.byGlobal.set(heroId, globalList);
     }
-    globalList.push({ snapshot, weight });
+    globalList.push(obs);
+
+    const cls = normalizeClassKey(heroMeta);
+    if (cls) {
+      // Only index under class if the collection's own class matches (or isn't set).
+      const snapCls = snapshot.class?.trim().toLowerCase();
+      if (!snapCls || snapCls === cls) {
+        this.pushObs(this.byModeClass, `${modeSlug}|${cls}`, obs);
+        this.pushObs(this.byGlobalClass, cls, obs);
+      }
+    }
   }
 
   resolve(
@@ -367,19 +462,60 @@ export class HeroCollectionModel {
     heroId: number,
     catalog: readonly CollectionCatalogItem[],
   ): CollectionSnapshot | null {
+    return this.resolveWithSource(modeSlug, heroId, catalog)?.snapshot ?? null;
+  }
+
+  resolveWithSource(
+    modeSlug: string,
+    heroId: number,
+    catalog: readonly CollectionCatalogItem[],
+  ): ResolvedCollection | null {
     const fromMode = this.byMode.get(`${modeSlug}|${heroId}`);
     if (fromMode && fromMode.length > 0) {
-      return synthesizeConsensusCollection(fromMode, catalog);
+      const snap = synthesizeConsensusCollection(fromMode, catalog);
+      if (snap) return { snapshot: snap, source: 'mode' };
     }
     const fromGlobal = this.byGlobal.get(heroId);
     if (fromGlobal && fromGlobal.length > 0) {
-      return synthesizeConsensusCollection(fromGlobal, catalog);
+      const snap = synthesizeConsensusCollection(fromGlobal, catalog);
+      if (snap) return { snapshot: snap, source: 'global' };
     }
+    return null;
+  }
+
+  resolveByClass(
+    modeSlug: string,
+    heroMeta: Hero | undefined,
+    catalog: readonly CollectionCatalogItem[],
+  ): ResolvedCollection | null {
+    const cls = normalizeClassKey(heroMeta);
+    if (!cls) return null;
+    const classLabel = heroMeta?.class?.trim() ?? cls;
+    const filterSameClass = (list: readonly CollectionObservation[] | undefined): CollectionObservation[] => {
+      if (!list || list.length === 0) return [];
+      return list.filter(({ snapshot }) => {
+        const resolved = resolveCatalogItem(catalog, snapshot.catalogId, snapshot.name);
+        const snapCls = (snapshot.class ?? resolved?.class)?.trim().toLowerCase();
+        return !snapCls || snapCls === cls;
+      });
+    };
+
+    const modeObs = filterSameClass(this.byModeClass.get(`${modeSlug}|${cls}`));
+    const modeSnap = synthesizeConsensusCollection(modeObs, catalog);
+    if (modeSnap) return { snapshot: modeSnap, source: 'class', sourceDetail: `similar ${classLabel} heroes` };
+
+    const globalObs = filterSameClass(this.byGlobalClass.get(cls));
+    const globalSnap = synthesizeConsensusCollection(globalObs, catalog);
+    if (globalSnap) return { snapshot: globalSnap, source: 'class', sourceDetail: `similar ${classLabel} heroes` };
+
     return null;
   }
 }
 
-export function buildCollectionModel(submissions: readonly Submission[]): HeroCollectionModel {
+export function buildCollectionModel(
+  submissions: readonly Submission[],
+  heroById?: ReadonlyMap<number, Hero>,
+): HeroCollectionModel {
   const model = new HeroCollectionModel();
   const maxUpvotesByTarget = new Map<string, number>();
 
@@ -399,7 +535,13 @@ export function buildCollectionModel(submissions: readonly Submission[]): HeroCo
         if (!pick.collection) continue;
         // Prefer observations that include mythic/recommended stat nodes over bare shells.
         const hasStats = desiredStatsFromSnapshot(pick.collection).length > 0;
-        model.addObservation(sub.mode, pick.hid, pick.collection, weight * (hasStats ? 1.0 : 0.45));
+        model.addObservation(
+          sub.mode,
+          pick.hid,
+          pick.collection,
+          weight * (hasStats ? 1.0 : 0.45),
+          heroById?.get(pick.hid),
+        );
       }
     }
   }
@@ -407,7 +549,10 @@ export function buildCollectionModel(submissions: readonly Submission[]): HeroCo
   return model;
 }
 
-export function buildInvestmentModel(submissions: readonly Submission[]): HeroInvestmentModel {
+export function buildInvestmentModel(
+  submissions: readonly Submission[],
+  heroById?: ReadonlyMap<number, Hero>,
+): HeroInvestmentModel {
   const model = new HeroInvestmentModel();
 
   const maxUpvotesByTarget = new Map<string, number>();
@@ -450,7 +595,15 @@ export function buildInvestmentModel(submissions: readonly Submission[]): HeroIn
       ) * (form.isSubstitute ? 0.7 : 1.0);
       for (const pick of form.heroes) {
         if (pick.merc && !hasRecordedInvestment(pick)) continue;
-        model.addObservation(sub.mode, sub.target, slotKey, compSig, pick, weight);
+        model.addObservation(
+          sub.mode,
+          sub.target,
+          slotKey,
+          compSig,
+          pick,
+          weight,
+          heroById?.get(pick.hid),
+        );
       }
     }
   }
@@ -652,14 +805,125 @@ export function buildModeledCompsForSlot(
       : rep.formation.petLevel;
 
     const petMeta = acc.petId !== null ? petById.get(acc.petId) : undefined;
+    const compHeroSet = new Set(rep.formation.heroes.map((h) => h.hid));
+
+    // Helper: find replaced peer heroes from 4/5-overlap formations in this same slot
+    // (e.g. when Nyla subs in for Talimar on a 4-hero core).
+    const findReplacedPeerHero = (
+      hid: number,
+      requireSameClass: boolean,
+    ): { readonly peerHid: number; readonly peerName: string; readonly compSig: string; readonly collections: CollectionObservation[] } | null => {
+      const heroCls = normalizeClassKey(heroById.get(hid));
+      if (requireSameClass && !heroCls) return null;
+      const otherIds = [...compHeroSet].filter((id) => id !== hid);
+      if (otherIds.length < 3) return null;
+
+      const peerScores = new Map<number, { weight: number; compSig: string; collections: CollectionObservation[] }>();
+      for (const { submission: peerSub, formation: peerForm } of entries) {
+        if (peerForm.heroes.length < 4) continue;
+        const peerIds = peerForm.heroes.map((h) => h.hid);
+        if (peerIds.includes(hid)) continue;
+        let overlap = 0;
+        for (const id of otherIds) {
+          if (peerIds.includes(id)) overlap += 1;
+        }
+        if (overlap < Math.min(4, otherIds.length)) continue;
+
+        const replacedPicks = peerForm.heroes.filter((h) => !compHeroSet.has(h.hid));
+        if (replacedPicks.length !== 1) continue;
+        const replaced = replacedPicks[0];
+        const peerMeta = heroById.get(replaced.hid);
+        if (requireSameClass && normalizeClassKey(peerMeta) !== heroCls) continue;
+
+        const w = computeSubmissionWeight(peerSub, peerForm, maxUpvotes, bestTime, maxDamage)
+          * (peerForm.isSubstitute ? 0.7 : 1.0);
+        const peerSig = [...peerIds].sort((a, b) => a - b).join(',');
+        let bucket = peerScores.get(replaced.hid);
+        if (!bucket) {
+          bucket = { weight: 0, compSig: peerSig, collections: [] };
+          peerScores.set(replaced.hid, bucket);
+        }
+        bucket.weight += w;
+        if (replaced.collection) {
+          bucket.collections.push({ snapshot: replaced.collection, weight: w });
+        }
+      }
+
+      let bestPeer: { peerHid: number; weight: number; compSig: string; collections: CollectionObservation[] } | null = null;
+      for (const [peerHid, info] of peerScores.entries()) {
+        if (!bestPeer || info.weight > bestPeer.weight) {
+          bestPeer = { peerHid, ...info };
+        }
+      }
+      if (!bestPeer) return null;
+      return {
+        peerHid: bestPeer.peerHid,
+        peerName: heroById.get(bestPeer.peerHid)?.name ?? `Hero #${bestPeer.peerHid}`,
+        compSig: bestPeer.compSig,
+        collections: bestPeer.collections,
+      };
+    };
 
     const heroes: ModeledCompHero[] = rep.formation.heroes.map((pick, idx) => {
       const meta = heroById.get(pick.hid);
-      const targetInv = investmentModel.resolve(mode.slug, target, slotKey, acc.compHeroSig, pick.hid);
-      const consensusCol = synthesizeConsensusCollection(
+
+      // 1. Investment resolution: hero comp -> mode -> global -> replaced same-slot peer -> class consensus.
+      let targetInv = investmentModel.resolveHeroOnly(mode.slug, target, slotKey, acc.compHeroSig, pick.hid);
+      if (!targetInv) {
+        const peer = findReplacedPeerHero(pick.hid, true) ?? findReplacedPeerHero(pick.hid, false);
+        if (peer) {
+          const peerInv = investmentModel.resolveHeroOnly(mode.slug, target, slotKey, peer.compSig, peer.peerHid);
+          if (peerInv?.inv) {
+            targetInv = {
+              ...peerInv,
+              source: 'sub',
+              sourceDetail: peer.peerName,
+            };
+          }
+        }
+      }
+      if (!targetInv) {
+        targetInv = investmentModel.resolveByClass(mode.slug, meta)
+          ?? investmentModel.resolve(mode.slug, target, slotKey, acc.compHeroSig, pick.hid, meta);
+      }
+
+      // 2. Collection resolution: comp -> hero mode/global -> replaced same-class peer -> class consensus.
+      let consensusCol: CollectionSnapshot | null = synthesizeConsensusCollection(
         collectionsByHero.get(pick.hid) ?? [],
         collectionCatalog,
-      ) ?? pick.collection ?? collectionModel?.resolve(mode.slug, pick.hid, collectionCatalog) ?? null;
+      ) ?? pick.collection ?? null;
+      let collectionSource: ModelInferenceSource = consensusCol ? 'comp' : 'none';
+      let collectionSourceDetail: string | undefined;
+
+      if (!consensusCol && collectionModel) {
+        const fromHero = collectionModel.resolveWithSource(mode.slug, pick.hid, collectionCatalog);
+        if (fromHero) {
+          consensusCol = fromHero.snapshot;
+          collectionSource = fromHero.source;
+          collectionSourceDetail = fromHero.sourceDetail;
+        }
+      }
+      if (!consensusCol) {
+        const sameClassPeer = findReplacedPeerHero(pick.hid, true);
+        if (sameClassPeer) {
+          const peerCol = synthesizeConsensusCollection(sameClassPeer.collections, collectionCatalog)
+            ?? collectionModel?.resolve(mode.slug, sameClassPeer.peerHid, collectionCatalog)
+            ?? null;
+          if (peerCol) {
+            consensusCol = peerCol;
+            collectionSource = 'sub';
+            collectionSourceDetail = sameClassPeer.peerName;
+          }
+        }
+      }
+      if (!consensusCol && collectionModel) {
+        const fromClass = collectionModel.resolveByClass(mode.slug, meta, collectionCatalog);
+        if (fromClass) {
+          consensusCol = fromClass.snapshot;
+          collectionSource = fromClass.source;
+          collectionSourceDetail = fromClass.sourceDetail;
+        }
+      }
 
       return {
         pos: idx,
@@ -669,6 +933,8 @@ export function buildModeledCompsForSlot(
         faction: pick.faction ?? meta?.faction ?? null,
         target: targetInv,
         collection: consensusCol,
+        collectionSource,
+        ...(collectionSourceDetail ? { collectionSourceDetail } : {}),
       };
     });
 
