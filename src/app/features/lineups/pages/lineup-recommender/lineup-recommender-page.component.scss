@@ -467,5 +467,26 @@
   margin: 0;
   color: var(--app-muted);
   font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.board--empty .board-note {
   text-align: center;
+}
+
+.sub-hints {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--app-radius-sm);
+  background: color-mix(in srgb, var(--app-primary) 10%, transparent);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.sub-hint {
+  margin: 0;
+  color: var(--app-ink);
 }
