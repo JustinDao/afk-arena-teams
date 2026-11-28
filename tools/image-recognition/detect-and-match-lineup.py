@@ -630,11 +630,12 @@ def assemble_staggered_teams(img, norm_boxes):
             else max(0, round(y_0 - 0.35 * dy))
         )
         pet_box = [x_R, pet_y, med_w, med_w]
+        # In-game formation order: Front-top (1), Front-bot (2), Back-top (3), Back-mid (4), Back-bot (5)
         hero_slots = [
-            [x_L, y_0, med_w, med_w],
             [x_R, round(y_0 + 0.5 * dy), med_w, med_w],
-            [x_L, round(y_0 + 1.0 * dy), med_w, med_w],
             [x_R, round(y_0 + 1.5 * dy), med_w, med_w],
+            [x_L, y_0, med_w, med_w],
+            [x_L, round(y_0 + 1.0 * dy), med_w, med_w],
             [x_L, round(y_0 + 2.0 * dy), med_w, med_w],
         ]
         for idx, hb in enumerate(hero_slots):
