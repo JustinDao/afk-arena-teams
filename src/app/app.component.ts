@@ -54,6 +54,10 @@ export class AppComponent {
         const path = this.routePath();
         this.onRoster.set(this.isStandalonePage(path));
         if (path === 'submit') void this.store.loadCollections();
+        if (path.startsWith('recommendations') || path.startsWith('lineup-recommender') || path.startsWith('recommender-v2')) {
+          void this.store.loadRosterDetails();
+          void this.store.loadCollections();
+        }
       });
     this.onRoster.set(this.isStandalonePage(this.routePath()));
     this.auth.onUserChange((user) => {
@@ -155,12 +159,15 @@ export class AppComponent {
   private async initializePageData(user: User | null): Promise<void> {
     await this.store.initializeBackend(user);
     const path = this.routePath();
-    if (path.startsWith('roster')) await this.store.loadRosterDetails();
-    if (path === 'roster/collections' || path === 'submit') await this.store.loadCollections();
+    if (path.startsWith('roster') || path.startsWith('recommendations') || path.startsWith('lineup-recommender') || path.startsWith('recommender-v2')) await this.store.loadRosterDetails();
+    if (path === 'roster/collections' || path === 'submit' || path.startsWith('recommendations') || path.startsWith('lineup-recommender') || path.startsWith('recommender-v2')) await this.store.loadCollections();
   }
 
   private isStandalonePage(path: string): boolean {
-    return path.startsWith('roster') || path.startsWith('recommendations');
+    return path.startsWith('roster')
+      || path.startsWith('recommendations')
+      || path.startsWith('lineup-recommender')
+      || path.startsWith('recommender-v2');
   }
 
   private routePath(): string {

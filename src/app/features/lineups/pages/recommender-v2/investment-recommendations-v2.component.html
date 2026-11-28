@@ -1,0 +1,335 @@
+<div class="inv-v2">
+  <div class="controls-bar">
+    <div class="control-row" role="group" aria-label="Modes to analyze">
+      <span class="control-label">Modes</span>
+      <div class="chip-group">
+        <button
+          mat-button
+          type="button"
+          class="chip"
+          [attr.aria-pressed]="selectedModes().length === 0"
+          (click)="toggleMode(null)"
+        >Overall (NC / CR / TS)</button>
+        @for (mode of store.modes(); track mode.slug) {
+          <button
+            mat-button
+            type="button"
+            class="chip"
+            [attr.aria-pressed]="modeSelected(mode.slug)"
+            (click)="toggleMode(mode.slug)"
+          >{{ mode.name }}</button>
+        }
+      </div>
+    </div>
+
+    @if (activeTab() === 'collections') {
+      <div class="control-row" role="group" aria-label="Collection filters">
+        <span class="control-label">Filter</span>
+        <div class="chip-group">
+          <button
+            mat-button
+            type="button"
+            class="chip"
+            [attr.aria-pressed]="excludeOwnedCollections()"
+            (click)="toggleExcludeOwnedCollections()"
+          >Exclude owned</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <nav class="sub-tabs" role="tablist" aria-label="Recommendation type">
+    <button
+      mat-button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'heroes'"
+      (click)="selectTab('heroes')"
+    >Heroes</button>
+    <button
+      mat-button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'collections'"
+      (click)="selectTab('collections')"
+    >Collections</button>
+    <button
+      mat-button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'pets'"
+      (click)="selectTab('pets')"
+    >Pets</button>
+  </nav>
+
+  @if (loading()) {
+    <div class="empty" role="status">
+      <p class="empty-message">Computing consensus investment recommendations…</p>
+    </div>
+  } @else {
+    @if (activeTab() === 'heroes') {
+      @if (result().overallHeroes.length === 0) {
+        <div class="empty">
+          <p class="empty-message">Your roster already meets the consensus breakpoints for the selected modes!</p>
+        </div>
+      } @else {
+        <section class="rec-panel rec-overall" aria-label="Overall priority">
+          <header class="rec-panel-header">
+            <h3>Overall priority</h3>
+            <span class="rec-panel-sub">Top {{ result().overallHeroes.length }} across all categories</span>
+          </header>
+          <ol class="rec-list">
+            @for (rec of result().overallHeroes; track rec.heroId; let i = $index) {
+              <li class="rec-row" [class.best]="i === 0">
+                <span class="rec-rank">{{ i + 1 }}</span>
+                <app-hero-icon
+                  [name]="rec.heroName"
+                  [imageUrl]="rec.iconUrl ?? null"
+                  [ascension]="rec.targetAscension"
+                  [investment]="rec.targetInv"
+                />
+                <div class="rec-main">
+                  <div class="rec-title-line">
+                    <strong>{{ rec.heroName }}</strong>
+                    <span class="rec-action" [class.is-build]="rec.kind === 'build'">{{ rec.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                    <span class="rec-category">{{ categoryLabel(rec.category) }}</span>
+                    @if (rec.kind === 'invest' && rec.missingMajorBreakpoints.length) {
+                      @for (bp of rec.missingMajorBreakpoints; track bp) {
+                        <span class="rec-bp" [class]="breakpointClass(bp)">{{ bp }}</span>
+                      }
+                    }
+                    @let cur = rec.kind === 'invest' ? formatInv(rec.ownedInv, rec.ownedAscension) : '';
+                    @let tgt = formatInv(rec.targetInv, rec.targetAscension);
+                    @if (cur || tgt) {
+                      <span class="rec-target">
+                        @if (cur) { <span class="rec-current">{{ cur }}@if (tgt) { → }</span> }{{ tgt }}
+                      </span>
+                    }
+                  </div>
+                  <div class="rec-sub-line">
+                    <span>{{ heroReason(rec) }}</span>
+                    @let covs = modeCoverageEntries(rec.byModeEvents);
+                    @if (covs.length) {
+                      <span class="rec-modes">
+                        @for (cov of covs; track cov.short) {
+                          <span [attr.title]="cov.used + ' of ' + cov.total + ' events'">{{ cov.short }} {{ cov.used }}/{{ cov.total }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <div class="rec-group-grid">
+          @for (cat of categories; track cat.key) {
+            @let list = result().heroesByCategory[cat.key];
+            <section class="rec-panel" [attr.aria-label]="cat.label">
+              <header class="rec-panel-header">
+                <h3>{{ cat.label }}</h3>
+              </header>
+              @if (list.length) {
+                <ol class="rec-list">
+                  @for (rec of list; track rec.heroId; let i = $index) {
+                    <li class="rec-row" [class.best]="i === 0">
+                      <span class="rec-rank">{{ i + 1 }}</span>
+                      <app-hero-icon
+                        [name]="rec.heroName"
+                        [imageUrl]="rec.iconUrl ?? null"
+                        [ascension]="rec.targetAscension"
+                        [investment]="rec.targetInv"
+                      />
+                      <div class="rec-main">
+                        <div class="rec-title-line">
+                          <strong>{{ rec.heroName }}</strong>
+                          <span class="rec-action" [class.is-build]="rec.kind === 'build'">{{ rec.kind === 'build' ? 'Build' : 'Invest' }}</span>
+                          @if (rec.kind === 'invest' && rec.missingMajorBreakpoints.length) {
+                            @for (bp of rec.missingMajorBreakpoints; track bp) {
+                              <span class="rec-bp" [class]="breakpointClass(bp)">{{ bp }}</span>
+                            }
+                          }
+                          @let cur = rec.kind === 'invest' ? formatInv(rec.ownedInv, rec.ownedAscension) : '';
+                          @let tgt = formatInv(rec.targetInv, rec.targetAscension);
+                          @if (cur || tgt) {
+                            <span class="rec-target">
+                              @if (cur) { <span class="rec-current">{{ cur }}@if (tgt) { → }</span> }{{ tgt }}
+                            </span>
+                          }
+                        </div>
+                        <div class="rec-sub-line">
+                          <span>{{ heroReason(rec) }}</span>
+                          @let covs = modeCoverageEntries(rec.byModeEvents);
+                          @if (covs.length) {
+                            <span class="rec-modes">
+                              @for (cov of covs; track cov.short) {
+                                <span [attr.title]="cov.used + ' of ' + cov.total + ' events'">{{ cov.short }} {{ cov.used }}/{{ cov.total }}</span>
+                              }
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </li>
+                  }
+                </ol>
+              } @else {
+                <p class="rec-empty">Nothing to recommend here for these modes.</p>
+              }
+            </section>
+          }
+        </div>
+      }
+    } @else if (activeTab() === 'collections') {
+      @if (visibleCollections().length === 0) {
+        <div class="empty">
+          <p class="empty-message">Your collection inventory covers the top consensus collection builds for these modes!</p>
+        </div>
+      } @else {
+        <section class="rec-panel rec-overall" aria-label="Overall collection priority">
+          <header class="rec-panel-header">
+            <h3>Overall priority</h3>
+            <span class="rec-panel-sub">Top {{ overallCollections().length }} distinct builds across all classes</span>
+          </header>
+          <ol class="rec-list">
+            @for (col of overallCollections(); track col.buildKey; let i = $index) {
+              <li class="rec-row" [class.best]="i === 0">
+                <span class="rec-rank">{{ i + 1 }}</span>
+                <img class="rec-icon" [src]="collectionIcon(col.catalogId, col.targetLevel)" [alt]="col.name + ' icon'" width="42" height="42">
+                <div class="rec-main">
+                  <div class="rec-title-line">
+                    <strong>{{ col.name }}</strong>
+                    <span class="rec-category">{{ col.collectionClass }}</span>
+                    @if (col.desiredStats.length) {
+                      <span class="rec-target rec-stats-inline">
+                        @for (stat of col.desiredStats; track stat) {
+                          <span class="stat-inline" [title]="statLabel(stat)">
+                            <img class="stat-icon" [src]="statIcon(stat)" [alt]="statLabel(stat)">
+                            <span>{{ statLabel(stat) }}</span>
+                          </span>
+                        }
+                      </span>
+                    }
+                  </div>
+                  <div class="rec-sub-line">
+                    <span>{{ collectionReason(col) }}</span>
+                    @let users = collectionUsers(col.topHeroIds);
+                    @if (users.length) {
+                      <span class="rec-sub-right">
+                        <span class="rec-users" aria-label="Most common users">
+                          @for (hero of users; track hero.id) {
+                            <app-hero-icon size="xs" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                          }
+                        </span>
+                      </span>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <div class="rec-group-grid">
+          @for (group of collectionGroups(); track group.label) {
+            <section class="rec-panel" [attr.aria-label]="group.label">
+              <header class="rec-panel-header">
+                <h3>{{ group.label }}</h3>
+              </header>
+              @if (group.items.length) {
+                <ol class="rec-list">
+                  @for (col of group.items; track col.buildKey; let i = $index) {
+                    <li class="rec-row" [class.best]="i === 0">
+                      <span class="rec-rank">{{ i + 1 }}</span>
+                      <img class="rec-icon" [src]="collectionIcon(col.catalogId, col.targetLevel)" [alt]="col.name + ' icon'" width="42" height="42">
+                      <div class="rec-main">
+                        <div class="rec-title-line">
+                          <strong>{{ col.name }}</strong>
+                          @if (col.desiredStats.length) {
+                            <span class="rec-target rec-stats-inline">
+                              @for (stat of col.desiredStats; track stat) {
+                                <span class="stat-inline" [title]="statLabel(stat)">
+                                  <img class="stat-icon" [src]="statIcon(stat)" [alt]="statLabel(stat)">
+                                  <span>{{ statLabel(stat) }}</span>
+                                </span>
+                              }
+                            </span>
+                          }
+                        </div>
+                        <div class="rec-sub-line">
+                          <span>{{ collectionReason(col) }}</span>
+                          @let users = collectionUsers(col.topHeroIds);
+                          @if (users.length) {
+                            <span class="rec-sub-right">
+                              <span class="rec-users" aria-label="Most common users">
+                                @for (hero of users; track hero.id) {
+                                  <app-hero-icon size="xs" [name]="hero.name" [imageUrl]="hero.iconUrl" [attr.title]="hero.name" />
+                                }
+                              </span>
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </li>
+                  }
+                </ol>
+              } @else {
+                <p class="rec-empty">Nothing to recommend for {{ group.label }} in these modes.</p>
+              }
+            </section>
+          }
+        </div>
+      }
+    } @else {
+      @if (result().pets.length === 0) {
+        <div class="empty">
+          <p class="empty-message">Your pet roster already meets the consensus levels for the selected modes!</p>
+        </div>
+      } @else {
+        <div class="rec-group-grid">
+          @for (group of petGroups(); track group.key) {
+            <section class="rec-panel" [attr.aria-label]="group.label">
+              <header class="rec-panel-header">
+                <h3>{{ group.label }}</h3>
+              </header>
+              @if (group.items.length) {
+                <ol class="rec-list">
+                  @for (pet of group.items; track pet.petId; let i = $index) {
+                    <li class="rec-row" [class.best]="i === 0">
+                      <span class="rec-rank">{{ i + 1 }}</span>
+                      <app-hero-icon [name]="pet.petName" [imageUrl]="pet.iconUrl ?? null" />
+                      <div class="rec-main">
+                        <div class="rec-title-line">
+                          <strong>{{ pet.petName }}</strong>
+                          <span class="rec-action" [class.is-build]="pet.kind === 'build'">{{ pet.kind === 'build' ? 'Get' : 'Level up' }}</span>
+                          <span class="rec-target">
+                            @if (pet.ownedLevel !== null) {
+                              <span class="rec-current">Lv. {{ pet.ownedLevel }} → </span>
+                            }Lv. {{ pet.targetLevel }}
+                          </span>
+                        </div>
+                        <div class="rec-sub-line">
+                          <span>{{ petReason(pet) }}</span>
+                          @let modes = petModeEntries(pet.byMode);
+                          @if (modes.length) {
+                            <span class="rec-modes">
+                              @for (m of modes; track m.short) {
+                                <span>{{ m.short }} {{ m.count }}</span>
+                              }
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </li>
+                  }
+                </ol>
+              } @else {
+                <p class="rec-empty">Nothing to recommend here for these modes.</p>
+              }
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+</div>

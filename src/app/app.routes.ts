@@ -59,21 +59,49 @@ export const APP_ROUTES: Routes = [
       import('./features/lineups/pages/submit-from-image-page.component').then((m) => m.SubmitFromImagePageComponent),
   },
   {
+    path: 'lineup-recommender',
+    pathMatch: 'full',
+    redirectTo: 'recommendations/lineups',
+  },
+  {
+    path: 'recommender-v2',
+    pathMatch: 'full',
+    redirectTo: 'recommendations/investments',
+  },
+  {
+    path: 'recommender-v2/lineups',
+    pathMatch: 'full',
+    redirectTo: 'recommendations/lineups',
+  },
+  {
+    path: 'recommender-v2/investments',
+    pathMatch: 'full',
+    redirectTo: 'recommendations/investments',
+  },
+  {
     path: 'recommendations',
-    loadComponent: () => import('./features/lineups/pages/recommendations/recommendations-page.component').then((m) => m.RecommendationsPageComponent),
+    loadComponent: () =>
+      import('./features/lineups/pages/recommender-v2/recommender-v2-page.component').then(
+        (m) => m.RecommenderV2PageComponent,
+      ),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'heroes' },
+      { path: '', pathMatch: 'full', redirectTo: 'investments' },
+      { path: 'heroes', pathMatch: 'full', redirectTo: 'investments' },
+      { path: 'collections', pathMatch: 'full', redirectTo: 'investments' },
+      { path: 'pets', pathMatch: 'full', redirectTo: 'investments' },
       {
-        path: 'heroes',
-        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-heroes.component').then((m) => m.RecommendationHeroesComponent),
+        path: 'investments',
+        loadComponent: () =>
+          import('./features/lineups/pages/recommender-v2/investment-recommendations-v2.component').then(
+            (m) => m.InvestmentRecommendationsV2Component,
+          ),
       },
       {
-        path: 'collections',
-        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-collections.component').then((m) => m.RecommendationCollectionsComponent),
-      },
-      {
-        path: 'pets',
-        loadComponent: () => import('./features/lineups/pages/recommendations/recommendation-pets.component').then((m) => m.RecommendationPetsComponent),
+        path: 'lineups',
+        loadComponent: () =>
+          import('./features/lineups/pages/lineup-recommender/lineup-recommender-page.component').then(
+            (m) => m.LineupRecommenderPageComponent,
+          ),
       },
     ],
   },

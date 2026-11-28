@@ -1,0 +1,275 @@
+<div class="lineup-recommender-body">
+  <div class="controls-bar">
+      <div class="control-row" role="group" aria-label="Game mode">
+        <span class="control-label">Mode</span>
+        <div class="chip-group">
+          @for (mode of supportedModes(); track mode.slug) {
+            <button
+              mat-button
+              type="button"
+              class="chip"
+              [attr.aria-pressed]="activeMode()?.slug === mode.slug"
+              (click)="selectMode(mode.slug)"
+            >{{ mode.name }}</button>
+          }
+        </div>
+      </div>
+
+      @if (activeMode(); as mode) {
+        <div class="control-row" role="group" [attr.aria-label]="mode.targetLabel">
+          <span class="control-label">{{ mode.targetLabel }}</span>
+          <div class="chip-group">
+            @for (target of availableTargets(); track target) {
+              <button
+                mat-button
+                type="button"
+                class="chip"
+                [attr.aria-pressed]="activeTarget() === target"
+                (click)="selectTarget(target)"
+              >{{ target }}</button>
+            }
+          </div>
+        </div>
+
+        @if (mode.slug === 'treasure-scramble') {
+          <div class="control-row" role="group" aria-label="Number of teams">
+            <span class="control-label">Teams</span>
+            <div class="chip-group">
+              @for (n of tsTeamCounts; track n) {
+                <button
+                  mat-button
+                  type="button"
+                  class="chip"
+                  [attr.aria-pressed]="tsTeamCount() === n"
+                  (click)="selectTsTeamCount(n)"
+                >{{ n }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="control-row" role="group" aria-label="Recommendation options">
+          <span class="control-label">Options</span>
+          <div class="chip-group">
+            <button
+              mat-button
+              type="button"
+              class="chip"
+              [attr.aria-pressed]="strictInvestment()"
+              (click)="toggleStrictInvestment()"
+            >Strict investment</button>
+            @if ((mode.mercMax ?? 0) > 0) {
+              <button
+                mat-button
+                type="button"
+                class="chip"
+                [attr.aria-pressed]="allowMerc()"
+                (click)="toggleAllowMerc()"
+              >Allow 1 mercenary</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (loading()) {
+      <div class="empty" role="status">
+        <p class="empty-message">Loading your roster, collections, and community lineups…</p>
+      </div>
+    } @else if (!hasRoster()) {
+      <div class="empty">
+        <p class="empty-message">Add your heroes (and pets/collections) to your roster to generate personalized lineups.</p>
+        <div class="row-wrap" style="justify-content: center;">
+          <a mat-flat-button class="btn primary" routerLink="/roster/heroes">Go to my roster</a>
+          @if (auth.configured && !auth.user()) {
+            <button mat-stroked-button type="button" class="btn" (click)="auth.requestSignIn()">Sign in</button>
+          }
+        </div>
+      </div>
+    } @else {
+      @if (recommendation(); as rec) {
+      @if (rec.candidateSubmissionCount === 0) {
+        <div class="empty">
+          <p class="empty-message">No community lineups have been submitted yet for {{ activeMode()?.name }} — {{ rec.target }}.</p>
+          <div class="row-wrap" style="justify-content: center;">
+            <a mat-flat-button class="btn primary" routerLink="/submit">Submit a lineup</a>
+          </div>
+        </div>
+      } @else {
+        <section class="summary-strip" aria-label="Recommended lineup summary">
+          <div class="summary-stat">
+            <span class="summary-label">Teams ready</span>
+            <strong class="summary-value" [class.ok]="rec.readyTeamCount === rec.expectedTeamCount" [class.warn]="rec.readyTeamCount < rec.expectedTeamCount">
+              {{ rec.readyTeamCount }} / {{ rec.expectedTeamCount }}
+            </strong>
+          </div>
+
+          @if (rec.merc; as merc) {
+            <div class="summary-stat">
+              <span class="summary-label">Recommended merc</span>
+              <strong class="summary-value merc">
+                {{ merc.heroName }}
+                <small>({{ merc.slotLabel }} · {{ merc.reason === 'missing' ? 'missing' : 'upgrade' }})</small>
+              </strong>
+            </div>
+          } @else if ((activeMode()?.mercMax ?? 0) > 0 && allowMerc()) {
+            <div class="summary-stat">
+              <span class="summary-label">Mercenary</span>
+              <strong class="summary-value">Not needed</strong>
+            </div>
+          }
+
+          @if (rec.collectionSummary.requested > 0) {
+            <div class="summary-stat">
+              <span class="summary-label">Collections matched</span>
+              <strong class="summary-value">
+                {{ rec.collectionSummary.exact + rec.collectionSummary.close }} / {{ rec.collectionSummary.requested }}
+                @if (rec.collectionSummary.fallback > 0 || rec.collectionSummary.missing > 0) {
+                  <small>
+                    (@if (rec.collectionSummary.fallback > 0) { {{ rec.collectionSummary.fallback }} alt }@if (rec.collectionSummary.fallback > 0 && rec.collectionSummary.missing > 0) {, }@if (rec.collectionSummary.missing > 0) { {{ rec.collectionSummary.missing }} missing })
+                  </small>
+                }
+              </strong>
+            </div>
+          }
+
+          @if (rec.totalNcTimeSeconds !== null) {
+            <div class="summary-stat">
+              <span class="summary-label">Est. total time</span>
+              <strong class="summary-value">{{ formatKillTime(rec.totalNcTimeSeconds) }}</strong>
+            </div>
+          }
+
+          <div class="summary-stat">
+            <span class="summary-label">Source pool</span>
+            <strong class="summary-value">{{ countLabel(rec.candidateSubmissionCount, 'submission') }}</strong>
+          </div>
+        </section>
+
+        @if (rec.missingHeroCount > 0 || rec.underHeroCount > 0 || rec.missingPetCount > 0 || rec.underPetCount > 0) {
+          <p class="gap-banner" role="status">
+            Gaps in this set:
+            @if (rec.missingHeroCount > 0) { <span>{{ countLabel(rec.missingHeroCount, 'missing hero') }}</span> }
+            @if (rec.underHeroCount > 0) { <span>{{ countLabel(rec.underHeroCount, 'under-invested hero') }}</span> }
+            @if (rec.missingPetCount > 0) { <span>{{ countLabel(rec.missingPetCount, 'missing pet') }}</span> }
+            @if (rec.underPetCount > 0) { <span>{{ countLabel(rec.underPetCount, 'under-level pet') }}</span> }
+          </p>
+        }
+
+        <div class="boards">
+          @for (team of rec.teams; track team.slotKey) {
+            <article class="board" [class.run]="team.runnable">
+              <header class="board-header">
+                <div class="board-title-wrap">
+                  <h3 class="board-title">{{ team.slotLabel }}</h3>
+                  <span class="status-badge" [class]="teamStatusTone(team)">{{ teamStatusLabel(team) }}</span>
+                </div>
+                <div class="board-meta">
+                  @if (rec.modeSlug === 'nightmare-corridor' && team.formation.timeSeconds !== null) {
+                    <span class="metric">{{ formatKillTime(team.formation.timeSeconds) }}</span>
+                  }
+                  @if (rec.modeSlug === 'cursed-realm' && team.formation.damage) {
+                    <span class="metric">{{ formatDamage(team.formation.damage) }}</span>
+                  }
+                  <a class="source-link" [routerLink]="['/lineup', team.sourceSubmission.id]" [title]="'Representative submission #' + team.sourceSubmission.id + ' (modeled from ' + countLabel(team.sourceCount, 'submission') + ')'">
+                    @if (team.sourceCount > 1) {
+                      {{ countLabel(team.sourceCount, 'lineup') }} · #{{ team.sourceSubmission.id }}
+                    } @else {
+                      Source #{{ team.sourceSubmission.id }}
+                    }
+                  </a>
+                </div>
+              </header>
+
+              <div class="hero-formation" [class.front-right]="lineupView.orientation() === 'front-right'">
+                @for (rowSize of layout; track $index; let rowIndex = $index) {
+                  <div class="hero-row" [class.back]="rowIndex > 0">
+                    @for (slot of team.heroes.slice(rowIndex === 0 ? 0 : 2, rowIndex === 0 ? 2 : 5); track slot.pick.hid) {
+                      <div
+                        class="hero"
+                        [class.ok]="slot.status === 'ok'"
+                        [class.merc]="slot.status === 'merc'"
+                        [class.under]="slot.status === 'under'"
+                        [class.missing]="slot.status === 'missing'"
+                        [style.--hero-faction-color]="heroFactionColor(slot)"
+                        [attr.title]="heroTooltip(slot)"
+                      >
+                        <app-hero-icon
+                          [name]="heroDisplayName(slot)"
+                          [imageUrl]="slot.pick.iconUrl ?? null"
+                          size="large"
+                          [ascension]="slot.pick.ascension"
+                          [investment]="slot.pick.inv"
+                        />
+                        @if (team.formation.spHeroId === slot.pick.hid) {
+                          <i class="sp-tag" title="SP skill enabled">SP</i>
+                        }
+                        @if (slot.isMerc) {
+                          <i class="tag merc-tag" title="Recommended mercenary">merc</i>
+                        }
+
+                        @if (slot.collectionAssignment.status !== 'none') {
+                          @let ca = slot.collectionAssignment;
+                          <div
+                            class="collection-assignment"
+                            [class]="ca.status"
+                            [attr.title]="collectionTooltip(ca)"
+                          >
+                            <span class="collection-tag">
+                              @if (collectionIcon(ca); as iconUrl) {
+                                <img class="collection-icon" [src]="iconUrl" [alt]="assignedCollectionLabel(ca) + ' icon'">
+                              }
+                              @for (node of collectionNodes(ca); track $index) {
+                                <img
+                                  class="collection-node-icon"
+                                  [src]="collectionNodeIcon(node.stat, node.tier)"
+                                  [alt]="node.tier + ' ' + node.stat.replaceAll('_', ' ')"
+                                >
+                              }
+                            </span>
+                            <span class="collection-pill" [class]="ca.status">{{ collectionStatusLabel(ca.status) }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (team.formation.beast) {
+                <div class="beast-row" [attr.title]="petTitle(team)">
+                  <app-pet-badge
+                    [name]="team.formation.beast"
+                    [imageUrl]="team.formation.petIconUrl ?? null"
+                    [level]="team.formation.petLevel"
+                    [tone]="petTone(team.formation.beast)"
+                    [title]="petTitle(team)"
+                  />
+                  @if (team.missingPet) {
+                    <span class="pet-status short">Missing</span>
+                  } @else if (team.underPetLevel && team.ownedPetLevel !== null) {
+                    <span class="pet-status warn">Yours Lv. {{ team.ownedPetLevel }}</span>
+                  }
+                </div>
+              }
+
+              @if (team.formation.notes) {
+                <p class="board-note">{{ team.formation.notes }}</p>
+              }
+            </article>
+          }
+
+          @for (empty of rec.emptySlots; track empty.key) {
+            <article class="board board--empty">
+              <header class="board-header">
+                <h3 class="board-title">{{ empty.label }}</h3>
+                <span class="status-badge short">No team found</span>
+              </header>
+              <p class="board-note">No conflict-free formation was available for this slot in the current submissions.</p>
+            </article>
+          }
+        </div>
+      }
+      }
+    }
+</div>

@@ -676,17 +676,30 @@ export class UserDataService {
     }
     const recommendation = value as Record<string, unknown>;
     const level = Number(recommendation['level']);
-    const attackStats = recommendation['attackStats'];
-    const defenseStats = recommendation['defenseStats'];
-    const isValidStatList = (stats: unknown, allowed: readonly CollectionNodeStat[]): stats is string[] =>
-      Array.isArray(stats) && stats.length <= 5 && stats.every((stat) =>
-        typeof stat === 'string' && allowed.includes(stat),
-      );
+    const rawAttack = recommendation['attackStats'];
+    const rawDefense = recommendation['defenseStats'];
     if (
       !Number.isInteger(level) || level < 1 || level > 3 ||
-      !isValidStatList(attackStats, ATTACK_COLLECTION_NODE_STATS) ||
-      !isValidStatList(defenseStats, DEFENSE_COLLECTION_NODE_STATS)
+      !Array.isArray(rawAttack) || !Array.isArray(rawDefense)
     ) throw new Error('A lineup contains an invalid collection recommendation.');
+
+    const attackStats: CollectionNodeStat[] = [];
+    const defenseStats: CollectionNodeStat[] = [];
+    for (const stat of [...rawAttack, ...rawDefense]) {
+      if (typeof stat !== 'string') {
+        throw new Error('A lineup contains an invalid collection recommendation.');
+      }
+      if (ATTACK_COLLECTION_NODE_STATS.includes(stat)) {
+        if (!attackStats.includes(stat)) attackStats.push(stat);
+      } else if (DEFENSE_COLLECTION_NODE_STATS.includes(stat)) {
+        if (!defenseStats.includes(stat)) defenseStats.push(stat);
+      } else {
+        throw new Error('A lineup contains an invalid collection recommendation.');
+      }
+    }
+    if (attackStats.length > 5 || defenseStats.length > 5) {
+      throw new Error('A lineup contains an invalid collection recommendation.');
+    }
     return { level, attackStats, defenseStats };
   }
 
