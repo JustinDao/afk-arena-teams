@@ -22,6 +22,25 @@
       </div>
     </div>
 
+    @if (activeTab() === 'heroes') {
+      <div class="control-row" role="group" aria-label="SI40 emblem strategy">
+        <span class="control-label">SI40 split</span>
+        <div class="chip-group">
+          @for (opt of si40Strategies; track opt.key) {
+            <button
+              mat-button
+              type="button"
+              class="chip"
+              [attr.aria-pressed]="activeSi40Strategy() === opt.key"
+              [attr.title]="opt.summary"
+              (click)="setSi40Strategy(opt.key)"
+            >{{ opt.label }}@if (result().recommendedSi40.strategy === opt.key) { <span class="chip-rec">Rec</span> }</button>
+          }
+        </div>
+        <span class="control-hint">{{ activeSi40Summary() }}</span>
+      </div>
+    }
+
     @if (activeTab() === 'collections') {
       <div class="control-row" role="group" aria-label="Collection filters">
         <span class="control-label">Filter</span>

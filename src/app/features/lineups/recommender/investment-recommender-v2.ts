@@ -29,6 +29,22 @@ import {
   WeightedSample,
 } from './meta-model';
 
+export type Si40Strategy = 'epic-focus' | 'split-305-380' | 'split-405-300' | 'balanced' | 'red-focus';
+
+export interface Si40StrategyOption {
+  readonly key: Si40Strategy;
+  readonly label: string;
+  readonly summary: string;
+}
+
+export const SI40_STRATEGY_OPTIONS: readonly Si40StrategyOption[] = [
+  { key: 'epic-focus', label: '225R / 445E', summary: 'Epic focus (Red on 32–35)' },
+  { key: 'split-305-380', label: '305R / 380E', summary: 'Lean Epic (Red on 32–36)' },
+  { key: 'split-405-300', label: '405R / 300E', summary: 'Mid split (Red on 32–36, 38)' },
+  { key: 'balanced', label: '495R / 230E', summary: 'Balanced (Red on 32–38)' },
+  { key: 'red-focus', label: '660R / 110E', summary: 'Red focus (Red on 31–39)' },
+];
+
 export interface InvestmentRecommenderV2Input {
   readonly selectedModeSlugs: readonly string[];
   readonly modes: readonly ModeConfig[];
@@ -39,6 +55,7 @@ export interface InvestmentRecommenderV2Input {
   readonly collectionCatalog: readonly CollectionCatalogItem[];
   readonly heroes: readonly Hero[];
   readonly pets: readonly Pet[];
+  readonly si40Strategy?: Si40Strategy;
 }
 
 export interface ImpactTeamEntry {
@@ -112,12 +129,21 @@ export interface CollectionInvestmentRecV2 {
   readonly impactTeams: readonly ImpactTeamEntry[];
 }
 
+export interface Si40Recommendation {
+  readonly strategy: Si40Strategy;
+  readonly missingSi30Count: number;
+  readonly missingSi40Count: number;
+  readonly reason: string;
+}
+
 export interface InvestmentRecommendationsV2Result {
   readonly overallHeroes: readonly HeroInvestmentRecV2[];
   readonly heroesByCategory: Readonly<Record<RecommendationCategory, readonly HeroInvestmentRecV2[]>>;
   readonly pets: readonly PetInvestmentRecV2[];
   readonly collections: readonly CollectionInvestmentRecV2[];
   readonly activeModeSlugs: readonly string[];
+  readonly recommendedSi40: Si40Recommendation;
+  readonly activeSi40Strategy: Si40Strategy;
 }
 
 const DEFAULT_OVERALL_MODES = ['nightmare-corridor', 'cursed-realm', 'treasure-scramble'] as const;
@@ -125,8 +151,37 @@ const NEAR_MISS_DECAY = 0.4;
 const GAP_CAP = 8;
 const BREADTH_BONUS = 0.15;
 const BREADTH_MIN_SHARE = 0.10;
-const COST_EXPONENT = 0.30;
+const COST_EXPONENT = 0.55;
+const LUXURY_ONLY_URGENCY_MULTIPLIER = 0.78;
 const PET_BREAKPOINTS = [6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36] as const;
+
+// Exact AFK Arena per-level SI emblem costs (SI 21-30 = 300 Red = 1.0 SI30-unit).
+const SI_21_30_RED = [10, 20, 20, 20, 30, 30, 40, 40, 40, 50] as const;
+const SI_31_40_RED = [40, 45, 50, 60, 70, 80, 90, 100, 125, 160] as const;
+const SI_31_40_EPIC = [30, 40, 50, 55, 60, 65, 70, 80, 90, 110] as const;
+const SI_41_50_EPIC = [50, 60, 70, 80, 120, 140, 180, 200, 220, 240] as const;
+
+interface Si40CostProfile {
+  /** Which SI 31-40 levels (0-based index: 0 = SI31 .. 9 = SI40) are paid with Red emblems. */
+  readonly redLevels: ReadonlySet<number>;
+  /** Effective weight of 1 Red emblem in SI30-red equivalents. */
+  readonly redWeight: number;
+  /** Effective weight of 1 Epic emblem in SI30-red equivalents. */
+  readonly epicWeight: number;
+}
+
+const SI40_COST_PROFILES: Readonly<Record<Si40Strategy, Si40CostProfile>> = {
+  // 225 Red (32-35) + 445 Epic (31, 36-40) -> ~4.61 SI30-units (saving Reds for SI30s).
+  'epic-focus': { redLevels: new Set([1, 2, 3, 4]), redWeight: 1.0, epicWeight: 2.6 },
+  // 305 Red (32-36) + 380 Epic (31, 37-40) -> ~4.28 SI30-units.
+  'split-305-380': { redLevels: new Set([1, 2, 3, 4, 5]), redWeight: 1.0, epicWeight: 2.58 },
+  // 405 Red (32-36, 38) + 300 Epic (31, 37, 39, 40) -> ~3.90 SI30-units.
+  'split-405-300': { redLevels: new Set([1, 2, 3, 4, 5, 7]), redWeight: 1.0, epicWeight: 2.55 },
+  // 495 Red (32-38) + 230 Epic (31, 39, 40) -> ~3.57 SI30-units (balanced endgame split).
+  balanced: { redLevels: new Set([1, 2, 3, 4, 5, 6, 7]), redWeight: 1.0, epicWeight: 2.5 },
+  // 660 Red (31-39) + 110 Epic (40) -> ~2.60 SI30-units (surplus Reds, pushing SI40s).
+  'red-focus': { redLevels: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8]), redWeight: 0.85, epicWeight: 2.0 },
+};
 
 const CATEGORY_BUILD_COST: Readonly<Record<RecommendationCategory, number>> = {
   'standard-4f': 1.0,
@@ -136,31 +191,126 @@ const CATEGORY_BUILD_COST: Readonly<Record<RecommendationCategory, number>> = {
   'dragon-highborn': 4.4,
 };
 
-function computeInvestmentCostFactor(
+function computeSiUpgradeUnits(haveSi: number, targetSi: number, strategy: Si40Strategy): number {
+  if (targetSi <= haveSi) return 0;
+  let units = 0;
+
+  // SI 0 -> 20: Purple + Gold emblems (cheap, farmable).
+  const si20From = Math.max(0, haveSi);
+  const si20To = Math.min(20, targetSi);
+  if (si20To > si20From) {
+    units += (si20To - si20From) * 0.015;
+  }
+
+  // SI 21 -> 30: exact Red emblem curve (300 Red = 1.0 unit).
+  const si30From = Math.max(20, haveSi);
+  const si30To = Math.min(30, targetSi);
+  for (let lvl = si30From + 1; lvl <= si30To; lvl += 1) {
+    units += SI_21_30_RED[lvl - 21] / 300;
+  }
+
+  // SI 31 -> 40: exact Red/Epic split curve for the chosen strategy.
+  const profile = SI40_COST_PROFILES[strategy];
+  const si40From = Math.max(30, haveSi);
+  const si40To = Math.min(40, targetSi);
+  for (let lvl = si40From + 1; lvl <= si40To; lvl += 1) {
+    const idx = lvl - 31;
+    const redEq = profile.redLevels.has(idx)
+      ? SI_31_40_RED[idx] * profile.redWeight
+      : SI_31_40_EPIC[idx] * profile.epicWeight;
+    units += redEq / 300;
+  }
+
+  // SI 41 -> 50: Epic emblems only (1,360 Epics).
+  const si50From = Math.max(40, haveSi);
+  const si50To = Math.min(50, targetSi);
+  for (let lvl = si50From + 1; lvl <= si50To; lvl += 1) {
+    units += (SI_41_50_EPIC[lvl - 41] * profile.epicWeight) / 300;
+  }
+
+  return units;
+}
+
+export function recommendSi40Strategy(
+  missingSi30Count: number,
+  missingSi40Count: number,
+): Si40Recommendation {
+  if (missingSi30Count >= 10) {
+    return {
+      strategy: 'epic-focus',
+      missingSi30Count,
+      missingSi40Count,
+      reason: `${missingSi30Count} owned meta heroes still need SI30 — save Reds`,
+    };
+  }
+  if (missingSi30Count >= 6) {
+    return {
+      strategy: 'split-305-380',
+      missingSi30Count,
+      missingSi40Count,
+      reason: `${missingSi30Count} owned meta heroes still need SI30 — lean Epic`,
+    };
+  }
+  if (missingSi30Count >= 3) {
+    return {
+      strategy: 'split-405-300',
+      missingSi30Count,
+      missingSi40Count,
+      reason: `${missingSi30Count} owned meta heroes still need SI30 — moderate Red/Epic split`,
+    };
+  }
+  if (missingSi30Count >= 1) {
+    return {
+      strategy: 'balanced',
+      missingSi30Count,
+      missingSi40Count,
+      reason: `Only ${missingSi30Count} owned meta ${missingSi30Count === 1 ? 'hero needs' : 'heroes need'} SI30 — balanced split`,
+    };
+  }
+  return {
+    strategy: 'red-focus',
+    missingSi30Count,
+    missingSi40Count,
+    reason: missingSi40Count > 0
+      ? `All owned meta SI30s done (${missingSi40Count} SI40 targets) — push with Reds`
+      : 'All owned meta SI30s done — Red focus',
+  };
+}
+
+export function computeInvestmentCostFactor(
   category: RecommendationCategory,
   kind: 'build' | 'invest',
   ownedInv: Investment | null,
   targetInv: Investment | null,
+  si40Strategy: Si40Strategy = 'balanced',
 ): number {
-  const baseCost = kind === 'build' ? CATEGORY_BUILD_COST[category] : 0.45;
+  const baseCost = kind === 'build' ? CATEGORY_BUILD_COST[category] : 0.55;
   let upgradeCost = 0;
   if (targetInv) {
     const haveSi = ownedInv?.si ?? 0;
     const haveFurn = ownedInv?.furn ?? 0;
     const haveEng = ownedInv?.eng ?? 0;
+
     if (targetInv.si && targetInv.si > haveSi) {
-      const si40Part = Math.max(0, targetInv.si - Math.max(30, haveSi));
-      const si30Part = Math.max(0, Math.min(30, targetInv.si) - haveSi);
-      upgradeCost += si30Part * 0.025 + si40Part * 0.095;
+      upgradeCost += computeSiUpgradeUnits(haveSi, targetInv.si, si40Strategy);
     }
+
     if (targetInv.furn && targetInv.furn > haveFurn) {
-      upgradeCost += (targetInv.furn - haveFurn) * 0.08;
+      const f3 = Math.max(0, Math.min(3, targetInv.furn) - haveFurn);
+      const f9 = Math.max(0, Math.min(9, targetInv.furn) - Math.max(3, haveFurn));
+      const fOver = Math.max(0, targetInv.furn - Math.max(9, haveFurn));
+      upgradeCost += f3 * 0.12 + f9 * 0.15 + fOver * 0.25;
     }
+
     if (targetInv.eng && targetInv.eng > haveEng) {
-      upgradeCost += (targetInv.eng - haveEng) * 0.018;
+      // E0->E30: 3,750 Shards (cheap); E30->E60: 4,500 Cores (scarce); E60->E80+: 6,000+ Cores (luxury).
+      const e30 = Math.max(0, Math.min(30, targetInv.eng) - haveEng);
+      const e60 = Math.max(0, Math.min(60, targetInv.eng) - Math.max(30, haveEng));
+      const e80 = Math.max(0, targetInv.eng - Math.max(60, haveEng));
+      upgradeCost += e30 * 0.014 + e60 * 0.08 + e80 * 0.16;
     }
   }
-  const totalCost = Math.max(0.5, baseCost + upgradeCost);
+  const totalCost = Math.max(0.55, baseCost + upgradeCost);
   return Math.pow(totalCost, COST_EXPONENT);
 }
 
@@ -185,6 +335,7 @@ export function computeInvestmentRecommendationsV2(
     collectionCatalog,
     heroes,
     pets,
+    si40Strategy,
   } = input;
 
   const activeModeSlugs = selectedModeSlugs.length > 0
@@ -375,12 +526,18 @@ export function computeInvestmentRecommendationsV2(
       const category = classifyHeroCategory(heroMeta);
       if (!category) continue;
 
-      // Weight upgrade urgency by breakpoint severity (missing hero = 1.0, major breakpoint gap = 0.75-1.0, minor gap = 0.35).
-      const severity = gap.status === 'missing'
+      // Weight upgrade urgency by breakpoint severity (missing hero = 1.0, below min viable = 0.9,
+      // core gaps = 0.35-0.85, luxury-only SI40/E60/E80 gaps discounted slightly).
+      const isLuxuryOnly = gap.status === 'under'
+        && !gap.belowMinViable
+        && gap.missingMajorBreakpoints.length > 0
+        && gap.missingMajorBreakpoints.every((bp) => bp === 'SI40' || bp === 'E60' || bp === 'E80');
+      const baseSeverity = gap.status === 'missing'
         ? 1.0
         : gap.belowMinViable
           ? 0.9
           : Math.min(0.85, 0.35 + gap.penalty / 120);
+      const severity = isLuxuryOnly ? baseSeverity * LUXURY_ONLY_URGENCY_MULTIPLIER : baseSeverity;
 
       const pts = row.weight * decayFactor * severity;
 
@@ -428,12 +585,37 @@ export function computeInvestmentRecommendationsV2(
     }
   }
 
+  // Recommend an SI40 Red/Epic split based on how many owned meta heroes still need SI30 vs SI40.
+  const singleMode = activeModeSlugs.length === 1 ? activeModeSlugs[0] : undefined;
+  let missingSi30Count = 0;
+  let missingSi40Count = 0;
+  if (hasRoster) {
+    for (const acc of heroAccMap.values()) {
+      if (acc.isMissing) continue;
+      const owned = roster[acc.heroId];
+      const ownedInv = rosterInvestment(owned);
+      const consensusTarget = investmentModel.resolveForHero(acc.heroId, singleMode);
+      const targetSi = consensusTarget.inv?.si ?? 0;
+      const haveSi = ownedInv?.si ?? 0;
+      if (targetSi >= 30 && haveSi < 30) missingSi30Count += 1;
+      if (targetSi >= 40 && haveSi < 40) missingSi40Count += 1;
+    }
+  }
+  const recommendedSi40: Si40Recommendation = hasRoster
+    ? recommendSi40Strategy(missingSi30Count, missingSi40Count)
+    : {
+        strategy: 'balanced',
+        missingSi30Count: 0,
+        missingSi40Count: 0,
+        reason: 'Default balanced split (add your roster for a personalized split)',
+      };
+  const activeSi40Strategy: Si40Strategy = si40Strategy ?? recommendedSi40.strategy;
+
   const allHeroRecs: HeroInvestmentRecV2[] = [];
   for (const acc of heroAccMap.values()) {
     const heroMeta = heroById.get(acc.heroId);
     const owned = roster[acc.heroId];
     const ownedInv = rosterInvestment(owned);
-    const singleMode = activeModeSlugs.length === 1 ? activeModeSlugs[0] : undefined;
     const consensusTarget = investmentModel.resolveForHero(acc.heroId, singleMode);
     const gapEval = evaluateHeroAgainstTarget(acc.heroId, consensusTarget, roster);
 
@@ -461,7 +643,13 @@ export function computeInvestmentRecommendationsV2(
 
     const breadthMultiplier = 1 + BREADTH_BONUS * Math.max(0, activeModes - 1);
     const kind: 'build' | 'invest' = acc.isMissing ? 'build' : 'invest';
-    const costFactor = computeInvestmentCostFactor(acc.category, kind, ownedInv, consensusTarget.inv);
+    const costFactor = computeInvestmentCostFactor(
+      acc.category,
+      kind,
+      ownedInv,
+      consensusTarget.inv,
+      activeSi40Strategy,
+    );
     const finalScore = Math.round(((rawScore * breadthMultiplier) / costFactor) * 100) / 100;
 
     allHeroRecs.push({
@@ -889,5 +1077,7 @@ export function computeInvestmentRecommendationsV2(
     pets: petRecs,
     collections: colRecs,
     activeModeSlugs,
+    recommendedSi40,
+    activeSi40Strategy,
   };
 }

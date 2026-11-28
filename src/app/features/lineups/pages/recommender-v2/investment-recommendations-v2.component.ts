@@ -29,9 +29,31 @@ import {
   HeroInvestmentRecV2,
   InvestmentRecommendationsV2Result,
   PetInvestmentRecV2,
+  SI40_STRATEGY_OPTIONS,
+  Si40Strategy,
 } from '../../recommender/investment-recommender-v2';
 
 type V2InvestmentTab = 'heroes' | 'pets' | 'collections';
+
+const SI40_STRATEGY_STORAGE_KEY = 'afk-arena-teams:si40-strategy:v1';
+
+function loadSi40Strategy(): Si40Strategy | null {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SI40_STRATEGY_STORAGE_KEY) : null;
+    if (
+      raw === 'epic-focus'
+      || raw === 'split-305-380'
+      || raw === 'split-405-300'
+      || raw === 'balanced'
+      || raw === 'red-focus'
+    ) {
+      return raw;
+    }
+  } catch {
+    // Ignore storage errors (private browsing / SSR).
+  }
+  return null;
+}
 
 const INVESTMENT_MODE_SLUGS = new Set<string>([
   'nightmare-corridor',
@@ -59,16 +81,32 @@ export class InvestmentRecommendationsV2Component {
   readonly store = inject(LineupsStore);
   readonly auth = inject(AuthService);
   readonly categories = RECOMMENDATION_CATEGORIES;
+  readonly si40Strategies = SI40_STRATEGY_OPTIONS;
   readonly countLabel = countLabel;
 
   readonly selectedModes = signal<readonly string[]>([]);
   readonly activeTab = signal<V2InvestmentTab>('heroes');
+  readonly si40StrategyOverride = signal<Si40Strategy | null>(loadSi40Strategy());
   readonly excludeOwnedCollections = signal(false);
   readonly expandedRowKey = signal<string | null>(null);
 
   readonly investmentModes = computed(() =>
     this.store.modes().filter((m) => INVESTMENT_MODE_SLUGS.has(m.slug)),
   );
+
+  readonly activeSi40Strategy = computed((): Si40Strategy =>
+    this.si40StrategyOverride() ?? this.result().recommendedSi40.strategy,
+  );
+
+  readonly activeSi40Summary = computed(() => {
+    const active = this.activeSi40Strategy();
+    const rec = this.result().recommendedSi40;
+    const opt = this.si40Strategies.find((o) => o.key === active);
+    const splitText = opt?.summary ?? '';
+    return active === rec.strategy
+      ? `${splitText} · ${rec.reason}`
+      : `${splitText} · Rec: ${this.si40Strategies.find((o) => o.key === rec.strategy)?.label ?? rec.strategy} (${rec.reason})`;
+  });
 
   readonly loading = computed(() =>
     !this.store.backendReady()
@@ -87,6 +125,7 @@ export class InvestmentRecommendationsV2Component {
       collectionCatalog: this.store.collectionCatalog(),
       heroes: this.store.heroes(),
       pets: this.store.pets(),
+      si40Strategy: this.si40StrategyOverride() ?? undefined,
     });
   });
 
@@ -162,6 +201,19 @@ export class InvestmentRecommendationsV2Component {
 
   isExpanded(key: string): boolean {
     return this.expandedRowKey() === key;
+  }
+
+  setSi40Strategy(strategy: Si40Strategy): void {
+    const isRecommended = strategy === this.result().recommendedSi40.strategy;
+    this.si40StrategyOverride.set(isRecommended ? null : strategy);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (isRecommended) localStorage.removeItem(SI40_STRATEGY_STORAGE_KEY);
+        else localStorage.setItem(SI40_STRATEGY_STORAGE_KEY, strategy);
+      }
+    } catch {
+      // Ignore storage errors.
+    }
   }
 
   toggleExcludeOwnedCollections(): void {

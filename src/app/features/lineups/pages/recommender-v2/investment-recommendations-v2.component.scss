@@ -47,6 +47,22 @@
   gap: var(--app-space-1);
 }
 
+.control-hint {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.chip-rec {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
 .rec-overall {
   margin-bottom: var(--app-space-4);
 }
