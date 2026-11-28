@@ -128,6 +128,8 @@ export interface CollectionSnapshot {
 export interface Formation {
   readonly key: string;
   readonly label: string;
+  readonly isSubstitute?: boolean;
+  readonly parentSlotKey?: string | null;
   readonly beast: string;
   readonly petId: number | null;
   readonly petIconUrl?: string | null;
@@ -149,6 +151,7 @@ export interface Submission {
   readonly days: number;
   readonly result: SubmissionResult;
   readonly forms: readonly Formation[];
+  readonly substituteForms?: readonly Formation[];
   readonly notes: string;
   readonly by: string;
   readonly heroLevel: number | null;

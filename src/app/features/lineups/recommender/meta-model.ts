@@ -391,9 +391,10 @@ export function buildCollectionModel(submissions: readonly Submission[]): HeroCo
   for (const sub of submissions) {
     const tKey = `${sub.mode}|${sub.target}`;
     const maxUp = maxUpvotesByTarget.get(tKey) ?? 0;
-    for (const form of sub.forms) {
+    const allForms = [...sub.forms, ...(sub.substituteForms ?? [])];
+    for (const form of allForms) {
       if (form.heroes.length === 0) continue;
-      const weight = computeSubmissionWeight(sub, form, maxUp, null, null);
+      const weight = computeSubmissionWeight(sub, form, maxUp, null, null) * (form.isSubstitute ? 0.7 : 1.0);
       for (const pick of form.heroes) {
         if (!pick.collection) continue;
         // Prefer observations that include mythic/recommended stat nodes over bare shells.
@@ -416,8 +417,10 @@ export function buildInvestmentModel(submissions: readonly Submission[]): HeroIn
   for (const sub of submissions) {
     const tKey = `${sub.mode}|${sub.target}`;
     maxUpvotesByTarget.set(tKey, Math.max(maxUpvotesByTarget.get(tKey) ?? 0, sub.up));
-    for (const form of sub.forms) {
-      const sKey = `${tKey}|${form.key}`;
+    const allForms = [...sub.forms, ...(sub.substituteForms ?? [])];
+    for (const form of allForms) {
+      const slotKey = form.parentSlotKey ?? form.key;
+      const sKey = `${tKey}|${slotKey}`;
       if (sub.mode === 'nightmare-corridor' && form.timeSeconds && form.timeSeconds > 0) {
         const prev = bestTimeBySlot.get(sKey);
         if (prev === undefined || form.timeSeconds < prev) bestTimeBySlot.set(sKey, form.timeSeconds);
@@ -432,9 +435,11 @@ export function buildInvestmentModel(submissions: readonly Submission[]): HeroIn
   for (const sub of submissions) {
     const tKey = `${sub.mode}|${sub.target}`;
     const maxUp = maxUpvotesByTarget.get(tKey) ?? 0;
-    for (const form of sub.forms) {
+    const allForms = [...sub.forms, ...(sub.substituteForms ?? [])];
+    for (const form of allForms) {
       if (form.heroes.length === 0) continue;
-      const sKey = `${tKey}|${form.key}`;
+      const slotKey = form.parentSlotKey ?? form.key;
+      const sKey = `${tKey}|${slotKey}`;
       const compSig = [...form.heroes].map((h) => h.hid).sort((a, b) => a - b).join(',');
       const weight = computeSubmissionWeight(
         sub,
@@ -442,10 +447,10 @@ export function buildInvestmentModel(submissions: readonly Submission[]): HeroIn
         maxUp,
         bestTimeBySlot.get(sKey) ?? null,
         maxDamageBySlot.get(sKey) ?? null,
-      );
+      ) * (form.isSubstitute ? 0.7 : 1.0);
       for (const pick of form.heroes) {
         if (pick.merc && !hasRecordedInvestment(pick)) continue;
-        model.addObservation(sub.mode, sub.target, form.key, compSig, pick, weight);
+        model.addObservation(sub.mode, sub.target, slotKey, compSig, pick, weight);
       }
     }
   }

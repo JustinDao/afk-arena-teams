@@ -1,5 +1,7 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HeroIconComponent } from '../../../../core/hero-icons/hero-icon.component';
 import {
@@ -42,7 +44,7 @@ const COLLECTION_CLASSES: readonly CollectionCatalogItem['class'][] = [
 @Component({
   selector: 'app-investment-recommendations-v2',
   standalone: true,
-  imports: [HeroIconComponent, MatButtonModule],
+  imports: [HeroIconComponent, MatButtonModule, NgTemplateOutlet, RouterLink],
   templateUrl: './investment-recommendations-v2.component.html',
   styleUrl: './investment-recommendations-v2.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +58,7 @@ export class InvestmentRecommendationsV2Component {
   readonly selectedModes = signal<readonly string[]>([]);
   readonly activeTab = signal<V2InvestmentTab>('heroes');
   readonly excludeOwnedCollections = signal(false);
+  readonly expandedRowKey = signal<string | null>(null);
 
   readonly loading = computed(() =>
     !this.store.backendReady()
@@ -140,6 +143,15 @@ export class InvestmentRecommendationsV2Component {
 
   selectTab(tab: V2InvestmentTab): void {
     this.activeTab.set(tab);
+    this.expandedRowKey.set(null);
+  }
+
+  toggleExpand(key: string): void {
+    this.expandedRowKey.update((current) => (current === key ? null : key));
+  }
+
+  isExpanded(key: string): boolean {
+    return this.expandedRowKey() === key;
   }
 
   toggleExcludeOwnedCollections(): void {

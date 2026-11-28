@@ -41,6 +41,15 @@ export interface InvestmentRecommenderV2Input {
   readonly pets: readonly Pet[];
 }
 
+export interface ImpactTeamEntry {
+  readonly submissionId: number;
+  readonly modeSlug: string;
+  readonly target: string;
+  readonly slotLabel: string;
+  readonly heroIds: readonly number[];
+  readonly completesTeam: boolean;
+}
+
 export interface HeroInvestmentRecV2 {
   readonly heroId: number;
   readonly heroName: string;
@@ -59,6 +68,7 @@ export interface HeroInvestmentRecV2 {
   readonly byModeEvents: Readonly<Record<string, ModeEventCoverage>>;
   readonly sampleCount: number;
   readonly submissionIds: readonly number[];
+  readonly impactTeams: readonly ImpactTeamEntry[];
 }
 
 export interface PetInvestmentRecV2 {
@@ -73,6 +83,7 @@ export interface PetInvestmentRecV2 {
   readonly minViableLevel: number;
   readonly completeCount: number;
   readonly byMode: Readonly<Record<string, number>>;
+  readonly impactTeams: readonly ImpactTeamEntry[];
 }
 
 export interface CollectionRecastCandidate {
@@ -98,6 +109,7 @@ export interface CollectionInvestmentRecV2 {
   readonly desiredStats: readonly string[];
   readonly topHeroIds: readonly number[];
   readonly demandCount: number;
+  readonly impactTeams: readonly ImpactTeamEntry[];
 }
 
 export interface InvestmentRecommendationsV2Result {
@@ -281,6 +293,41 @@ export function computeInvestmentRecommendationsV2(
   });
 
   // ---- 1. HERO INVESTMENT RECOMMENDATIONS ----
+  interface ImpactAccEntry {
+    readonly entry: ImpactTeamEntry;
+    readonly weight: number;
+  }
+
+  const recordImpact = (
+    map: Map<string, ImpactAccEntry>,
+    row: NormalizedFormationRow,
+    completesTeam: boolean,
+    weight: number,
+  ): void => {
+    const k = `${row.modeSlug}|${row.submission.target}|${row.formation.label}`;
+    const existing = map.get(k);
+    const rankScore = weight + (completesTeam ? 1000 : 0);
+    if (!existing || rankScore > existing.weight) {
+      map.set(k, {
+        weight: rankScore,
+        entry: {
+          submissionId: row.submission.id,
+          modeSlug: row.modeSlug,
+          target: row.submission.target,
+          slotLabel: row.formation.label,
+          heroIds: row.formation.heroes.map((h) => h.hid),
+          completesTeam,
+        },
+      });
+    }
+  };
+
+  const topImpactTeams = (map: Map<string, ImpactAccEntry>, limit = 5): readonly ImpactTeamEntry[] =>
+    [...map.values()]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, limit)
+      .map((item) => item.entry);
+
   interface HeroAcc {
     heroId: number;
     category: RecommendationCategory;
@@ -292,6 +339,7 @@ export function computeInvestmentRecommendationsV2(
     submissionIds: Set<number>;
     gapSeveritySum: number;
     gapWeightSum: number;
+    impacts: Map<string, ImpactAccEntry>;
   }
 
   const heroAccMap = new Map<number, HeroAcc>();
@@ -349,6 +397,7 @@ export function computeInvestmentRecommendationsV2(
           submissionIds: new Set(),
           gapSeveritySum: 0,
           gapWeightSum: 0,
+          impacts: new Map(),
         };
         heroAccMap.set(pick.hid, acc);
       }
@@ -367,6 +416,7 @@ export function computeInvestmentRecommendationsV2(
       acc.submissionIds.add(row.submission.id);
       acc.gapSeveritySum += severity * row.weight;
       acc.gapWeightSum += row.weight;
+      recordImpact(acc.impacts, row, teamGapCount === 1, pts);
     }
   }
 
@@ -432,6 +482,7 @@ export function computeInvestmentRecommendationsV2(
       byModeEvents,
       sampleCount: consensusTarget.sampleCount,
       submissionIds: [...acc.submissionIds].slice(0, 6),
+      impactTeams: topImpactTeams(acc.impacts, 5),
     });
   }
 
@@ -458,6 +509,7 @@ export function computeInvestmentRecommendationsV2(
     pts: number;
     completeCount: number;
     byMode: Record<string, number>;
+    impacts: Map<string, ImpactAccEntry>;
   }
   const petAccMap = new Map<number, PetAcc>();
 
@@ -483,6 +535,7 @@ export function computeInvestmentRecommendationsV2(
         pts: 0,
         completeCount: 0,
         byMode: {},
+        impacts: new Map(),
       };
       petAccMap.set(pid, acc);
     }
@@ -490,6 +543,7 @@ export function computeInvestmentRecommendationsV2(
     acc.pts += row.weight * priorityBoost;
     acc.completeCount += 1;
     acc.byMode[row.modeSlug] = (acc.byMode[row.modeSlug] ?? 0) + 1;
+    recordImpact(acc.impacts, row, crossing18, row.weight * priorityBoost);
   }
 
   const petRecs: PetInvestmentRecV2[] = [...petAccMap.values()]
@@ -510,6 +564,7 @@ export function computeInvestmentRecommendationsV2(
         minViableLevel: snapToBreakpoint(minRaw, PET_BREAKPOINTS),
         completeCount: acc.completeCount,
         byMode: acc.byMode,
+        impactTeams: topImpactTeams(acc.impacts, 5),
       };
     })
     .filter((p) => p.ownedLevel === null || p.ownedLevel < p.targetLevel)
@@ -746,6 +801,7 @@ export function computeInvestmentRecommendationsV2(
     heroWeights: Map<number, number>;
     pts: number;
     demandCount: number;
+    impacts: Map<string, ImpactAccEntry>;
   }
   const colAccMap = new Map<string, ColAcc>();
 
@@ -779,6 +835,7 @@ export function computeInvestmentRecommendationsV2(
           heroWeights: new Map(),
           pts: 0,
           demandCount: 0,
+          impacts: new Map(),
         };
         colAccMap.set(key, acc);
       }
@@ -788,6 +845,7 @@ export function computeInvestmentRecommendationsV2(
       acc.pts += row.weight * gapMult * statConfidence * evalOwned.closenessMultiplier;
       acc.demandCount += 1;
       acc.heroWeights.set(pick.hid, (acc.heroWeights.get(pick.hid) ?? 0) + row.weight);
+      recordImpact(acc.impacts, row, false, row.weight * gapMult);
     }
   }
 
@@ -818,6 +876,7 @@ export function computeInvestmentRecommendationsV2(
         desiredStats: acc.desiredStats,
         topHeroIds,
         demandCount: acc.demandCount,
+        impactTeams: topImpactTeams(acc.impacts, 5),
       };
     })
     .filter((c) => c.ownedMatchingCount < c.maxCopiesInRun)

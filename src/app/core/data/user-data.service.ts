@@ -49,6 +49,7 @@ interface DatabaseSubmissionRow {
     slot_label: string;
     slot_order: number;
     is_substitute?: boolean;
+    parent_slot_key?: string | null;
     beast: string | null;
     pet_id: number | null;
     pet_level: number | null;
@@ -227,7 +228,7 @@ export class UserDataService {
     return new Map(((data ?? []) as { submission_id: number; display_name: string }[]).map((row) => [row.submission_id, row.display_name]));
   }
 
-  private static readonly SUBMISSION_SELECT_WITH_RECOMMENDATIONS = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,is_substitute,beast,pet_id,pet_level,result_time_seconds,result_damage,sp_hero_id,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
+  private static readonly SUBMISSION_SELECT_WITH_RECOMMENDATIONS = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,is_substitute,parent_slot_key,beast,pet_id,pet_level,result_time_seconds,result_damage,sp_hero_id,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes,recommendation))';
   private static readonly SUBMISSION_SELECT_LEGACY = 'id,upvotes,hero_level,result,notes,created_at,targets(name),game_modes(slug),formations(id,slot_key,slot_label,slot_order,beast,pet_id,pet_level,result_time_seconds,notes,pets(name,icon_url),formation_heroes(position,hero_id,is_merc,si,furniture,engraving,ascension,heroes(name,icon_url,faction,is_awakened)),formation_collections(hero_id,collection_name,catalog_id,collection_class,nodes))';
 
   async loadSubmissions(): Promise<readonly Submission[]> {
@@ -274,8 +275,59 @@ export class UserDataService {
     return this.mapSubmissionRow(row, authors);
   }
 
+  private mapFormationRow(formation: DatabaseSubmissionRow['formations'][number]): Formation {
+    return {
+      key: formation.slot_key,
+      label: formation.slot_label,
+      ...(formation.is_substitute ? { isSubstitute: true } : {}),
+      ...(formation.parent_slot_key ? { parentSlotKey: formation.parent_slot_key } : {}),
+      beast: formation.pets?.name ?? formation.beast ?? '',
+      petId: formation.pet_id,
+      petIconUrl: formation.pet_id === null
+        ? formation.pets?.icon_url ?? null
+        : petIconUrl(formation.pet_id),
+      petLevel: formation.pet_level,
+      timeSeconds: formation.result_time_seconds,
+      damage: formation.result_damage ?? null,
+      spHeroId: formation.sp_hero_id ?? null,
+      notes: formation.notes ?? '',
+      heroes: formation.formation_heroes
+        .sort((a, b) => a.position - b.position)
+        .map((hero) => {
+          const collection = formation.formation_collections.find((item) => item.hero_id === hero.hero_id);
+          const inv = { si: hero.si, furn: hero.furniture, eng: hero.engraving };
+          const recommendation = this.mapCollectionRecommendation(collection?.recommendation);
+          const recommendationCatalogId = this.collectionRecommendationCatalogId(collection?.recommendation);
+          return {
+            pos: hero.position,
+            hid: hero.hero_id,
+            name: hero.heroes ? displayHeroName({ name: hero.heroes.name, isAwakened: hero.heroes.is_awakened }) : undefined,
+            iconUrl: hero.heroes?.icon_url,
+            faction: hero.heroes?.faction,
+            inv,
+            ascension: hero.ascension ?? defaultAscensionForInvestment(inv) ?? 'ascended',
+            merc: hero.is_merc,
+            collection: collection ? {
+              name: collection.collection_name,
+              catalogId: collection.catalog_id ?? recommendationCatalogId,
+              class: collection.collection_class ?? undefined,
+              nodes: recommendation ? [] : this.mapCollectionNodes(collection.nodes),
+              ...(recommendation ? { recommendation } : {}),
+            } : null,
+          };
+        }),
+    };
+  }
+
   private mapSubmissionRow(row: DatabaseSubmissionRow, authors: ReadonlyMap<number, string>): Submission {
     if (!row.targets || !row.game_modes) throw new Error(`Lineup ${row.id} has invalid reference data.`);
+    const sortedFormations = [...row.formations].sort((a, b) => a.slot_order - b.slot_order);
+    const primaryForms = sortedFormations
+      .filter((formation) => !formation.is_substitute)
+      .map((formation) => this.mapFormationRow(formation));
+    const substituteForms = sortedFormations
+      .filter((formation) => Boolean(formation.is_substitute))
+      .map((formation) => this.mapFormationRow(formation));
     return {
         id: row.id,
         mode: row.game_modes.slug,
@@ -286,48 +338,8 @@ export class UserDataService {
         notes: row.notes ?? '',
         by: authors.get(row.id) ?? 'community member',
         heroLevel: row.hero_level,
-        forms: row.formations
-          .filter((formation) => !formation.is_substitute)
-          .sort((a, b) => a.slot_order - b.slot_order)
-          .map((formation): Formation => ({
-            key: formation.slot_key,
-            label: formation.slot_label,
-            beast: formation.pets?.name ?? formation.beast ?? '',
-            petId: formation.pet_id,
-            petIconUrl: formation.pet_id === null
-              ? formation.pets?.icon_url ?? null
-              : petIconUrl(formation.pet_id),
-            petLevel: formation.pet_level,
-            timeSeconds: formation.result_time_seconds,
-            damage: formation.result_damage ?? null,
-            spHeroId: formation.sp_hero_id ?? null,
-            notes: formation.notes ?? '',
-            heroes: formation.formation_heroes
-              .sort((a, b) => a.position - b.position)
-              .map((hero) => {
-                const collection = formation.formation_collections.find((item) => item.hero_id === hero.hero_id);
-                const inv = { si: hero.si, furn: hero.furniture, eng: hero.engraving };
-                const recommendation = this.mapCollectionRecommendation(collection?.recommendation);
-                const recommendationCatalogId = this.collectionRecommendationCatalogId(collection?.recommendation);
-                return {
-                  pos: hero.position,
-                  hid: hero.hero_id,
-                  name: hero.heroes ? displayHeroName({ name: hero.heroes.name, isAwakened: hero.heroes.is_awakened }) : undefined,
-                  iconUrl: hero.heroes?.icon_url,
-                  faction: hero.heroes?.faction,
-                  inv,
-                  ascension: hero.ascension ?? defaultAscensionForInvestment(inv) ?? 'ascended',
-                  merc: hero.is_merc,
-                  collection: collection ? {
-                    name: collection.collection_name,
-                      catalogId: collection.catalog_id ?? recommendationCatalogId,
-                      class: collection.collection_class ?? undefined,
-                      nodes: recommendation ? [] : this.mapCollectionNodes(collection.nodes),
-                      ...(recommendation ? { recommendation } : {}),
-                    } : null,
-                };
-              }),
-          })),
+        forms: primaryForms,
+        ...(substituteForms.length > 0 ? { substituteForms } : {}),
     };
   }
 

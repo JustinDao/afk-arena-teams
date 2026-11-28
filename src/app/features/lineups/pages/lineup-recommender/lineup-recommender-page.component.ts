@@ -40,6 +40,13 @@ import {
 } from '../../recommender/lineup-recommender';
 import { rosterFilterColor } from '../../roster-filter-colors';
 
+const EXCLUDED_MERCS_STORAGE_KEY = 'll.recommender.excludedMercs';
+
+interface SavedExcludedMerc {
+  readonly id: number;
+  readonly name?: string;
+}
+
 @Component({
   selector: 'app-lineup-recommender-page',
   standalone: true,
@@ -62,11 +69,28 @@ export class LineupRecommenderPageComponent {
 
   readonly selectedModeSlug = signal<RecommendedLineupModeSlug>('nightmare-corridor');
   readonly selectedTarget = signal<string>('');
-  readonly tsTeamCount = signal<number>(7);
+  readonly variableTeamCount = signal<number | null>(null);
   readonly strictInvestment = signal<boolean>(false);
   readonly allowMerc = signal<boolean>(true);
-  readonly excludedMercHeroIds = signal<readonly number[]>([]);
+  readonly excludedMercs = signal<readonly SavedExcludedMerc[]>(this.readExcludedMercs());
+  readonly excludedMercHeroIds = computed(() => this.excludedMercs().map((m) => m.id));
   readonly selectedOptionIndex = signal<number>(0);
+
+  readonly variableTeamCountOptions = computed((): readonly number[] => {
+    const v = this.activeMode()?.variable;
+    if (!v) return [];
+    const list: number[] = [];
+    for (let n = v.min; n <= v.max; n++) list.push(n);
+    return list;
+  });
+
+  readonly activeTeamCount = computed((): number | undefined => {
+    const v = this.activeMode()?.variable;
+    if (!v) return undefined;
+    const chosen = this.variableTeamCount();
+    if (chosen !== null && chosen >= v.min && chosen <= v.max) return chosen;
+    return v.default ?? v.max;
+  });
 
   readonly supportedModes = computed((): readonly ModeConfig[] => {
     const allowed = new Set<string>(RECOMMENDED_LINEUP_MODE_SLUGS);
@@ -129,7 +153,7 @@ export class LineupRecommenderPageComponent {
     return recommendLineupOptionsForMode({
       mode,
       target,
-      teamCount: mode.slug === 'treasure-scramble' ? this.tsTeamCount() : undefined,
+      teamCount: this.activeTeamCount(),
       strictInvestment: this.strictInvestment(),
       allowMerc: this.allowMerc(),
       excludedMercHeroIds: this.excludedMercHeroIds(),
@@ -152,9 +176,9 @@ export class LineupRecommenderPageComponent {
 
   readonly excludedMercHeroes = computed((): readonly { readonly id: number; readonly name: string }[] => {
     const names = this.heroNameById();
-    return this.excludedMercHeroIds().map((id) => ({
-      id,
-      name: names.get(id) ?? `Hero #${id}`,
+    return this.excludedMercs().map((entry) => ({
+      id: entry.id,
+      name: names.get(entry.id) ?? entry.name ?? `Hero #${entry.id}`,
     }));
   });
 
@@ -165,12 +189,23 @@ export class LineupRecommenderPageComponent {
         void this.store.loadCollections();
       }
     });
+    // Backfill cached names for any previously saved ID-only excluded mercs once heroes load.
+    effect(() => {
+      const names = this.heroNameById();
+      const current = this.excludedMercs();
+      if (current.some((e) => !e.name && names.has(e.id))) {
+        const updated = current.map((e) => ({ id: e.id, name: e.name ?? names.get(e.id) }));
+        this.excludedMercs.set(updated);
+        this.writeExcludedMercs(updated);
+      }
+    });
   }
 
   selectMode(slug: string): void {
     if (RECOMMENDED_LINEUP_MODE_SLUGS.includes(slug as RecommendedLineupModeSlug)) {
       this.selectedModeSlug.set(slug as RecommendedLineupModeSlug);
       this.selectedTarget.set('');
+      this.variableTeamCount.set(null);
       this.selectedOptionIndex.set(0);
     }
   }
@@ -180,8 +215,8 @@ export class LineupRecommenderPageComponent {
     this.selectedOptionIndex.set(0);
   }
 
-  selectTsTeamCount(count: number): void {
-    this.tsTeamCount.set(count);
+  selectVariableTeamCount(count: number): void {
+    this.variableTeamCount.set(count);
     this.selectedOptionIndex.set(0);
   }
 
@@ -200,21 +235,68 @@ export class LineupRecommenderPageComponent {
   }
 
   excludeMercHero(heroId: number): void {
-    const current = this.excludedMercHeroIds();
-    if (!current.includes(heroId)) {
-      this.excludedMercHeroIds.set([...current, heroId]);
+    const current = this.excludedMercs();
+    if (!current.some((entry) => entry.id === heroId)) {
+      const name = this.heroNameById().get(heroId);
+      const next: SavedExcludedMerc[] = [...current, name ? { id: heroId, name } : { id: heroId }];
+      this.excludedMercs.set(next);
+      this.writeExcludedMercs(next);
       this.selectedOptionIndex.set(0);
     }
   }
 
   removeExcludedMerc(heroId: number): void {
-    this.excludedMercHeroIds.update((list) => list.filter((id) => id !== heroId));
+    const next = this.excludedMercs().filter((entry) => entry.id !== heroId);
+    this.excludedMercs.set(next);
+    this.writeExcludedMercs(next);
     this.selectedOptionIndex.set(0);
   }
 
   clearExcludedMercs(): void {
-    this.excludedMercHeroIds.set([]);
+    this.excludedMercs.set([]);
+    this.writeExcludedMercs([]);
     this.selectedOptionIndex.set(0);
+  }
+
+  teamSubstituteHints(team: RecommendedTeam): readonly { readonly missingName: string; readonly subs: string }[] {
+    return team.heroes
+      .filter((h) => h.status === 'missing' && h.suggestedSubstitutes.length > 0)
+      .map((h) => ({
+        missingName: this.heroDisplayName(h),
+        subs: h.suggestedSubstitutes.map((s) => `${s.heroName} (${s.reason})`).join(' or '),
+      }));
+  }
+
+  private readExcludedMercs(): readonly SavedExcludedMerc[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(EXCLUDED_MERCS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      const result: SavedExcludedMerc[] = [];
+      for (const item of parsed) {
+        if (typeof item === 'number' && Number.isInteger(item)) {
+          result.push({ id: item });
+        } else if (item && typeof item === 'object' && Number.isInteger(item.id)) {
+          result.push({
+            id: item.id,
+            ...(typeof item.name === 'string' && item.name ? { name: item.name } : {}),
+          });
+        }
+      }
+      return result;
+    } catch {
+      return [];
+    }
+  }
+
+  private writeExcludedMercs(entries: readonly SavedExcludedMerc[]): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(EXCLUDED_MERCS_STORAGE_KEY, JSON.stringify(entries));
+    } catch {
+      // Ignore storage quota / privacy mode errors.
+    }
   }
 
   optionSummaryLabel(opt: LineupRecommendationResult, index: number): string {

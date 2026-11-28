@@ -34,6 +34,9 @@ export const RECOMMENDED_LINEUP_MODE_SLUGS = [
   'nightmare-corridor',
   'cursed-realm',
   'treasure-scramble',
+  'temporal-rift',
+  'hunting-fields-contract',
+  'abyssal-expedition',
 ] as const;
 
 export type RecommendedLineupModeSlug = (typeof RECOMMENDED_LINEUP_MODE_SLUGS)[number];
@@ -55,6 +58,13 @@ export interface LineupRecommenderInput {
   readonly pets?: readonly Pet[];
 }
 
+export interface SuggestedHeroSubstitute {
+  readonly heroId: number;
+  readonly heroName: string;
+  readonly overlapCount: number;
+  readonly reason: string;
+}
+
 export interface RecommendedHeroSlot {
   readonly pick: HeroPick;
   readonly status: HeroStatus | 'merc';
@@ -63,6 +73,7 @@ export interface RecommendedHeroSlot {
   readonly investmentTarget: HeroInvestmentTarget;
   readonly missingBreakpoints: readonly string[];
   readonly belowMinViable: boolean;
+  readonly suggestedSubstitutes: readonly SuggestedHeroSubstitute[];
   readonly collectionAssignment: CollectionAssignmentResult;
 }
 
@@ -412,11 +423,16 @@ function solveNamedSlots(
 function solveUnorderedTeams(
   candidates: readonly CompCandidate[],
   targetTeamCount: number,
+  uniqueAcross = true,
 ): CompCandidate[] {
   const n = candidates.length;
   if (n === 0 || targetTeamCount <= 0) return [];
 
   const limit = Math.min(targetTeamCount, n);
+  if (!uniqueAcross) {
+    // Modes like Abyssal Expedition allow heroes to repeat across competing compositions.
+    return [...candidates].slice(0, limit);
+  }
   let bestCount = 0;
   let bestScore = -Infinity;
   let bestTeamList: CompCandidate[] = [];
@@ -541,16 +557,20 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
   const emptySlots: { key: string; label: string }[] = [];
   let expectedTeamCount = 0;
 
-  if (mode.slug === 'treasure-scramble') {
+  const isVariableMode = Boolean(mode.variable);
+  const uniqueAcross = mode.uniqueAcross !== false;
+
+  if (isVariableMode) {
     const desiredCount = Math.max(
-      mode.variable?.min ?? 2,
-      Math.min(mode.variable?.max ?? 7, input.teamCount ?? mode.variable?.default ?? 7),
+      mode.variable?.min ?? 1,
+      Math.min(mode.variable?.max ?? 7, input.teamCount ?? mode.variable?.default ?? 5),
     );
     expectedTeamCount = desiredCount;
 
     const rawEntries: { submission: Submission; formation: Formation }[] = [];
     for (const sub of matchingSubmissions) {
-      for (const formation of sub.forms) {
+      const allForms = [...sub.forms, ...(sub.substituteForms ?? [])];
+      for (const formation of allForms) {
         if (formation.heroes.length > 0) {
           rawEntries.push({ submission: sub, formation });
         }
@@ -560,7 +580,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
     const modeledComps = buildModeledCompsForSlot(
       mode,
       target,
-      'ts-pool',
+      `${mode.slug}-pool`,
       'Team',
       rawEntries,
       investmentModel,
@@ -580,13 +600,13 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         collectionCatalog,
         heroById,
         strictInvestment,
-        false,
+        canUseMerc,
         excludedMercSet,
       ),
     );
 
     const pruned = pruneCandidates(allCandidates, MAX_TS_CANDIDATES);
-    chosenCandidates = solveUnorderedTeams(pruned, desiredCount).map((cand, index) => ({
+    chosenCandidates = solveUnorderedTeams(pruned, desiredCount, uniqueAcross).map((cand, index) => ({
       ...cand,
       slotKey: `team-${index + 1}`,
       slotLabel: `Team ${index + 1}`,
@@ -602,11 +622,21 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
     const perSlotCandidates = slotDefs.map((slotDef, slotIndex) => {
       const slotEntries: { submission: Submission; formation: Formation }[] = [];
       for (const sub of matchingSubmissions) {
-        const formation = sub.forms.find((f) => f.key === slotDef.key)
+        const primary = sub.forms.find((f) => f.key === slotDef.key)
           ?? sub.forms.find((f) => f.label.toLowerCase() === slotDef.label.toLowerCase())
           ?? (sub.forms.length === slotDefs.length ? sub.forms[slotIndex] : undefined);
-        if (!formation || formation.heroes.length === 0) continue;
-        slotEntries.push({ submission: sub, formation });
+        if (primary && primary.heroes.length > 0) {
+          slotEntries.push({ submission: sub, formation: primary });
+        }
+        for (const subForm of sub.substituteForms ?? []) {
+          if (subForm.heroes.length === 0) continue;
+          const matchesSlot = subForm.parentSlotKey === slotDef.key
+            || subForm.key === slotDef.key
+            || subForm.label.toLowerCase() === slotDef.label.toLowerCase();
+          if (matchesSlot) {
+            slotEntries.push({ submission: sub, formation: subForm });
+          }
+        }
       }
 
       const modeledComps = buildModeledCompsForSlot(
@@ -688,6 +718,98 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
     missing: 0,
   };
 
+  // Precompute all hero IDs used across the chosen lineup (to avoid suggesting already-used heroes as subs).
+  const usedInLineup = new Set<number>(chosenCandidates.flatMap((c) => c.heroIds));
+
+  // Build pool of all formations for this mode (primary + substitute) for 4-core substitute inference.
+  const modeFormations = submissions
+    .filter((s) => s.mode === mode.slug)
+    .flatMap((s) => [...s.forms, ...(s.substituteForms ?? [])].map((f) => ({ sub: s, form: f })))
+    .filter(({ form }) => form.heroes.length >= 4);
+
+  const inferSubstitutesForMissingHero = (
+    teamHeroIds: readonly number[],
+    missingHeroId: number,
+    slotKey: string,
+  ): readonly SuggestedHeroSubstitute[] => {
+    const coreOthers = new Set(teamHeroIds.filter((id) => id !== missingHeroId));
+    if (coreOthers.size < 3) return [];
+
+    const scoreBySubHero = new Map<number, { score: number; bestOverlap: number }>();
+
+    for (const { sub, form } of modeFormations) {
+      const fIds = form.heroes.map((h) => h.hid);
+      if (fIds.includes(missingHeroId)) continue;
+      let overlap = 0;
+      for (const id of fIds) {
+        if (coreOthers.has(id)) overlap += 1;
+      }
+      if (overlap < 3) continue;
+
+      const sameTargetBonus = sub.target === target ? 2.5 : 1.0;
+      const sameSlotBonus = (form.parentSlotKey ?? form.key) === slotKey ? 2.0 : 1.0;
+      const baseWeight = (overlap === 4 ? 10 : 3) * sameTargetBonus * sameSlotBonus * (1 + Math.log1p(Math.max(0, sub.up)));
+
+      for (const candidateId of fIds) {
+        if (coreOthers.has(candidateId)) continue;
+        // Only suggest heroes the user owns and (when uniqueAcross) aren't already used in another team.
+        if (!roster[candidateId]) continue;
+        if (uniqueAcross && usedInLineup.has(candidateId)) continue;
+
+        const prev = scoreBySubHero.get(candidateId);
+        if (!prev) {
+          scoreBySubHero.set(candidateId, { score: baseWeight, bestOverlap: overlap });
+        } else {
+          scoreBySubHero.set(candidateId, {
+            score: prev.score + baseWeight,
+            bestOverlap: Math.max(prev.bestOverlap, overlap),
+          });
+        }
+      }
+    }
+
+    const fromCore = [...scoreBySubHero.entries()]
+      .sort((a, b) => b[1].bestOverlap - a[1].bestOverlap || b[1].score - a[1].score)
+      .slice(0, 2)
+      .map(([heroId, info]) => ({
+        heroId,
+        heroName: heroById.get(heroId)?.name ?? `Hero #${heroId}`,
+        overlapCount: info.bestOverlap,
+        reason: `${info.bestOverlap}/4 core`,
+      }));
+
+    if (fromCore.length > 0) return fromCore;
+
+    // Tier 2 fallback: owned, unused heroes of the same class used on this same boss/slot.
+    const missingClass = heroById.get(missingHeroId)?.class ?? null;
+    const bossSubScores = new Map<number, number>();
+    for (const { sub, form } of modeFormations) {
+      const matchesSlot = (form.parentSlotKey ?? form.key) === slotKey
+        || (isVariableMode && sub.target === target);
+      if (!matchesSlot) continue;
+      const w = (sub.target === target ? 2 : 1) * (1 + Math.log1p(Math.max(0, sub.up)));
+      for (const pick of form.heroes) {
+        const cid = pick.hid;
+        if (cid === missingHeroId || coreOthers.has(cid)) continue;
+        if (!roster[cid]) continue;
+        if (uniqueAcross && usedInLineup.has(cid)) continue;
+        const candClass = heroById.get(cid)?.class ?? null;
+        if (missingClass && candClass && candClass !== missingClass) continue;
+        bossSubScores.set(cid, (bossSubScores.get(cid) ?? 0) + w);
+      }
+    }
+
+    return [...bossSubScores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([heroId]) => ({
+        heroId,
+        heroName: heroById.get(heroId)?.name ?? `Hero #${heroId}`,
+        overlapCount: 0,
+        reason: missingClass ? `same boss · ${missingClass}` : 'same boss',
+      }));
+  };
+
   const teams: RecommendedTeam[] = chosenCandidates.map((cand, teamIdx) => {
     const synthesizedFormation = buildSynthesizedFormation(cand.comp, cand.mercHeroId);
 
@@ -718,6 +840,10 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         collectionSummary[assignment.status] += 1;
       }
 
+      const suggestedSubstitutes = status === 'missing'
+        ? inferSubstitutesForMissingHero(cand.heroIds, hero.hid, cand.slotKey)
+        : [];
+
       return {
         pick: synthesizedFormation.heroes[heroIdx],
         status,
@@ -726,6 +852,7 @@ export function recommendLineupForMode(input: LineupRecommenderInput): LineupRec
         investmentTarget: hero.target,
         missingBreakpoints: isMerc ? [] : gap.missingMajorBreakpoints,
         belowMinViable: isMerc ? false : gap.belowMinViable,
+        suggestedSubstitutes,
         collectionAssignment: assignment,
       };
     });
@@ -831,11 +958,11 @@ export function recommendLineupOptionsForMode(
       const pivotTeam = [...prev.teams]
         .sort((a, b) => b.score - a.score)
         .find((t) => {
-          const key = input.mode.slug === 'treasure-scramble' ? t.compKey : `${t.slotKey}::${t.compKey}`;
+          const key = input.mode.variable ? t.compKey : `${t.slotKey}::${t.compKey}`;
           return !excludedComps.includes(key);
         });
       if (!pivotTeam) break;
-      const pivotKey = input.mode.slug === 'treasure-scramble'
+      const pivotKey = input.mode.variable
         ? pivotTeam.compKey
         : `${pivotTeam.slotKey}::${pivotTeam.compKey}`;
       excludedComps.push(pivotKey);

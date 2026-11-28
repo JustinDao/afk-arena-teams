@@ -386,4 +386,103 @@ describe('recommendLineupForMode', () => {
     }, 3);
     expect(without20[0].merc?.heroId).toBe(21);
   });
+
+  it('uses substituteForms when primary formation has a missing hero, and infers 4-core substitutes when still missing', () => {
+    const customNcMode: ModeConfig = {
+      ...ncMode,
+      targetFormations: {
+        'Soulchain Knight': [{ key: 'boss-1', label: 'Boss 1' }],
+      },
+    };
+
+    const subWithBudgetAlt: Submission = {
+      id: 501,
+      mode: 'nightmare-corridor',
+      target: 'Soulchain Knight',
+      up: 25,
+      days: 1,
+      result: {},
+      notes: '',
+      by: 'alice',
+      heroLevel: null,
+      // Primary uses hero 30 (missing).
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 30], 1, 18, 12)],
+      // Substitute formation for boss-1 uses hero 5 (owned!).
+      substituteForms: [
+        {
+          ...makeFormation('boss-1-sub', 'Boss 1', [1, 2, 3, 4, 5], 1, 18, 16),
+          isSubstitute: true,
+          parentSlotKey: 'boss-1',
+        },
+      ],
+    };
+
+    const roster: Record<string, RosterEntry> = {};
+    for (const id of [1, 2, 3, 4, 5, 6]) {
+      roster[id] = { inv: '309e60', ascension: 'ascended_1', si: 30, furn: 9, eng: 60 };
+    }
+
+    const withSub = recommendLineupForMode({
+      mode: customNcMode,
+      target: 'Soulchain Knight',
+      strictInvestment: false,
+      allowMerc: false,
+      submissions: [subWithBudgetAlt],
+      roster,
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes,
+    });
+
+    // Solver should pick the owned substitute formation!
+    expect(withSub.readyTeamCount).toBe(1);
+    expect(withSub.teams[0].heroes.map((h) => h.pick.hid)).toContain(5);
+
+    // Now test 4-core substitute inference when only the missing-hero primary exists for Soulchain Knight,
+    // while another NC cycle has a 4/4 core overlap team using owned Hero 6!
+    const primaryOnly: Submission = {
+      id: 502,
+      mode: 'nightmare-corridor',
+      target: 'Soulchain Knight',
+      up: 20,
+      days: 1,
+      result: {},
+      notes: '',
+      by: 'bob',
+      heroLevel: null,
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 30], 1, 18, 14)],
+    };
+    const otherCycleWithCore: Submission = {
+      id: 503,
+      mode: 'nightmare-corridor',
+      target: 'Infernal Overlord',
+      up: 15,
+      days: 2,
+      result: {},
+      notes: '',
+      by: 'carol',
+      heroLevel: null,
+      forms: [makeFormation('boss-1', 'Boss 1', [1, 2, 3, 4, 6], 1, 18, 18)],
+    };
+
+    const inferred = recommendLineupForMode({
+      mode: customNcMode,
+      target: 'Soulchain Knight',
+      strictInvestment: false,
+      allowMerc: false,
+      submissions: [primaryOnly, otherCycleWithCore],
+      roster,
+      petRoster: { 1: { level: 18 } },
+      collections: [],
+      collectionCatalog: COLLECTION_CATALOG,
+      heroes,
+    });
+
+    const missingSlot = inferred.teams[0].heroes.find((h) => h.status === 'missing')!;
+    expect(missingSlot.pick.hid).toBe(30);
+    expect(missingSlot.suggestedSubstitutes.length).toBe(1);
+    expect(missingSlot.suggestedSubstitutes[0].heroId).toBe(6);
+    expect(missingSlot.suggestedSubstitutes[0].overlapCount).toBe(4);
+  });
 });

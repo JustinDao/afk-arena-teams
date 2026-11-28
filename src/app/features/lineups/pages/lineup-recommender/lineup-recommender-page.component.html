@@ -31,17 +31,17 @@
           </div>
         </div>
 
-        @if (mode.slug === 'treasure-scramble') {
+        @if (variableTeamCountOptions().length > 0) {
           <div class="control-row" role="group" aria-label="Number of teams">
             <span class="control-label">Teams</span>
             <div class="chip-group">
-              @for (n of tsTeamCounts; track n) {
+              @for (n of variableTeamCountOptions(); track n) {
                 <button
                   mat-button
                   type="button"
                   class="chip"
-                  [attr.aria-pressed]="tsTeamCount() === n"
-                  (click)="selectTsTeamCount(n)"
+                  [attr.aria-pressed]="activeTeamCount() === n"
+                  (click)="selectVariableTeamCount(n)"
                 >{{ n }}</button>
               }
             </div>
@@ -293,6 +293,15 @@
                     <span class="pet-status short">Missing</span>
                   } @else if (team.underPetLevel && team.ownedPetLevel !== null) {
                     <span class="pet-status warn">Yours Lv. {{ team.ownedPetLevel }}</span>
+                  }
+                </div>
+              }
+
+              @let subHints = teamSubstituteHints(team);
+              @if (subHints.length > 0) {
+                <div class="sub-hints">
+                  @for (hint of subHints; track hint.missingName) {
+                    <p class="sub-hint">Sub for <strong>{{ hint.missingName }}</strong>: {{ hint.subs }}</p>
                   }
                 </div>
               }
